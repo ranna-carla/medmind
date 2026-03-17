@@ -9,7 +9,6 @@ exports.handler = async function(event, context) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
-
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
@@ -25,30 +24,45 @@ exports.handler = async function(event, context) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Texto do PDF muito curto' }) };
     }
 
-    const systemPrompt = `Voce e um gerador de modulos educacionais para estudantes de medicina brasileiros. A partir do texto de uma aula/material, gere um modulo de estudo completo. Retorne APENAS um JSON valido (sem markdown, sem backticks, sem texto antes ou depois) com esta estrutura exata: { "emoji": "string", "summary": "Resumo completo em HTML (use h3, p, ul, strong, table). Seja detalhado e didatico. Minimo 500 palavras.", "tabs": [ { "title": "Nome da aba tematica", "emoji": "string", "cards": [ { "title": "Titulo do card", "content": "Conteudo explicativo em HTML com strong para termos importantes" } ] } ], "quiz": { "objective": [ { "question": "Pergunta?", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Explicacao" } ], "written": [ { "question": "Pergunta dissertativa?", "answer": "Resposta completa" } ], "clinical": [ { "scenario": "Paciente de X anos apresenta...", "question": "Qual o diagnostico?", "answer": "Resposta com justificativa" } ] } } REGRAS: Gere exatamente 10 questoes objetivas, 3 dissertativas e 2 casos clinicos. Crie 3-5 abas tematicas com 2-4 cards cada. Use terminologia medica precisa em portugues brasileiro. Retorne APENAS o JSON.`;
+    const systemPrompt = "Voce e um gerador de modulos educacionais para estudantes de medicina brasileiros. A partir do texto de uma aula, gere um modulo completo. Retorne APENAS JSON valido com: emoji (string), summary (HTML do resumo, minimo 500 palavras), tabs (array de abas com title, emoji, cards com title e content), quiz com objective (10 questoes com question, options array de 4, correct index, explanation), written (3 questoes com question e answer), clinical (2 casos com scenario, question, answer). Use portugues brasileiro e terminologia medica precisa.";
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: 'Disciplina: ' + (discipline || 'Medicina') + '. Titulo: ' + (title || 'Modulo') + '. Texto da aula: ' + text.substring(0, 12000) }]
-      })
+    const requestBody = {
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 8000,
+      messages: [
+        {
+          role: "user",
+          content: systemPrompt + "\n\nDisciplina: " + (discipline || "Medicina") + "\nTitulo: " + (title || "Modulo") + "\nTexto da aula:\n" + text.substring(0, 12000)
+        }
+      ]
+    };
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify(requestBody)
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      return { statusCode: 502, headers, body: JSON.stringify({ error: 'Erro na API: ' + response.status }) };
+      return {
+        statusCode: 502, headers,
+        body: JSON.stringify({ error: "Claude API " + response.status + ": " + responseText })
+      };
     }
 
-    const data = await response.json();
-    const content = data.content[0]?.text || '';
-    const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const data = JSON.parse(responseText);
+    const content = data.content[0]?.text || "";
+    const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const moduleJSON = JSON.parse(cleaned);
 
     return { statusCode: 200, headers, body: JSON.stringify({ module: moduleJSON }) };
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Erro: ' + err.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: "Erro: " + err.message }) };
   }
 };
