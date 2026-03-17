@@ -31,7 +31,7 @@ exports.handler = async function(event, context) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 8000,
         system: systemPrompt,
         messages: [{ role: 'user', content: 'Disciplina: ' + (discipline || 'Medicina') + '. Titulo: ' + (title || 'Modulo') + '. Texto da aula: ' + text.substring(0, 12000) }]
