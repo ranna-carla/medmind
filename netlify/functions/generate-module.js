@@ -27,7 +27,7 @@ exports.handler = async function(event, context) {
     const systemPrompt = "Voce e um gerador de modulos educacionais para estudantes de medicina brasileiros. A partir do texto de uma aula, gere um modulo completo. Retorne APENAS JSON valido com: emoji (string), summary (HTML do resumo, minimo 500 palavras), tabs (array de abas com title, emoji, cards com title e content), quiz com objective (10 questoes com question, options array de 4, correct index, explanation), written (3 questoes com question e answer), clinical (2 casos com scenario, question, answer). Use portugues brasileiro e terminologia medica precisa.";
 
     const requestBody = {
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-haiku-20240307",
       max_tokens: 8000,
       messages: [
         {
