@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MedMind">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080e1a">
+<meta name="description" content="App educativo de medicina com quiz interativo e sistema de XP">
+<title>MedMind — Estude com Inteligência</title>
+<meta name="version" content="2.0">
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22MedMind%20-%20Estude%20com%20Inteligência%22,%22short_name%22:%22MedMind%22,%22description%22:%22App educativo com quizzes e gamificação%22,%22start_url%22:%22./%22,%22display%22:%22standalone%22,%22background_color%22:%22%23080e1a%22,%22theme_color%22:%226c5ce7%22,%22scope%22:%22./%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27%3E%3Crect fill=%27%236c5ce7%27 width=%27192%27 height=%27192%27 rx=%2745%27/%3E%3Ctext x=%2796%27 y=%27130%27 font-size=%27100%27 text-anchor=%27middle%27%3E🧠%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22,%22purpose%22:%22any%22}]}">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect fill=%27%236c5ce7%27 width=%27100%27 height=%27100%27 rx=%2720%27/%3E%3Ctext x=%2750%27 y=%2770%27 font-size=%2760%27 text-anchor=%27middle%27%3E🧠%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#080e1a;--bg2:#0f1729;--bg3:#172035;--bg4:#1e2a42;--text:#eef2f7;--dim:#7b8ba5;--dim2:#4a5568;--accent:#6c5ce7;--accent2:#a29bfe;--accent-bg:rgba(108,92,231,.12);--accent-border:rgba(108,92,231,.25);--gold:#f9ca24;--gold-bg:rgba(249,202,36,.12);--green:#00b894;--green-bg:rgba(0,184,148,.12);--red:#ff6b6b;--red-bg:rgba(255,107,107,.12);--blue:#0984e3;--blue-bg:rgba(9,132,227,.12);--pink:#e84393;--pink-bg:rgba(232,67,147,.12);--orange:#e17055;--esp:#3b8df0;--esp-bg:rgba(59,141,240,.12);--ovo:#d44d7a;--ovo-bg:rgba(212,77,122,.12);--fec:#10a37f;--fec-bg:rgba(16,163,127,.12);--s1:#6da030;--s1-bg:rgba(109,160,48,.12);--s2:#c08420;--s2-bg:rgba(192,132,32,.12);--correct:#22c55e;--wrong:#ef4444;--r:16px;--safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;touch-action:manipulation}
+.app{display:flex;flex-direction:column;height:100dvh}
+.bnav{display:flex;justify-content:space-around;align-items:center;padding:8px 0;padding-bottom:max(8px,var(--safe-bot));background:rgba(8,14,26,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.05);z-index:30;flex-shrink:0}
+.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--dim);font-family:'Sora',sans-serif;font-size:10px;font-weight:500;cursor:pointer;padding:4px 12px;transition:color .2s}
+.bnav-btn.on{color:var(--accent2)}
+.bnav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+.page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.page.on{display:flex;flex-direction:column}
+.page-inner{padding:16px 14px 30px;flex:1}
+.pg-hdr{padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0}
+.home-hero{padding:20px 0 16px;text-align:center;background:linear-gradient(135deg,rgba(108,92,231,.08),rgba(232,67,147,.06));border-radius:var(--r);margin-bottom:0}
+.home-logo{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.home-tagline{font-size:12px;color:var(--dim);margin-top:2px}
+.xp-card{background:var(--bg2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)}
+.xp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.xp-level{display:flex;align-items:center;gap:8px}
+.xp-badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.xp-badge.lv1{background:var(--blue-bg);color:var(--blue);border:2px solid var(--blue)}
+.xp-badge.lv2{background:var(--green-bg);color:var(--green);border:2px solid var(--green)}
+.xp-badge.lv3{background:var(--gold-bg);color:var(--gold);border:2px solid var(--gold)}
+.xp-badge.lv4{background:var(--pink-bg);color:var(--pink);border:2px solid var(--pink)}
+.xp-badge.lv5{background:rgba(225,112,85,.12);color:var(--orange);border:2px solid var(--orange)}
+.xp-lv-name{font-size:13px;font-weight:600}.xp-lv-sub{font-size:10px;color:var(--dim)}
+.xp-streak{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--gold)}
+.xp-bar-wrap{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.xp-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--pink));transition:width .5s ease}
+.xp-bar-label{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.stats-row{display:flex;gap:8px;margin-bottom:16px}
+.stat-card{flex:1;background:var(--bg2);border-radius:12px;padding:12px 10px;text-align:center;border:1px solid rgba(255,255,255,.05)}
+.stat-num{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.stat-label{font-size:10px;color:var(--dim);margin-top:2px}
+.mod-section-title{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.mod-card{background:var(--bg2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.05);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+.mod-card:active{transform:scale(.98);border-color:rgba(255,255,255,.1)}
+.mod-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.mod-info{flex:1;min-width:0}.mod-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.mod-desc{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mod-progress{width:50px;text-align:right}.mod-stars{font-size:14px;letter-spacing:1px}
+.mod-pct{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.mod-card-locked{opacity:.4;pointer-events:none}
+.mod-hdr{display:flex;align-items:center;gap:10px}
+.mod-back{background:none;border:none;color:var(--text);cursor:pointer;padding:4px}
+.mod-back svg{width:24px;height:24px}.mod-hdr-title{font-size:16px;font-weight:700;flex:1}
+.mod-hdr-xp{font-size:11px;color:var(--accent2);font-family:'JetBrains Mono',monospace}
+.mod-tabs{display:flex;gap:6px;padding:8px 14px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0;-webkit-overflow-scrolling:touch}
+.mod-tabs::-webkit-scrollbar{display:none}
+.mod-tab{flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.mod-tab.on{background:var(--accent);color:#fff;border-color:transparent}
+.mod-sec{display:none;animation:fu .3s ease}.mod-sec.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.sec-hdr{padding:10px 0 6px;display:flex;align-items:center;gap:8px}
+.sec-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sec-hdr h3{font-size:14px;font-weight:700}
+.card{background:var(--bg2);border-radius:var(--r);margin-bottom:8px;border:1px solid rgba(255,255,255,.05);overflow:hidden;transition:border-color .2s}
+.card.open{border-color:rgba(255,255,255,.1)}
+.card-h{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.card-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.card-t{font-size:13.5px;font-weight:600;flex:1;line-height:1.3}
+.card-chev{width:20px;height:20px;color:var(--dim);transition:transform .25s;flex-shrink:0}
+.card.open .card-chev{transform:rotate(180deg)}
+.card-b{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .25s ease}
+.card.open .card-b{max-height:600px;padding:0 14px 14px}
+.card-b p{font-size:13px;line-height:1.6;color:var(--dim)}.card-b p strong{color:var(--text);font-weight:600}
+[data-theme="esp"] .card-num{background:var(--esp-bg);color:var(--esp)}
+[data-theme="ovo"] .card-num{background:var(--ovo-bg);color:var(--ovo)}
+[data-theme="fec"] .card-num{background:var(--fec-bg);color:var(--fec)}
+[data-theme="s1"] .card-num{background:var(--s1-bg);color:var(--s1)}
+[data-theme="s2"] .card-num{background:var(--s2-bg);color:var(--s2)}
+[data-theme="temp"] .card-num{background:rgba(230,126,34,.12);color:#e67e22}
+[data-theme="temp"] .flow-s{background:rgba(230,126,34,.12);color:#e67e22}
+[data-theme="perda"] .card-num{background:rgba(52,152,219,.12);color:#3498db}
+[data-theme="perda"] .flow-s{background:rgba(52,152,219,.12);color:#3498db}
+[data-theme="termo"] .card-num{background:rgba(231,76,60,.12);color:#e74c3c}
+[data-theme="febr"] .card-num{background:rgba(155,89,182,.12);color:#9b59b6}
+[data-theme="gast"] .card-num{background:rgba(211,84,0,.12);color:#d35400}
+[data-theme="gast"] .flow-s{background:rgba(211,84,0,.12);color:#d35400}
+[data-theme="noto"] .card-num{background:rgba(41,128,185,.12);color:#2980b9}
+[data-theme="neur"] .card-num{background:rgba(142,68,173,.12);color:#8e44ad}
+[data-theme="neur"] .flow-s{background:rgba(142,68,173,.12);color:#8e44ad}
+[data-theme="meso"] .card-num{background:rgba(39,174,96,.12);color:#27ae60}
+[data-theme="meso"] .flow-s{background:rgba(39,174,96,.12);color:#27ae60}
+[data-theme="folh"] .card-num{background:rgba(230,126,34,.12);color:#e67e22}
+.flow{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none;margin-bottom:8px;-webkit-overflow-scrolling:touch}
+.flow::-webkit-scrollbar{display:none}
+.flow-s{flex-shrink:0;padding:7px 10px;border-radius:8px;font-size:11px;font-weight:600;text-align:center;min-width:68px}
+.flow-a{flex-shrink:0;font-size:14px;color:var(--dim)}
+[data-theme="esp"] .flow-s{background:var(--esp-bg);color:var(--esp)}
+[data-theme="ovo"] .flow-s{background:var(--ovo-bg);color:var(--ovo)}
+[data-theme="s1"] .flow-s{background:var(--s1-bg);color:var(--s1)}
+.resumo-content{padding:4px 0 20px}
+.res-title{text-align:center;font-size:16px;font-weight:800;color:var(--text);margin:12px 0 4px;line-height:1.3}
+.res-sub{text-align:center;font-size:11px;color:var(--dim);margin-bottom:16px;line-height:1.5}
+.res-h1{font-size:14px;font-weight:700;color:var(--accent2);margin:18px 0 6px;padding:8px 0 4px;border-bottom:1px solid var(--accent-border)}
+.res-h2{font-size:13px;font-weight:600;color:var(--text);margin:12px 0 4px;padding-left:4px;border-left:3px solid var(--accent)}
+.resumo-content p{font-size:13px;line-height:1.65;color:var(--dim);margin:4px 0 8px}
+.resumo-content p strong{color:var(--text);font-weight:600}
+.qz-mode-wrap{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.qz-mode{flex:1;min-width:90px;padding:10px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+.qz-mode.on{background:var(--accent);color:#fff;border-color:transparent}
+.qz-mode span{display:block;font-size:16px;margin-bottom:3px}
+.qz-q{background:var(--bg2);border-radius:var(--r);padding:16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.05)}
+.qz-q-num{font-size:10px;font-weight:700;color:var(--accent2);font-family:'JetBrains Mono',monospace;text-transform:uppercase;margin-bottom:6px}
+.qz-q-text{font-size:13.5px;font-weight:500;line-height:1.5;margin-bottom:12px}
+.qz-q-tag{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;margin-bottom:10px;background:var(--accent-bg);color:var(--accent2);font-family:'JetBrains Mono',monospace}
+.qz-opt{display:block;width:100%;padding:11px 14px;margin-bottom:6px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;text-align:left;cursor:pointer;transition:all .2s;line-height:1.4}
+.qz-opt:active{transform:scale(.98)}
+.qz-opt.right{border-color:var(--correct);background:rgba(34,197,94,.12);color:var(--correct)}
+.qz-opt.wrongsel{border-color:var(--wrong);background:rgba(239,68,68,.12);color:var(--wrong)}
+.qz-textarea{width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;resize:vertical;outline:none;line-height:1.5}
+.qz-reveal-btn{display:inline-block;padding:9px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
+.qz-answer{margin-top:10px;padding:12px;border-radius:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);font-size:13px;line-height:1.6;color:var(--dim);display:none}
+.qz-answer.show{display:block}.qz-answer strong{color:var(--text)}
+.qz-prat-img{width:100%;border-radius:10px;margin-bottom:10px;background:var(--bg3);padding:16px;border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--dim);text-align:center;line-height:1.5}
+.qz-prat-img strong{color:var(--accent2);font-size:14px;display:block;margin-bottom:6px}
+.qz-reward{text-align:center;padding:24px 16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(108,92,231,.12),rgba(0,184,148,.08));border:1px solid var(--accent-border);border-radius:var(--r);animation:fu .4s ease}
+.qz-reward-xp{font-size:32px;font-weight:800;color:var(--accent2);font-family:'JetBrains Mono',monospace}
+.qz-reward-label{font-size:12px;color:var(--dim);margin-top:2px}
+.qz-reward-detail{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6}
+.qz-reward-detail strong{color:var(--gold)}
+.qz-restart{display:inline-block;padding:10px 24px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px}
+.rank-card{background:var(--bg2);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:12px}
+.rank-pos{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.rank-pos.p1{background:var(--gold-bg);color:var(--gold)}.rank-pos.p2{background:rgba(192,192,192,.12);color:#c0c0c0}.rank-pos.p3{background:rgba(205,127,50,.12);color:#cd7f32}.rank-pos.pn{background:var(--bg3);color:var(--dim)}
+.rank-info{flex:1}.rank-name{font-size:13px;font-weight:600}.rank-xp{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.rank-lv{font-size:18px}
+.rank-you{border-color:var(--accent-border);background:linear-gradient(135deg,rgba(108,92,231,.06),var(--bg2))}
+.profile-card{background:var(--bg2);border-radius:var(--r);padding:20px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05);text-align:center}
+.profile-avatar{width:60px;height:60px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,var(--accent),var(--pink))}
+.profile-name-input{background:transparent;border:none;border-bottom:1px dashed var(--dim2);color:var(--text);font-family:'Sora',sans-serif;font-size:16px;font-weight:700;text-align:center;outline:none;width:80%;padding:4px 0}
+.profile-sub{font-size:11px;color:var(--dim);margin-top:4px}
+.history-item{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-bottom:6px;border:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+.history-left{font-size:12px;color:var(--dim)}.history-left strong{color:var(--text)}
+.history-right{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.history-right.good{color:var(--green)}.history-right.ok{color:var(--gold)}.history-right.bad{color:var(--red)}
+.reset-btn{display:block;width:100%;padding:12px;border-radius:10px;border:1px solid var(--red);background:transparent;color:var(--red);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px}
+/* === SISTEMA DE AMIZADES === */
+.friend-code-box{background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(232,67,147,.1));border:1px solid var(--accent-border);border-radius:var(--r);padding:16px;text-align:center;margin-bottom:16px}
+.friend-code{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--accent2);letter-spacing:3px;margin:8px 0}
+.friend-code-label{font-size:11px;color:var(--dim)}
+.friend-code-actions{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.friend-code-btn{padding:8px 16px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.friend-code-btn.primary{background:var(--accent);color:#fff}
+.friend-code-btn.secondary{background:var(--bg3);color:var(--text);border:1px solid rgba(255,255,255,.08)}
+.friend-req-card{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:12px}
+.friend-req-info{flex:1;min-width:0}
+.friend-req-name{font-size:13px;font-weight:600}
+.friend-req-sub{font-size:11px;color:var(--dim)}
+.friend-req-actions{display:flex;gap:6px;flex-shrink:0}
+.friend-req-btn{padding:6px 12px;border-radius:6px;border:none;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s}
+.friend-req-btn.accept{background:var(--green-bg);color:var(--green)}
+.friend-req-btn.reject{background:var(--red-bg);color:var(--red)}
+.friend-item{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:12px}
+.friend-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:linear-gradient(135deg,var(--accent),var(--pink));flex-shrink:0}
+.friend-info{flex:1;min-width:0}
+.friend-name{font-size:13px;font-weight:600}
+.friend-xp{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.friend-remove{background:none;border:none;color:var(--dim2);cursor:pointer;font-size:16px;padding:4px 8px;transition:color .2s}
+.friend-remove:active{color:var(--red)}
+.friend-search-wrap{display:flex;gap:8px;margin-bottom:16px}
+.friend-search-input{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;letter-spacing:2px;text-transform:uppercase;outline:none;text-align:center;transition:border-color .2s}
+.friend-search-input:focus{border-color:var(--accent)}
+.friend-search-input::placeholder{font-family:'Sora',sans-serif;letter-spacing:0;text-transform:none;font-size:13px}
+.friend-search-btn{padding:12px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
+.friend-search-btn:active{transform:scale(.97)}
+.friend-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;font-family:'JetBrains Mono',monospace}
+.friend-notif{background:linear-gradient(135deg,rgba(255,107,107,.08),rgba(255,107,107,.04));border:1px solid rgba(255,107,107,.2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .2s}
+.friend-notif:active{transform:scale(.98)}
+.friend-empty{color:var(--dim);font-size:12px;text-align:center;padding:20px;background:var(--bg2);border-radius:10px;margin-bottom:12px;border:1px dashed rgba(255,255,255,.1)}
+.friend-modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fmIn .2s ease}
+@keyframes fmIn{from{opacity:0}to{opacity:1}}
+.friend-modal{background:var(--bg2);border-radius:20px;padding:24px;width:100%;max-width:380px;border:1px solid rgba(255,255,255,.08);animation:fmSlide .3s ease}
+@keyframes fmSlide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.friend-modal h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.friend-modal-close{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:20px;padding:4px 8px}
+.friend-result{background:var(--bg3);border-radius:12px;padding:14px;margin-top:12px;display:flex;align-items:center;gap:12px}
+.friend-result-info{flex:1}
+.friend-result-name{font-size:14px;font-weight:600}
+.friend-result-xp{font-size:11px;color:var(--dim)}
+.friend-result-btn{padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.friend-result-btn:disabled{opacity:.5;cursor:not-allowed}
+.friend-result-status{font-size:12px;color:var(--dim);font-weight:500}
+@media(min-width:600px){.page-inner,.mod-tabs{max-width:540px;margin-left:auto;margin-right:auto}}
+/* === TELA DE LOGIN === */
+.gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+.gate.hidden{display:none}
+.gate-box{width:100%;max-width:380px;text-align:center}
+.gate-logo{font-size:48px;margin-bottom:8px}
+.gate-title{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.gate-sub{font-size:13px;color:var(--dim);margin-bottom:32px;line-height:1.5}
+.gate-input-wrap{position:relative;margin-bottom:16px}
+.gate-input{width:100%;padding:14px 48px 14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:15px;outline:none;transition:border-color .2s}
+.gate-input:focus{border-color:var(--accent)}
+.gate-input::placeholder{color:var(--dim2)}
+.gate-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);cursor:pointer;padding:4px}
+.gate-eye svg{width:20px;height:20px}
+.gate-btn{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:transform .15s,opacity .15s;letter-spacing:.5px}
+.gate-btn:active{transform:scale(.97);opacity:.9}
+.gate-btn:disabled{opacity:.5;cursor:not-allowed}
+.gate-error{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;font-weight:500}
+.gate-footer{margin-top:40px;font-size:11px;color:var(--dim2);line-height:1.6}
+.gate-footer a{color:var(--accent2);text-decoration:none}
+.gate-shake{animation:gshake .4s ease}
+@keyframes gshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+/* === CRIAR MÓDULO + BIBLIOTECA + RATING === */
+.create-fab{position:fixed;bottom:80px;right:16px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;border:none;font-size:28px;font-weight:300;cursor:pointer;z-index:25;box-shadow:0 4px 20px rgba(108,92,231,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.create-fab:active{transform:scale(.9)}
+.create-page{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto}
+.create-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:max(14px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.create-hdr-title{font-size:16px;font-weight:700;flex:1}
+.create-close{background:none;border:none;color:var(--dim);cursor:pointer;font-size:20px;padding:4px 8px}
+.create-body{padding:16px;flex:1;max-width:540px;margin:0 auto;width:100%}
+.create-upload{border:2px dashed rgba(108,92,231,.3);border-radius:var(--r);padding:32px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04);margin-bottom:16px}
+.create-upload:active{border-color:var(--accent);background:rgba(108,92,231,.08)}
+.create-upload.has-file{border-color:var(--green);background:rgba(0,184,148,.06)}
+.create-upload-icon{font-size:36px;margin-bottom:8px}
+.create-upload-text{font-size:13px;color:var(--dim)}
+.create-upload-file{font-size:14px;font-weight:600;color:var(--green);margin-top:8px}
+.create-label{font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:16px}
+.create-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.create-input:focus{border-color:var(--accent)}
+.create-select{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b8ba5' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.create-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.create-tag{padding:5px 12px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--dim);font-size:11px;font-weight:500;cursor:pointer;transition:all .2s}
+.create-tag.on{background:var(--accent-bg);color:var(--accent2);border-color:var(--accent-border)}
+.create-vis{display:flex;gap:10px;margin-top:8px}
+.create-vis-opt{flex:1;padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);text-align:center;cursor:pointer;transition:all .2s}
+.create-vis-opt.on{border-color:var(--accent);background:var(--accent-bg)}
+.create-vis-opt .vis-icon{font-size:24px;margin-bottom:4px}
+.create-vis-opt .vis-label{font-size:12px;font-weight:600}
+.create-vis-opt .vis-desc{font-size:10px;color:var(--dim);margin-top:2px}
+.create-gen-btn{width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:24px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.create-gen-btn:disabled{opacity:.5;cursor:not-allowed}
+.create-gen-btn:active{transform:scale(.98)}
+.gen-progress{text-align:center;padding:40px 16px}
+.gen-spinner{width:48px;height:48px;border:3px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-progress-text{font-size:14px;color:var(--dim);margin-top:8px}
+.gen-progress-sub{font-size:11px;color:var(--dim2);margin-top:4px}
+/* Library */
+.lib-filters{display:flex;gap:6px;padding:0 0 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.lib-filters::-webkit-scrollbar{display:none}
+.lib-filter{flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+.lib-filter.on{background:var(--accent);color:#fff;border-color:transparent}
+.lib-sort{display:flex;gap:6px;margin-bottom:12px}
+.lib-sort-btn{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:11px;cursor:pointer;transition:all .2s}
+.lib-sort-btn.on{color:var(--accent2);border-color:var(--accent-border)}
+.lib-card{background:var(--bg2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.05);cursor:pointer;transition:all .2s}
+.lib-card:active{transform:scale(.98)}
+.lib-card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.lib-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--accent-bg);flex-shrink:0}
+.lib-card-info{flex:1;min-width:0}
+.lib-card-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-card-creator{font-size:11px;color:var(--dim)}
+.lib-card-meta{display:flex;gap:12px;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.lib-card-stars{color:var(--gold)}
+.lib-card-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:500;background:var(--accent-bg);color:var(--accent2)}
+/* Rating */
+.rating-modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fmIn .2s ease}
+.rating-modal{background:var(--bg2);border-radius:20px;padding:24px;width:100%;max-width:340px;text-align:center;border:1px solid rgba(255,255,255,.08)}
+.rating-stars{display:flex;justify-content:center;gap:8px;margin:16px 0}
+.rating-star{font-size:32px;cursor:pointer;transition:transform .15s;opacity:.3}
+.rating-star.on{opacity:1}
+.rating-star:active{transform:scale(1.2)}
+/* Module detail overlay */
+.mod-detail-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto}
+.mod-detail-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:max(14px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.mod-detail-body{padding:16px;flex:1;max-width:540px;margin:0 auto;width:100%}
+.mod-detail-actions{display:flex;gap:8px;padding:12px 16px;background:rgba(8,14,26,.95);border-top:1px solid rgba(255,255,255,.05)}
+.mod-detail-btn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+.mod-detail-btn.primary{background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff}
+.mod-detail-btn.secondary{background:var(--bg3);color:var(--text);border:1px solid rgba(255,255,255,.08)}
+</style>
+</head>
+<body>
+
+<!-- === TELA DE LOGIN FIREBASE === -->
+<div class="gate" id="loginGate">
+<div class="gate-box">
+<div class="gate-logo">🧠</div>
+<div class="gate-title">MedMind</div>
+<div class="gate-sub">Estude com Inteligência<br>Crie sua conta ou faça login</div>
+<div id="authForms">
+<div id="loginForm">
+<div class="gate-input-wrap"><input class="gate-input" id="authEmail" type="email" placeholder="Seu e-mail" autocomplete="email"></div>
+<div class="gate-input-wrap">
+<input class="gate-input" id="authPass" type="password" placeholder="Senha (mínimo 6 caracteres)" autocomplete="current-password" onkeypress="if(event.key==='Enter')doEmailAuth()">
+<button class="gate-eye" onclick="toggleEye()" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+</div>
+<button class="gate-btn" onclick="doEmailAuth()" id="authBtn">Entrar</button>
+<div class="gate-error" id="gateError"></div>
+<div style="text-align:center;margin-top:8px"><a href="#" onclick="doResetPassword(event)" style="color:var(--accent2);font-size:12px;text-decoration:none;opacity:.7" id="forgotLink">Esqueci minha senha</a></div>
+<div style="text-align:center;margin-top:10px"><span style="color:var(--dim);font-size:13px" id="authToggleText">Não tem conta? </span><a href="#" onclick="toggleAuthMode(event)" style="color:var(--accent2);font-size:13px;text-decoration:none;font-weight:600" id="authToggleLink">Criar conta</a></div>
+<div style="display:flex;align-items:center;gap:12px;margin:18px 0"><div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div><span style="color:var(--dim);font-size:11px">ou</span><div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div></div>
+<button class="gate-btn" onclick="doGoogleAuth()" style="background:var(--bg2);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;gap:10px"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Entrar com Google</button>
+</div>
+</div>
+<div class="gate-footer">Seus dados ficam salvos na nuvem<br>Acesse de qualquer dispositivo</div>
+</div>
+</div>
+
+<!-- === LOADING === -->
+<div class="gate" id="loadingScreen">
+<div class="gate-box" style="text-align:center">
+<div class="gate-logo">🧠</div>
+<div class="gate-title">MedMind</div>
+<div style="color:var(--dim);margin-top:12px;font-size:13px">Carregando...</div>
+</div>
+</div>
+
+<!-- === APP === -->
+<div class="app" id="mainApp" style="display:none">
+<div class="page on" id="pg-home"><div class="pg-hdr"><div class="home-hero"><div class="home-logo">🧠 MedMind</div><div class="home-tagline">Estude com Inteligência</div></div></div><div class="page-inner" id="homeContent"></div></div>
+<div class="page" id="pg-module"><div class="pg-hdr"><div class="mod-hdr"><button class="mod-back" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><div class="mod-hdr-title" id="modTitle"></div><div class="mod-hdr-xp" id="modXP"></div></div></div><div class="mod-tabs" id="modTabs"></div><div class="page-inner" id="modContent"></div></div>
+<div class="page" id="pg-ranking"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">🏆 Ranking</div></div><div class="page-inner" id="rankContent"></div></div>
+<div class="page" id="pg-library"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📚 Sugerir Módulo</div></div><div class="page-inner" id="libraryContent"></div></div>
+<div class="page" id="pg-profile"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">👤 Perfil</div></div><div class="page-inner" id="profileContent"></div></div>
+<div class="bnav">
+<button class="bnav-btn on" data-pg="home" onclick="goPage('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Início</button>
+<button class="bnav-btn" data-pg="library" onclick="goPage('library')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Sugerir</button>
+<button class="bnav-btn" data-pg="ranking" onclick="goPage('ranking')"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Ranking</button>
+<button class="bnav-btn" data-pg="profile" onclick="goPage('profile')" style="position:relative"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil<span class="friend-badge" id="friendBadge" style="display:none">0</span></button>
+</div>
+</div>
+<script>
+const APP_VERSION='4.0-friends';
+
+/* ============================================================
+   🔥 FIREBASE CONFIG
+   ============================================================ */
+firebase.initializeApp({
+  apiKey: "AIzaSyCvoPA9OOC3o42ERViKs1IjRIOuwOon0UU",
+  authDomain: "medmind-pro.firebaseapp.com",
+  projectId: "medmind-pro",
+  storageBucket: "medmind-pro.firebasestorage.app",
+  messagingSenderId: "860950221382",
+  appId: "1:860950221382:web:4d31ac4cc0fb7d1a883047"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+let currentUser = null;
+let unsubRanking = null;
+let unsubFriendReqs = null;
+let pendingRequests = [];
+let friendsData = [];
+
+/* === Friend Code Generator === */
+function generateFriendCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<4;i++)code+=chars[Math.floor(Math.random()*chars.length)];return'MED-'+code;}
+
+async function ensureFriendCode(userId){
+try{const doc=await db.collection('users').doc(userId).get();
+if(doc.exists&&doc.data().friendCode)return doc.data().friendCode;
+let code=generateFriendCode();let exists=true;let attempts=0;
+while(exists&&attempts<10){const snap=await db.collection('users').where('friendCode','==',code).get();
+if(snap.empty){exists=false;}else{code=generateFriendCode();attempts++;}}
+await db.collection('users').doc(userId).set({friendCode:code},{merge:true});
+S.friendCode=code;return code;
+}catch(e){console.error('Erro ao gerar código:',e);return null;}}
+
+/* === Friend Search === */
+async function searchFriendByCode(code){
+code=code.toUpperCase().trim();
+if(!code.startsWith('MED-'))code='MED-'+code;
+try{const snap=await db.collection('users').where('friendCode','==',code).limit(1).get();
+if(snap.empty)return null;
+const doc=snap.docs[0];return{uid:doc.id,...doc.data()};
+}catch(e){console.error('Erro ao buscar:',e);return null;}}
+
+/* === Friend Requests === */
+async function sendFriendRequest(toUserId,toName){
+if(!currentUser)return;
+try{
+const existing=await db.collection('friendRequests')
+.where('from','==',currentUser.uid).where('to','==',toUserId).where('status','==','pending').get();
+if(!existing.empty){alert('⏳ Você já enviou uma solicitação para esta pessoa.');return;}
+const reverse=await db.collection('friendRequests')
+.where('from','==',toUserId).where('to','==',currentUser.uid).where('status','==','pending').get();
+if(!reverse.empty){await acceptFriendRequest(reverse.docs[0].id);return;}
+if(S.friends&&S.friends.includes(toUserId)){alert('✅ Vocês já são amigos!');return;}
+await db.collection('friendRequests').add({
+from:currentUser.uid,to:toUserId,
+fromName:S.name,fromPhoto:S.photoURL||'',
+toName:toName||'',
+status:'pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()
+});
+alert('✅ Solicitação enviada para '+toName+'!');
+closeFriendModal();
+}catch(e){console.error('Erro ao enviar solicitação:',e);alert('❌ Erro ao enviar solicitação');}}
+
+async function acceptFriendRequest(requestId){
+if(!currentUser)return;
+try{const reqDoc=await db.collection('friendRequests').doc(requestId).get();
+if(!reqDoc.exists)return;const req=reqDoc.data();
+await db.collection('friendRequests').doc(requestId).update({status:'accepted',respondedAt:firebase.firestore.FieldValue.serverTimestamp()});
+await db.collection('users').doc(currentUser.uid).update({friends:firebase.firestore.FieldValue.arrayUnion(req.from)});
+await db.collection('users').doc(req.from).update({friends:firebase.firestore.FieldValue.arrayUnion(currentUser.uid)});
+if(!S.friends)S.friends=[];
+if(!S.friends.includes(req.from))S.friends.push(req.from);
+saveState(S);
+alert('✅ Agora vocês são amigos!');
+loadFriendsData();renderProfile();
+}catch(e){console.error('Erro ao aceitar:',e);alert('❌ Erro ao aceitar solicitação');}}
+
+async function rejectFriendRequest(requestId){
+try{await db.collection('friendRequests').doc(requestId).update({status:'rejected',respondedAt:firebase.firestore.FieldValue.serverTimestamp()});
+}catch(e){console.error('Erro ao rejeitar:',e);}}
+
+async function removeFriend(friendId,friendName){
+if(!confirm('Remover '+friendName+' dos amigos?'))return;
+try{
+await db.collection('users').doc(currentUser.uid).update({friends:firebase.firestore.FieldValue.arrayRemove(friendId)});
+await db.collection('users').doc(friendId).update({friends:firebase.firestore.FieldValue.arrayRemove(currentUser.uid)});
+S.friends=(S.friends||[]).filter(f=>f!==friendId);
+saveState(S);
+loadFriendsData();renderProfile();
+}catch(e){console.error('Erro ao remover amigo:',e);alert('❌ Erro ao remover amigo');}}
+
+/* === Listen for Friend Requests === */
+function listenFriendRequests(){
+if(unsubFriendReqs){unsubFriendReqs();unsubFriendReqs=null;}
+if(!currentUser)return;
+unsubFriendReqs=db.collection('friendRequests')
+.where('to','==',currentUser.uid).where('status','==','pending')
+.onSnapshot(snap=>{
+pendingRequests=snap.docs.map(d=>({id:d.id,...d.data()}));
+updateFriendBadge();
+},e=>console.error('Friend req listener error:',e));}
+
+function updateFriendBadge(){
+const badge=document.getElementById('friendBadge');
+if(badge){if(pendingRequests.length>0){badge.textContent=pendingRequests.length;badge.style.display='flex';}else{badge.style.display='none';}}}
+
+/* === Load Friends Data === */
+async function loadFriendsData(){
+if(!S.friends||S.friends.length===0){friendsData=[];return;}
+try{friendsData=[];
+const chunks=[];for(let i=0;i<S.friends.length;i+=10){chunks.push(S.friends.slice(i,i+10));}
+for(const chunk of chunks){const snap=await db.collection('users').where(firebase.firestore.FieldPath.documentId(),'in',chunk).get();
+snap.docs.forEach(d=>friendsData.push({uid:d.id,...d.data()}));}
+friendsData.sort((a,b)=>(b.xp||0)-(a.xp||0));
+}catch(e){console.error('Erro ao carregar amigos:',e);}}
+
+/* === Friend Modal === */
+function openFriendModal(){
+const overlay=document.createElement('div');overlay.className='friend-modal-overlay';overlay.id='friendModalOverlay';
+overlay.onclick=function(e){if(e.target===overlay)closeFriendModal();};
+overlay.innerHTML=`<div class="friend-modal" style="position:relative">
+<button class="friend-modal-close" onclick="closeFriendModal()">✕</button>
+<h3>Adicionar Amigo</h3>
+<p style="font-size:12px;color:var(--dim);margin-bottom:16px">Digite o código do seu amigo</p>
+<div class="friend-search-wrap">
+<input class="friend-search-input" id="friendSearchInput" placeholder="MED-XXXX" maxlength="8" onkeypress="if(event.key==='Enter')doFriendSearch()" autofocus>
+<button class="friend-search-btn" onclick="doFriendSearch()">Buscar</button>
+</div>
+<div id="friendSearchResult"></div>
+</div>`;
+document.body.appendChild(overlay);
+setTimeout(()=>{const inp=document.getElementById('friendSearchInput');if(inp)inp.focus();},100);}
+
+function closeFriendModal(){const o=document.getElementById('friendModalOverlay');if(o)o.remove();}
+
+async function doFriendSearch(){
+const inp=document.getElementById('friendSearchInput');const res=document.getElementById('friendSearchResult');
+let code=inp.value.trim().toUpperCase();if(!code){res.innerHTML='<p style="color:var(--red);font-size:12px;text-align:center;margin-top:8px">Digite um código</p>';return;}
+if(!code.startsWith('MED-'))code='MED-'+code;
+res.innerHTML='<p style="color:var(--dim);font-size:12px;text-align:center;margin-top:8px">Buscando...</p>';
+const user=await searchFriendByCode(code);
+if(!user){res.innerHTML='<p style="color:var(--red);font-size:12px;text-align:center;margin-top:8px">❌ Nenhum usuário com este código</p>';return;}
+if(user.uid===currentUser.uid){res.innerHTML='<p style="color:var(--dim);font-size:12px;text-align:center;margin-top:8px">Esse é seu próprio código 😅</p>';return;}
+const isFriend=S.friends&&S.friends.includes(user.uid);
+const lv=getLevel(user.xp||0);
+res.innerHTML=`<div class="friend-result">
+<div class="friend-avatar">${lv.emoji}</div>
+<div class="friend-result-info"><div class="friend-result-name">${user.name||'Anônimo'}</div><div class="friend-result-xp">${user.xp||0} XP · ${lv.emoji} ${lv.name}</div></div>
+${isFriend?'<span class="friend-result-status">✅ Amigos</span>':
+`<button class="friend-result-btn" onclick="sendFriendRequest('${user.uid}','${(user.name||'Anônimo').replace(/'/g,"\\'")}')">Adicionar</button>`}
+</div>`;}
+
+async function shareFriendCode(){
+const code=S.friendCode;if(!code)return;
+const text='Estude comigo no MedMind! Meu código: '+code+'\nhttps://medmindplus.netlify.app';
+if(navigator.share){try{await navigator.share({title:'MedMind',text:text});return;}catch(e){}}
+try{await navigator.clipboard.writeText(code);alert('📋 Código copiado: '+code);}catch(e){prompt('Seu código de amigo:',code);}}
+
+/* === Firebase Auth === */
+let authIsLogin=true;
+function toggleAuthMode(ev){ev.preventDefault();authIsLogin=!authIsLogin;document.getElementById('authBtn').textContent=authIsLogin?'Entrar':'Criar Conta';document.getElementById('authToggleText').textContent=authIsLogin?'Não tem conta? ':'Já tem conta? ';document.getElementById('authToggleLink').textContent=authIsLogin?'Criar conta':'Entrar';document.getElementById('gateError').textContent='';document.getElementById('authPass').setAttribute('autocomplete',authIsLogin?'current-password':'new-password');}
+function doEmailAuth(){
+const email=document.getElementById('authEmail').value.trim();
+const pass=document.getElementById('authPass').value;
+const err=document.getElementById('gateError');
+if(!email){err.textContent='Digite seu e-mail';return;}
+if(pass.length<6){err.textContent='Senha deve ter no mínimo 6 caracteres';return;}
+err.textContent='';document.getElementById('authBtn').disabled=true;
+if(authIsLogin){
+auth.signInWithEmailAndPassword(email,pass).catch(e=>{
+err.textContent=fbErr(e.code);document.getElementById('authBtn').disabled=false;
+});
+}else{
+auth.createUserWithEmailAndPassword(email,pass).catch(e=>{
+err.textContent=fbErr(e.code);document.getElementById('authBtn').disabled=false;
+});
+}}
+function doGoogleAuth(){
+const provider=new firebase.auth.GoogleAuthProvider();
+auth.signInWithPopup(provider).catch(e=>{
+document.getElementById('gateError').textContent=fbErr(e.code);
+});}
+function fbErr(c){const m={'auth/email-already-in-use':'Este e-mail já está cadastrado','auth/invalid-email':'E-mail inválido','auth/weak-password':'Senha muito fraca (mínimo 6 caracteres)','auth/wrong-password':'Senha incorreta','auth/invalid-credential':'E-mail ou senha incorretos','auth/too-many-requests':'Muitas tentativas. Aguarde e tente novamente','auth/popup-closed-by-user':'Login cancelado','auth/network-request-failed':'Sem conexão. Verifique sua internet'};return m[c]||'Erro: '+c;}
+function doLogout(){if(confirm('Sair do MedMind?\nVocê precisará fazer login novamente.')){auth.signOut();}}
+function doResetPassword(ev){ev.preventDefault();const email=document.getElementById('authEmail').value.trim();const err=document.getElementById('gateError');if(!email){err.textContent='Digite seu e-mail acima para redefinir a senha';return;}auth.sendPasswordResetEmail(email).then(()=>{err.style.color='var(--green)';err.textContent='E-mail de redefinição enviado! Verifique sua caixa de entrada.';setTimeout(()=>{err.style.color='';},5000);}).catch(e=>{err.textContent=fbErr(e.code);});}
+function toggleEye(){const inp=document.getElementById('authPass');const isPass=inp.type==='password';inp.type=isPass?'text':'password';document.getElementById('eyeIcon').innerHTML=isPass?'<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>':'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';}
+
+/* === Auth State Observer === */
+auth.onAuthStateChanged(async user=>{
+if(user){
+currentUser=user;
+document.getElementById('loadingScreen').classList.remove('hidden');
+document.getElementById('loginGate').classList.add('hidden');
+document.getElementById('mainApp').style.display='none';
+await loadUserData(user);
+document.getElementById('loadingScreen').classList.add('hidden');
+document.getElementById('mainApp').style.display='flex';
+renderHome();
+}else{
+currentUser=null;
+document.getElementById('loginGate').classList.remove('hidden');
+document.getElementById('loadingScreen').classList.add('hidden');
+document.getElementById('mainApp').style.display='none';
+if(unsubRanking){unsubRanking();unsubRanking=null;}
+if(unsubFriendReqs){unsubFriendReqs();unsubFriendReqs=null;}
+pendingRequests=[];friendsData=[];
+}});
+
+/* === Firestore Sync === */
+async function loadUserData(user){
+try{const doc=await db.collection('users').doc(user.uid).get();
+if(doc.exists){S={...ds(),...doc.data()};if(!S.participants)S.participants=[];if(!S.quizHistory)S.quizHistory=[];if(!S.modules)S.modules={};if(!S.friends)S.friends=[];if(!S.savedModules)S.savedModules=[];if(!S.createdModules)S.createdModules=[];}
+else{S=ds();S.name=user.displayName||user.email.split('@')[0];S.email=user.email;await saveToCloud();}
+if(!S.friendCode)await ensureFriendCode(user.uid);
+await loadFriendsData();
+listenFriendRequests();
+}catch(e){console.error('Erro ao carregar dados:',e);S=ds();S.name=user.displayName||user.email.split('@')[0];}}
+async function saveToCloud(){
+if(!currentUser)return;
+try{const data={
+name:S.name,email:currentUser.email,xp:S.xp,streak:S.streak,bestStreak:S.bestStreak,
+modules:S.modules||{},quizHistory:(S.quizHistory||[]).slice(0,30),participants:S.participants||[],
+friends:S.friends||[],friendCode:S.friendCode||'',
+savedModules:S.savedModules||[],createdModules:S.createdModules||[],
+lastActive:firebase.firestore.FieldValue.serverTimestamp()
+};await db.collection('users').doc(currentUser.uid).set(data,{merge:true});}catch(e){console.error('Erro ao salvar:',e);}}
+
+const LEVELS=[{name:'Calouro',emoji:'🔬',xp:0},{name:'Acadêmico',emoji:'🧪',xp:200},{name:'Residente',emoji:'🩺',xp:500},{name:'Especialista',emoji:'⚕️',xp:1000},{name:'Mestre',emoji:'🧠',xp:2000}];
+const XP_CORRECT=15,XP_WRONG=2,XP_STREAK=5,XP_PERFECT=50;
+function getLevel(xp){let lv={...LEVELS[0],idx:0};for(let i=LEVELS.length-1;i>=0;i--)if(xp>=LEVELS[i].xp){lv={...LEVELS[i],idx:i};break;}lv.next=LEVELS[lv.idx+1]||null;return lv;}
+let saveTimer=null;
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('mm'));if(!raw)return ds();if(!raw.participants)raw.participants=[];if(!raw.quizHistory)raw.quizHistory=[];if(!raw.modules)raw.modules={};return raw;}catch(e){return ds();}}
+function saveState(s){localStorage.setItem('mm',JSON.stringify(s));localStorage.setItem('mm_version',APP_VERSION);if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveToCloud(),1500);}
+function ds(){return{name:'Estudante',xp:0,streak:0,bestStreak:0,quizHistory:[],modules:{},participants:[],friends:[],friendCode:'',photoURL:'',bio:'',savedModules:[],createdModules:[]};}
+let S=loadState();
+const PEERS=[{name:'Ana Clara',xp:820},{name:'Pedro H.',xp:650},{name:'Mariana S.',xp:1150},{name:'Lucas R.',xp:430},{name:'Isabela M.',xp:980},{name:'Gabriel F.',xp:310},{name:'Camila O.',xp:560}];
+
+const MODULES=[{
+id:'gametogenese',name:'Gametogênese e Embriologia',desc:'Espermatogênese, Oogênese, Fecundação, 1ª e 2ª Semana',icon:'🧬',color:'#6c5ce7',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'esp',label:'🔵 Espermatogênese'},{id:'ovo',label:'🩷 Oogênese'},{id:'fec',label:'🟢 Fecundação'},{id:'s1',label:'🌱 1ª Semana'},{id:'s2',label:'🟠 2ª Semana'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+esp:{theme:'esp',title:'Espermatogênese',flow:['Espermatogônia<br><small>(2n)</small>','Espermatócito I<br><small>(2n)</small>','Espermatócito II<br><small>(n)</small>','Espermátide<br><small>(n)</small>','Espermatozoide<br><small>(n)</small>'],cards:[
+{t:'Visão Geral',b:'Formação dos espermatozoides nos <strong>túbulos seminíferos</strong>. Inicia na <strong>puberdade</strong>, contínua. ~<strong>120 milhões/dia</strong>.'},
+{t:'Espermatogônias (2n)',b:'Células primordiais. Na puberdade, <strong>mitose</strong>. Uma parte → <strong>espermatócito I (2n)</strong>; outra mantém células-tronco.'},
+{t:'Espermatócito I (2n)',b:'<strong>Meiose I</strong> → 2 <strong>espermatócitos II (n)</strong>. Célula mais volumosa, mais tempo em divisão (prófase I).'},
+{t:'Espermatócito II (n)',b:'23 cromossomos. <strong>Meiose II</strong> rápida → 2 <strong>espermátides (n)</strong>.'},
+{t:'Espermátide (n)',b:'Redonda, sem flagelo. → <strong>espermiogênese</strong>. Sincício (pontes citoplasmáticas).'},
+{t:'Espermiogênese',b:'<strong>Núcleo condensa</strong>; <strong>acrossoma</strong> (Golgi); <strong>citoplasma eliminado</strong>; <strong>cauda</strong>. Mitocôndrias na peça intermediária.'},
+{t:'Espermatozoide (n)',b:'<strong>Cabeça</strong> (núcleo+acrossoma), <strong>peça intermediária</strong> (mitocôndrias), <strong>cauda</strong> (flagelo). Matura epidídimo, ~72h no trato feminino.'},
+]},
+ovo:{theme:'ovo',title:'Oogênese',flow:['Oogônia<br><small>(2n)</small>','Oócito I<br><small>(2n)</small>','Oócito II<br><small>(n)</small>','Óvulo<br><small>(n)</small>'],cards:[
+{t:'Visão Geral',b:'Inicia <strong>antes do nascimento</strong>. Nascimento: ~1-2 milhões. Adolescência: ~40.000. ~400 ovulam.'},
+{t:'Oogônias (2n)',b:'<strong>Mitose</strong> fetal. → <strong>oócitos primários</strong>, Meiose I parando na prófase I.'},
+{t:'Oócito I (2n)',b:'Parado <strong>prófase I</strong>. <strong>LH</strong> reinicia. → oócito II + 1º corpúsculo polar.'},
+{t:'Oócito II (n)',b:'Ovulado em <strong>Metáfase II</strong>. Completa só se <strong>fecundado</strong> → óvulo + 2º corpúsculo polar.'},
+{t:'Corpúsculos Polares',b:'Subproduto. Oogênese → <strong>1 óvulo</strong> (vs 4 espermatozoides).'},
+{t:'Foliculogênese',b:'Primordial→primário→secundário→terciário→<strong>Graaf</strong>. 20-30/ciclo, <strong>1 matura</strong>.'},
+{t:'Corpo Lúteo',b:'<strong>LH</strong>. <strong>Progesterona+estrogênio</strong>. Fecundação→gravídico (<strong>HCG</strong>). Sem→albicans.'},
+]},
+fec:{theme:'fec',title:'Fecundação',cards:[
+{t:'Visão Geral',b:'Espermatozoide(n)+ovócito(n)→<strong>zigoto(2n)</strong>. <strong>Tubas uterinas</strong> — monospermia.'},
+{t:'5 Etapas',b:'<strong>1.</strong>Corona radiata. <strong>2.</strong>Zona pelúcida. <strong>3.</strong>Penetração(acrossômica). <strong>4.</strong>Fusão membranas. <strong>5.</strong>Pronúcleos→cariogamia→zigoto.'},
+{t:'Resultados',b:'Completa <strong>Meiose II</strong>. Restaura <strong>2n=46</strong>. <strong>Sexo</strong>(XX/XY). <strong>Variabilidade</strong>. Ativação metabólica.'},
+]},
+s1:{theme:'s1',title:'1ª Semana',flow:['Zigoto<br><small>dia 0</small>','2 cél.<br><small>dia 1</small>','4 cél.<br><small>dia 2</small>','8 cél.<br><small>dia 3</small>','Mórula<br><small>dia 4</small>','Blastocisto<br><small>dia 5</small>'],cards:[
+{t:'Visão Geral',b:'<strong>Clivagens</strong> na tuba. Blastômeros menores. <strong>Dia 6-7:</strong> implantação.'},
+{t:'Clivagens',b:'Mitoses rápidas. Volume ≈ zigoto. <strong>Sem diferenciação</strong>.'},
+{t:'Mórula (dia 4)',b:'12-16 blastômeros. <strong>Cavidade uterina</strong>. E-caderina.'},
+{t:'Blastocisto (dia 5)',b:'<strong>Embrioblasto</strong>(embrião), <strong>Trofoblasto</strong>(placenta), <strong>Blastocele</strong>. Zona pelúcida degenera.'},
+{t:'Células-tronco',b:'<strong>Totipotentes</strong>(mórula): tudo. <strong>Pluripotentes</strong>(embrioblasto): tecidos. <strong>Multipotentes</strong>(adultas): tecido de origem.'},
+]},
+s2:{theme:'s2',title:'2ª Semana — Regra dos 2',cards:[
+{t:'Visão Geral',b:'"Em dupla": <strong>2 camadas</strong> trofoblasto, <strong>2 camadas</strong> embrioblasto, <strong>2 cavidades</strong>, <strong>2 vesículas</strong>. Dia 14: <strong>placa precordal</strong>.'},
+{t:'Cito+Sinciciotrofoblasto',b:'<strong>Citotrofoblasto:</strong> interna. <strong>Sinciciotrofoblasto:</strong> externa, invasiva → lacunas com sangue materno.'},
+{t:'Disco Bilaminar',b:'<strong>Epiblasto:</strong> superior→embrião. <strong>Hipoblasto:</strong> inferior→endoderma primário.'},
+{t:'2 Cavidades',b:'<strong>Amniótica:</strong> acima epiblasto. <strong>Exocelômica:</strong> abaixo hipoblasto.'},
+{t:'Implantação Ectópica',b:'<strong>Tubária</strong>(~98%). Ovariana, abdominal, cervical. Emergência.'},
+]},
+},
+quiz:{
+obj:[
+{q:"Onde ocorre a espermatogênese?",opts:["Epidídimo","Túbulos seminíferos","Próstata","Vesícula seminal"],ans:1,tag:"Espermatogênese"},
+{q:"Qual célula sofre Meiose I?",opts:["Espermatogônia","Espermátide","Espermatócito I","Espermatócito II"],ans:2,tag:"Espermatogênese"},
+{q:"Espermiogênese transforma:",opts:["Espermatogônia→espermatócito I","Espermatócito I→II","Espermátide→espermatozoide","Espermatócito II→espermátide"],ans:2,tag:"Espermatogênese"},
+{q:"Acrossoma vem de qual organela?",opts:["RE","Mitocôndria","Complexo de Golgi","Lisossomo"],ans:2,tag:"Espermatogênese"},
+{q:"Quantos espermatozoides de 1 espermatogônia?",opts:["1","2","3","4"],ans:3,tag:"Espermatogênese"},
+{q:"Oócito I parado em qual fase?",opts:["Metáfase I","Prófase I","Anáfase I","Metáfase II"],ans:1,tag:"Oogênese"},
+{q:"Quantos óvulos de 1 oócito I?",opts:["4","2","3","1"],ans:3,tag:"Oogênese"},
+{q:"Oócito II ovulado em:",opts:["Prófase II","Metáfase II","Anáfase II","Telófase II"],ans:1,tag:"Oogênese"},
+{q:"O que completa Meiose II do oócito II?",opts:["FSH","LH","Fecundação","Ovulação"],ans:2,tag:"Oogênese"},
+{q:"Corpo lúteo gravídico mantido por:",opts:["FSH","LH","HCG","Progesterona"],ans:2,tag:"Oogênese"},
+{q:"Fecundação ocorre na:",opts:["Útero","Ovário","Tuba uterina","Colo do útero"],ans:2,tag:"Fecundação"},
+{q:"Mórula no dia:",opts:["2","3","4","6"],ans:2,tag:"1ª Semana"},
+{q:"Blastocisto é formado por:",opts:["Embrioblasto+trofoblasto+blastocele","Epiblasto+hipoblasto+âmnio","Mórula+zona pelúcida+corona","Sincício+citotrofoblasto+disco"],ans:0,tag:"1ª Semana"},
+{q:"Totipotentes até:",opts:["Blastocisto","Mórula(16 cél.)","Gástrula","Nêurula"],ans:1,tag:"1ª Semana"},
+{q:"Regra dos 2 é da:",opts:["1ª semana","2ª semana","3ª semana","4ª semana"],ans:1,tag:"2ª Semana"},
+{q:"Sinciciotrofoblasto:",opts:["Forma disco bilaminar","Produz líquido amniótico","Invade endométrio","Origina corpo lúteo"],ans:2,tag:"2ª Semana"},
+{q:"Ectópica mais comum:",opts:["Ovário","Tuba uterina","Cavidade abdominal","Colo"],ans:1,tag:"2ª Semana"},
+{q:"Epiblasto dará origem a:",opts:["Placenta","Embrião","Vesícula umbilical","Corpo lúteo"],ans:1,tag:"2ª Semana"},
+],
+esc:[
+{q:"Descreva espermiogênese e estrutura do espermatozoide.",tag:"Espermatogênese",ans:"(1) Núcleo condensa. (2) Acrossoma (Golgi). (3) Citoplasma eliminado. (4) Cauda. Mitocôndrias na peça intermediária. Espermatozoide: cabeça+peça intermediária+cauda."},
+{q:"Compare espermatogênese e oogênese.",tag:"Comparação",ans:"Espermatogênese: puberdade, contínua, 4 gametas. Oogênese: vida fetal, pausas (prófase I e metáfase II), 1 óvulo + 3 corpúsculos polares."},
+{q:"Explique a Regra dos 2.",tag:"2ª Semana",ans:"2 camadas trofoblasto, 2 camadas embrioblasto (disco bilaminar), 2 cavidades, 2 vesículas umbilicais. Dia 14: placa precordal."},
+],
+pra:[
+{q:"Identifique: célula 2n maior da linhagem, prófase I prolongada.",desc:"Camada intermediária do epitélio seminífero.",ans:"<strong>Espermatócito I</strong> — Meiose I → 2 espermatócitos II.",tag:"Espermatogênese"},
+{q:"Identifique: estrutura esférica com antro no ovário.",desc:"Folículo grande, cavidade líquida, oócito no cumulus.",ans:"<strong>Folículo de Graaf</strong> — último estágio da foliculogênese.",tag:"Oogênese"},
+{q:"Identifique: embrião dia 5 com cavidade e massa celular.",desc:"Blastocele + embrioblasto + trofoblasto.",ans:"<strong>Blastocisto</strong> — Embrioblasto(embrião) + Trofoblasto(placenta) + Blastocele.",tag:"1ª Semana"},
+]},
+resumoHTML:'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="res-title" style="margin:0;flex:1">Gametogênese e Desenvolvimento Embrionário</div><button onclick="downloadResumo()" style="background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap">⬇️ Download</button></div><div class="res-sub">Espermatogênese, Oogênese | 1ª e 2ª Semana | Prof.ª Dra. Ludmila Lima-Silveira<br>Universidade de Rio Verde — Embriologia, 2025</div><div class="res-h1">1. Sistema Reprodutor Humano</div><p>Os dois componentes básicos do sistema reprodutor são as gônadas e o trato reprodutor. As gônadas (testículos e ovários) desempenham função endócrina, regulada pelo eixo hipotalâmico-hipofisário-gonadal.</p><div class="res-h2">Sistema Reprodutor Masculino</div><p><strong>Testículos</strong> — produção de espermatozoides (~120 milhões/dia)<br><strong>Epidídimo</strong> — maturação e mobilidade<br><strong>Canal Deferente</strong> — estocagem<br><strong>Vesículas Seminais</strong> — secreção nutritiva<br><strong>Próstata</strong> — secreção alcalina<br><strong>Uretra</strong> — passagem final</p><div class="res-h2">Sistema Reprodutor Feminino</div><p><strong>Ovários</strong> — produção de ovócitos e hormônios<br><strong>Tubas uterinas</strong> — captação e fecundação<br><strong>Útero</strong> — implantação e desenvolvimento<br><strong>Vagina</strong> — canal do parto</p><div class="res-h1">2. Espermatogênese</div><p>Processo contínuo de formação de espermatozoides nos túbulos seminíferos. Inicia na puberdade e continua durante toda a vida.</p><div class="res-h2">Etapas</div><p><strong>Espermatogônias (2n)</strong> — células primordiais que proliferam por mitose na puberdade<br><strong>Espermatócito I (2n)</strong> — passa por Meiose I<br><strong>Espermatócitos II (n)</strong> — 2 células haplóides após Meiose I<br><strong>Espermátides (n)</strong> — 4 células haplóides após Meiose II<br><strong>Espermatozoides (n)</strong> — formados após Espermiogênese</p><div class="res-h2">Espermiogênese</div><p>Transformação da espermátide em espermatozoide maduro:</p><p>• Núcleo se condensa<br>• Acrossoma se forma (Golgi) — enzimas para penetrar ovócito<br>• Citoplasma é eliminado<br>• Cauda se desenvolve — proporciona motilidade<br>• Mitocôndrias na peça intermediária — fornecem energia</p><div class="res-h1">3. Oogênese e Foliculogênese</div><p>Processo de formação dos ovócitos maduros. Inicia-se antes do nascimento (período fetal) e completa após puberdade até menopausa.</p><div class="res-h2">Etapas</div><p><strong>Oogônias (2n)</strong> — proliferam por mitose durante vida fetal<br><strong>Ovócito I (2n)</strong> — parado na Prófase I (desde nascimento até ovulação)<br><strong>Ovócito II (n)</strong> — formado após Meiose I; ovulado em Metáfase II<br><strong>Óvulo (n)</strong> — formado se houver fecundação</p><p><strong>Quantidades:</strong> Nascimento: ~1-2 milhões · Adolescência: ~40.000 · Vida reprodutiva: ~400 ovulam</p><div class="res-h2">Foliculogênese</div><p><strong>Primordial</strong> → <strong>Primário</strong> → <strong>Secundário</strong> → <strong>Terciário (antral)</strong> → <strong>Maduro (Graaf)</strong></p><p>A cada ciclo: 20-30 folículos recrutados, mas apenas <strong>1 atinge maturidade</strong>.</p><div class="res-h2">Corpo Lúteo</div><p><strong>Formação:</strong> pós-ovulação sob ação do LH<br><strong>Função:</strong> produz progesterona e estrogênio<br><strong>Com fecundação:</strong> torna-se gravídico (mantido por HCG)<br><strong>Sem fecundação:</strong> degenera em 10-12 dias → corpo albicans</p><div class="res-h1">4. Espermatogênese × Oogênese — Comparativo</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:300px"><tr style="background:var(--accent-bg)"><th style="padding:8px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Característica</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Espermatogênese</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Oogênese</th></tr><tr><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Gônada</strong></td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Testículo</td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Ovário</td></tr><tr><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Início</strong></td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Puberdade</td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Vida fetal</td></tr><tr><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Término</strong></td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Contínuo (vida toda)</td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Menopausa</td></tr><tr><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Tamanho</strong></td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Pequeno (~50 µm)</td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Grande (~120 µm)</td></tr><tr><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Gametas</strong></td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">4 espermatozoides</td><td style="padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">1 óvulo + 3 polares</td></tr><tr><td style="padding:7px 8px;color:var(--text)"><strong>Tempo de vida</strong></td><td style="padding:7px 8px;color:var(--dim)">~72h no trato feminino</td><td style="padding:7px 8px;color:var(--dim)">~12-24h pós-ovulação</td></tr></table></div><div class="res-h1">5. Fecundação</div><p>Fusão do espermatozoide (n) com ovócito (n) → <strong>zigoto (2n)</strong>. Ocorre nas <strong>tubas uterinas</strong> — fenômeno de <strong>monospermia</strong>.</p><div class="res-h2">5 Etapas</div><p>1. Passagem pela corona radiata<br>2. Contato e ligação à zona pelúcida<br>3. Penetração na zona pelúcida — reação acrossômica<br>4. Fusão das membranas plasmáticas<br>5. Formação e fusão dos pronúcleos (cariogamia) → zigoto</p><div class="res-h2">Resultados</div><p>• Estimula conclusão da Meiose II<br>• Restaura número diplóide (2n = 46)<br>• Determina sexo cromossômico (XX/XY)<br>• Promove variabilidade genética<br>• Ativa metabolismo do ovócito</p><div class="res-h1">6. Primeira Semana de Desenvolvimento</div><p>Após fecundação, zigoto sofre clivagens sucessivas enquanto migra pela tuba até o útero.</p><div class="res-h2">Cronograma</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:280px"><tr style="background:var(--accent-bg)"><th style="padding:6px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Dia</th><th style="padding:6px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Estrutura</th><th style="padding:6px;text-align:left;border-bottom:1px solid var(--accent-border);color:var(--accent2);font-weight:600">Evento</th></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 0</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Zigoto (pró-nuclear)</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Fecundação nas tubas</td></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 1</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">2 células</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">1ª clivagem</td></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 2</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">4 células</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">2ª clivagem</td></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 3</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">8 células</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">3ª clivagem</td></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 4</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Mórula</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Entra no útero</td></tr><tr><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dia 5</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Blastocisto</td><td style="padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Zona degenera</td></tr><tr><td style="padding:5px 6px;color:var(--text)">Dia 6-7</td><td style="padding:5px 6px;color:var(--dim)">Blastocisto implantado</td><td style="padding:5px 6px;color:var(--dim)">Implantação no endométrio</td></tr></table></div><div class="res-h2">Estrutura do Blastocisto</div><p><strong>Embrioblasto</strong> (massa interna) — dará origem ao embrião<br><strong>Trofoblasto</strong> (massa externa) — dará origem à placenta<br><strong>Blastocele</strong> — cavidade interna<br><strong>Zona pelúcida</strong> — degenera permitindo implantação</p><div class="res-h2">Células-Tronco</div><p><strong>Totipotentes</strong> (mórula ≤16): ilimitadas — todos os tecidos + placenta<br><strong>Pluripotentes</strong> (embrioblasto): todos os tecidos exceto anexos<br><strong>Multipotentes</strong> (adultas): limitadas — tecido de origem</p><div class="res-h1">7. Segunda Semana — Regra dos 2</div><p>Implantação completa e formação de estruturas bilaminares. Quase tudo ocorre "em dupla".</p><div class="res-h2">Estruturas Duplas</div><p><strong>2 Camadas Trofoblasto:</strong> Citotrofoblasto (interna) + Sinciciotrofoblasto (externa, invasiva)<br><strong>2 Camadas Embrioblasto:</strong> Epiblasto (superior→embrião) + Hipoblasto (inferior→endoderma)<br><strong>2 Cavidades:</strong> Amniótica (acima) + Exocelômica (abaixo)<br><strong>2 Vesículas Umbilicais:</strong> Primitiva (dia ~10) + Secundária (dia ~13-14)</p><div class="res-h2">Implantação Ectópica</div><p>Implantação fora da cavidade uterina:</p><p>• Tubária (~98% dos casos) — nas trompas de Falópio<br>• Ovariana — no ovário<br>• Abdominal — cavidade peritoneal<br>• Cervical — colo do útero</p><div class="res-footer">Resumo elaborado para revisão de prova · Embriologia 2025 · Prof.ª Dra. Ludmila Lima-Silveira</div>',
+},
+{
+id:'gastrulacao',name:'3ª Semana — Gastrulação',desc:'Disco trilaminar, linha primitiva, notocorda, neurulação, somitos',icon:'🧫',color:'#d35400',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'gast',label:'🔶 Gastrulação'},{id:'noto',label:'🔵 Notocorda'},{id:'neur',label:'🟣 Neurulação'},{id:'meso',label:'🟢 Mesoderma'},{id:'folh',label:'📋 Folhetos'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+gast:{theme:'gast',title:'Gastrulação e Linha Primitiva',flow:['Disco<br><small>bilaminar</small>','Linha<br><small>primitiva</small>','Nó<br><small>primitivo</small>','Migração<br><small>celular</small>','Disco<br><small>trilaminar</small>'],cards:[
+{t:'Visão Geral',b:'A 3ª semana é marcada pela <strong>gastrulação</strong>: transformação do disco embrionário bilaminar (epiblasto+hipoblasto) em <strong>trilaminar</strong> (ectoderma, mesoderma, endoderma). Estabelece os 3 folhetos germinativos e os eixos do corpo.'},
+{t:'Linha Primitiva',b:'No <strong>dia 15</strong>, surge um espessamento do epiblasto na extremidade <strong>caudal</strong> do disco embrionário → <strong>linha primitiva</strong>. Células migram para o centro formando a linha. Contém o <strong>sulco primitivo</strong> (depressão ao longo da linha).'},
+{t:'Nó e Fosseta Primitivos',b:'Na extremidade cranial da linha primitiva forma-se o <strong>nó primitivo</strong> (elevação arredondada). No centro do nó: <strong>fosseta primitiva</strong> (pequena depressão). O nó primitivo é o organizador principal da gastrulação.'},
+{t:'Eixos do Corpo',b:'A linha primitiva determina: <strong>Eixo cefalocaudal</strong> (cranial-caudal), <strong>superfícies dorsal e ventral</strong>, e <strong>lados direito e esquerdo</strong>. Epiblasto = dorsal. Hipoblasto = ventral.'},
+{t:'Formação das 3 Camadas',b:'Células do epiblasto migram pelo sulco primitivo (invaginação): 1) Algumas <strong>deslocam o hipoblasto</strong> → formam o <strong>endoderma embrionário</strong>. 2) Outras se organizam entre epiblasto e endoderma → <strong>mesoderma intraembrionário</strong>. 3) O epiblasto restante → <strong>ectoderma embrionário</strong>.'},
+{t:'Membrana Bucofaríngea',b:'Região cranial onde ectoderma e endoderma estão firmemente aderidos <strong>sem mesoderma entre eles</strong>. Futura boca. A <strong>membrana cloacal</strong> (caudal) é equivalente — futuro ânus.'},
+]},
+noto:{theme:'noto',title:'Notocorda',cards:[
+{t:'Processo Notocordal',b:'Células do nó primitivo migram cranialmente formando o <strong>processo notocordal</strong> — tubo de células mesenquimais que se estende do nó primitivo até a <strong>placa pré-cordal</strong>. Cresce entre ectoderma e endoderma.'},
+{t:'Placa e Canal Notocordal',b:'O assoalho do processo notocordal funde-se com o endoderma → forma a <strong>placa notocordal</strong>. Esta se dobra formando a <strong>notocorda definitiva</strong> — bastão sólido de células. O <strong>canal neuroentérico</strong> comunica temporariamente cavidade amniótica com vesícula umbilical.'},
+{t:'Funções da Notocorda',b:'<strong>1.</strong> Define o eixo primitivo do embrião. <strong>2.</strong> Base para o esqueleto axial. <strong>3.</strong> Induz o ectoderma acima a formar a <strong>placa neural</strong> (neurulação). <strong>4.</strong> Nos adultos, persiste como <strong>núcleo pulposo</strong> dos discos intervertebrais.'},
+{t:'Alantoide',b:'Evaginação do saco vitelino (endoderma) que se projeta no pedículo de conexão. Papel na <strong>formação dos vasos sanguíneos</strong> e desenvolvimento da bexiga urinária. Em humanos é rudimentar.'},
+]},
+neur:{theme:'neur',title:'Neurulação',flow:['Placa<br><small>neural</small>','Sulco<br><small>neural</small>','Pregas<br><small>neurais</small>','Tubo<br><small>neural</small>','Crista<br><small>neural</small>'],cards:[
+{t:'Placa Neural (dia 18)',b:'A notocorda induz o ectoderma acima a espessar-se, formando a <strong>placa neural</strong> — primórdio do sistema nervoso. Aparece como espessamento do ectoderma na região dorsal.'},
+{t:'Sulco e Pregas Neurais',b:'Um <strong>sulco neural</strong> longitudinal se desenvolve na linha média da placa neural. As bordas da placa se elevam formando as <strong>pregas neurais</strong> (margeiam o sulco).'},
+{t:'Tubo Neural (dia 21-28)',b:'As pregas neurais se aproximam na linha média e <strong>se fundem</strong>, formando o <strong>tubo neural</strong> — primórdio do <strong>SNC</strong> (encéfalo + medula espinhal). Fusão começa na região cervical e se estende cranial e caudalmente. Início na 3ª semana, completa na 4ª.'},
+{t:'Crista Neural',b:'Células <strong>neuroectodérmicas</strong> que se separam das pregas neurais durante a fusão. Localizam-se entre o ectoderma superficial e o tubo neural. Dão origem a: gânglios sensoriais, melanócitos, células de Schwann, medula adrenal, ossos da face.'},
+{t:'Defeitos do Tubo Neural',b:'Falha no fechamento → <strong>anencefalia</strong> (cranial) ou <strong>espinha bífida</strong> (caudal). Prevenção: suplementação de <strong>ácido fólico</strong> antes e durante a gestação. Detecção: dosagem de alfa-fetoproteína (AFP) elevada no soro materno.'},
+]},
+meso:{theme:'meso',title:'Diferenciação do Mesoderma',flow:['Mesoderma<br><small>paraxial</small>','Mesoderma<br><small>intermediário</small>','Mesoderma<br><small>lateral</small>'],cards:[
+{t:'Mesoderma Paraxial — Somitos',b:'Porção mais próxima da notocorda/tubo neural. Organiza-se em blocos segmentados: <strong>somitos</strong> (a partir do dia 20). ~42-44 pares ao final. Dão origem a: <strong>ossos e cartilagens</strong> (esclerótomo), <strong>músculos esqueléticos</strong> (miótomo), <strong>derme dorsal</strong> (dermátomo).'},
+{t:'Mesoderma Intermediário',b:'Faixa entre paraxial e lateral. Origina o sistema <strong>urogenital</strong>: rins (pronefro, mesonefro, metanefro), ureteres, gônadas e ductos genitais.'},
+{t:'Mesoderma Lateral',b:'Porção mais afastada. Divide-se em 2 lâminas: <strong>Somatopleura</strong> (mesoderma somático + ectoderma) → parede do corpo. <strong>Esplancnopleura</strong> (mesoderma esplâncnico + endoderma) → parede do intestino. O espaço entre elas: <strong>celoma intraembrionário</strong> (futuras cavidades pleural, pericárdica e peritoneal).'},
+{t:'Início da Cardiogênese',b:'No final da 3ª semana, a <strong>área cardiogênica</strong> (cranial) começa a formar os tubos cardíacos primitivos. Dia 20: tubos cardíacos bilaterais. Dia 21-22: fusão → tubo cardíaco único. O coração começa a bater no <strong>dia 22-23</strong>. Primeiro órgão funcional do embrião.'},
+{t:'Vilosidades Coriônicas',b:'Antes do final da 3ª semana, capilares se desenvolvem nas vilosidades coriônicas → <strong>vilosidades terciárias</strong>. Início da circulação uteroplacentária primitiva. Sangue materno (espaço interviloso) e fetal (capilares das vilosidades) não se misturam.'},
+]},
+folh:{theme:'folh',title:'Destino dos Folhetos Embrionários',cards:[
+{t:'Ectoderma',b:'Camada externa. Origina: <strong>epiderme</strong> e anexos (pelos, unhas, glândulas), <strong>sistema nervoso</strong> (SNC + SNP via crista neural), esmalte dentário, cristalino do olho, orelha interna, hipófise anterior (adenohipófise).'},
+{t:'Mesoderma',b:'Camada intermediária. Origina: <strong>derme</strong>, ossos, cartilagens, <strong>músculos</strong> (esquelético, liso, cardíaco), <strong>sistema circulatório</strong> (coração, vasos, sangue), <strong>sistema urogenital</strong> (rins, gônadas), serosas (pleura, pericárdio, peritônio), baço, córtex adrenal.'},
+{t:'Endoderma',b:'Camada interna. Origina: revestimento do <strong>trato digestório</strong> (epitélio), <strong>sistema respiratório</strong> (traqueia, brônquios, pulmões), fígado, pâncreas, tireoide, paratireoides, timo, revestimento da bexiga e uretra.'},
+{t:'Resumo: Epiblasto é a Fonte',b:'O <strong>epiblasto</strong> é a fonte de todos os 3 folhetos germinativos. Ectoderma do âmnio, ectoderma embrionário, mesoderma embrionário, endoderma embrionário e processo notocordal — todos derivam do epiblasto. O hipoblasto origina o endoderma da vesícula umbilical e mesoderma extraembrionário.'},
+]},
+},
+quiz:{
+obj:[
+{q:"O principal evento da 3ª semana é:",opts:["Implantação","Gastrulação","Neurulação","Organogênese"],ans:1,tag:"Gastrulação"},
+{q:"A gastrulação transforma o disco bilaminar em:",opts:["Unilaminar","Bilaminar","Trilaminar","Quadrilaminar"],ans:2,tag:"Gastrulação"},
+{q:"A linha primitiva surge na extremidade:",opts:["Cranial","Lateral","Caudal","Dorsal"],ans:2,tag:"Gastrulação"},
+{q:"As 3 camadas germinativas são:",opts:["Epiblasto, hipoblasto, trofoblasto","Ectoderma, mesoderma, endoderma","Citotrofoblasto, sincício, âmnio","Somitos, notocorda, crista neural"],ans:1,tag:"Gastrulação"},
+{q:"Qual estrutura induz a formação da placa neural?",opts:["Linha primitiva","Mesoderma lateral","Notocorda","Endoderma"],ans:2,tag:"Notocorda"},
+{q:"A notocorda persiste no adulto como:",opts:["Medula espinhal","Núcleo pulposo dos discos intervertebrais","Vértebras","Meninges"],ans:1,tag:"Notocorda"},
+{q:"O tubo neural é primórdio do:",opts:["Sistema digestório","Sistema nervoso central","Sistema circulatório","Sistema urinário"],ans:1,tag:"Neurulação"},
+{q:"A crista neural origina:",opts:["Músculos esqueléticos","Epitélio intestinal","Melanócitos e gânglios sensoriais","Ossos longos"],ans:2,tag:"Neurulação"},
+{q:"Defeitos do fechamento do tubo neural incluem:",opts:["Teratoma sacrococcígeo","Anencefalia e espinha bífida","Situs inversus","Fenda palatina"],ans:1,tag:"Neurulação"},
+{q:"Os somitos derivam do mesoderma:",opts:["Lateral","Intermediário","Paraxial","Extraembrionário"],ans:2,tag:"Mesoderma"},
+{q:"Os somitos dão origem a:",opts:["Sistema nervoso","Ossos do tronco, músculos e derme dorsal","Epitélio intestinal","Fígado e pâncreas"],ans:1,tag:"Mesoderma"},
+{q:"O mesoderma intermediário origina:",opts:["Coração","Sistema urogenital","Epiderme","Pulmões"],ans:1,tag:"Mesoderma"},
+{q:"O celoma intraembrionário dará origem a:",opts:["Cavidade amniótica","Cavidades pleural, pericárdica e peritoneal","Blastocele","Canal neural"],ans:1,tag:"Mesoderma"},
+{q:"O coração começa a bater no dia:",opts:["15","18","22-23","28"],ans:2,tag:"Cardiogênese"},
+{q:"O ectoderma origina:",opts:["Músculos e ossos","Sistema nervoso e epiderme","Fígado e pâncreas","Rins e gônadas"],ans:1,tag:"Folhetos"},
+{q:"O endoderma origina:",opts:["Epiderme","Músculos esqueléticos","Revestimento do trato digestório e respiratório","Derme"],ans:2,tag:"Folhetos"},
+{q:"Todos os 3 folhetos germinativos derivam do:",opts:["Hipoblasto","Trofoblasto","Epiblasto","Sinciciotrofoblasto"],ans:2,tag:"Folhetos"},
+{q:"Prevenção de defeitos do tubo neural:",opts:["Vitamina C","Ácido fólico","Ferro","Cálcio"],ans:1,tag:"Neurulação"},
+],
+esc:[
+{q:"Descreva o processo de gastrulação.",tag:"Gastrulação",ans:"Dia 15: formação da linha primitiva na extremidade caudal do epiblasto. Células do epiblasto migram pelo sulco primitivo (invaginação). Algumas deslocam o hipoblasto → endoderma embrionário. Outras se posicionam entre as camadas → mesoderma intraembrionário. Epiblasto restante → ectoderma. Resultado: disco trilaminar."},
+{q:"Explique a neurulação e seus defeitos.",tag:"Neurulação",ans:"Notocorda induz ectoderma → placa neural (dia 18). Sulco neural se forma na linha média, margeado pelas pregas neurais. Pregas se fundem → tubo neural (primórdio do SNC). Células da crista neural se separam. Defeitos: anencefalia (falha cranial) e espinha bífida (falha caudal). Prevenção: ácido fólico."},
+{q:"Descreva o destino dos 3 folhetos germinativos.",tag:"Folhetos",ans:"Ectoderma: epiderme, SN, cristalino, esmalte. Mesoderma: derme, ossos, músculos, coração, vasos, sangue, rins, gônadas, serosas. Endoderma: epitélio digestório e respiratório, fígado, pâncreas, tireoide, bexiga. Todos derivam do epiblasto."},
+],
+pra:[
+{q:"Embrião com 16 dias — identifique a estrutura na extremidade caudal do epiblasto com sulco central.",desc:"Vista dorsal do disco embrionário bilaminar, espessamento linear caudal.",ans:"<strong>Linha primitiva</strong> com sulco primitivo. Na extremidade cranial da linha: nó primitivo com fosseta primitiva. Marca o início da gastrulação e define os eixos do corpo.",tag:"Gastrulação"},
+{q:"Gestante sem suplementação de ácido fólico. USG mostra ausência de calota craniana fetal.",desc:"Primeiro trimestre, alfafetoproteína elevada.",ans:"<strong>Anencefalia</strong> — defeito do fechamento do tubo neural na extremidade cranial. Incompatível com vida. Prevenção: ácido fólico 400-800µg/dia antes e durante gestação.",tag:"Neurulação"},
+{q:"Corte transversal do embrião mostra 3 camadas e blocos segmentados bilaterais ao tubo neural.",desc:"Embrião ~21 dias, corte transversal.",ans:"<strong>Somitos</strong> (mesoderma paraxial). Blocos segmentados que darão origem a esclerótomo (ossos/cartilagens), miótomo (músculos esqueléticos) e dermátomo (derme dorsal). Cerca de 42-44 pares ao total.",tag:"Mesoderma"},
+]},
+resumoHTML:'<div class="res-title">3ª Semana — Gastrulação</div><div class="res-sub">Disco Trilaminar, Linha Primitiva, Notocorda, Neurulação, Somitos<br>Prof.ª Dra. Ludmila Lima-Silveira · Embriologia · UniRV</div><div class="res-h1">1. Gastrulação — Visão Geral</div><p>O principal evento da 3ª semana é a <strong>gastrulação</strong>: transformação do disco bilaminar (epiblasto + hipoblasto) em disco <strong>trilaminar</strong> com 3 folhetos germinativos (ectoderma, mesoderma e endoderma). O epiblasto é a fonte de todas as 3 camadas.</p><div class="res-h2">Linha Primitiva (dia 15)</div><p>Espessamento do epiblasto na extremidade <strong>caudal</strong>. Contém: <strong>sulco primitivo</strong> (depressão central), <strong>nó primitivo</strong> (extremidade cranial) e <strong>fosseta primitiva</strong> (depressão no nó). Define os eixos do corpo: cefalocaudal, dorsoventral e lateralidade.</p><div class="res-h2">Formação das 3 Camadas</div><p>Células do epiblasto invaginam pelo sulco primitivo: algumas deslocam o hipoblasto → <strong>endoderma embrionário</strong>; outras formam o <strong>mesoderma intraembrionário</strong> entre as camadas; epiblasto restante → <strong>ectoderma embrionário</strong>.</p><div class="res-h1">2. Notocorda</div><p>Células do nó primitivo migram cranialmente → <strong>processo notocordal</strong> (do nó até a placa pré-cordal). Transforma-se na <strong>notocorda definitiva</strong> — bastão sólido que define o eixo do embrião, serve de base para o esqueleto axial e <strong>induz a formação da placa neural</strong>. No adulto: persiste como <strong>núcleo pulposo</strong> dos discos intervertebrais.</p><div class="res-h1">3. Neurulação</div><p><strong>Dia 18</strong>: notocorda induz ectoderma → <strong>placa neural</strong> (espessamento). <strong>Sulco neural</strong> se forma na linha média, margeado pelas <strong>pregas neurais</strong>. As pregas se aproximam e se fundem → <strong>tubo neural</strong> (primórdio do SNC). Fusão começa na região cervical (dia ~21) e se estende. Completa na 4ª semana.</p><div class="res-h2">Crista Neural</div><p>Células neuroectodérmicas que se separam das pregas neurais. Migram extensivamente. Originam: gânglios sensoriais e autônomos, melanócitos, células de Schwann, medula adrenal, ossos da face.</p><div class="res-h2">Defeitos do Tubo Neural</div><p><strong>Anencefalia</strong> (falha cranial): incompatível com vida. <strong>Espinha bífida</strong> (falha caudal): graus variáveis. Prevenção: <strong>ácido fólico</strong> (400-800 µg/dia). Detecção: AFP elevada no soro materno.</p><div class="res-h1">4. Diferenciação do Mesoderma</div><p><strong>Paraxial</strong> → somitos (ossos, cartilagens, músculos esqueléticos, derme dorsal). <strong>Intermediário</strong> → sistema urogenital. <strong>Lateral</strong> → divide-se em somatopleura e esplancnopleura; celoma intraembrionário (futuras cavidades serosas).</p><div class="res-h2">Cardiogênese</div><p>Dia 20: tubos cardíacos. Dia 21-22: fusão. <strong>Dia 22-23: coração começa a bater</strong> — primeiro órgão funcional. Vilosidades coriônicas terciárias se formam → início da circulação uteroplacentária.</p><div class="res-h1">5. Destino dos Folhetos</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:300px"><tr style="background:rgba(211,84,0,.12)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(211,84,0,.3);color:#d35400;font-weight:600">Folheto</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(211,84,0,.3);color:#d35400;font-weight:600">Derivados</th></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Ectoderma</strong></td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Epiderme, SNC, SNP (crista neural), cristalino, esmalte dentário</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Mesoderma</strong></td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Derme, ossos, músculos, coração, vasos, sangue, rins, gônadas, serosas</td></tr><tr><td style="padding:5px 8px;color:var(--text)"><strong>Endoderma</strong></td><td style="padding:5px 8px;color:var(--dim)">Epitélio digestório e respiratório, fígado, pâncreas, tireoide, bexiga</td></tr></table></div><div class="res-footer">Resumo Embriologia · 3ª Semana — Gastrulação · Prof.ª Dra. Ludmila Lima-Silveira · UniRV</div>',
+},
+{
+id:'fenomenos',name:'Fenômenos de Membrana',desc:'Transporte de água, solutos, difusão, transporte ativo, vesicular',icon:'⚡',color:'#00b894',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'agua',label:'💧 Transporte de Água'},{id:'solutos',label:'🔁 Transporte de Solutos'},{id:'ativo',label:'⚙️ Transporte Ativo'},{id:'vesicular',label:'🫧 Vesicular'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+agua:{theme:'fec',title:'Transporte de Água',flow:['Osmose<br><small>movimento H₂O</small>','Gradiente<br><small>osmótico</small>','Pressão<br><small>osmótica</small>','Equilíbrio<br><small>eletroquímico</small>'],cards:[
+{t:'Osmose',b:'Difusão da água através de membrana <strong>semipermeável</strong>, do compartimento menos concentrado para o mais concentrado, até equilíbrio.'},
+{t:'Compartimentos Corporais',b:'<strong>LIC</strong> (líquido intracelular) = 2/3 do volume de água total. <strong>LEC</strong> (líquido extracelular) = 1/3. LEC inclui plasma (25%) e líquido intersticial (75%).'},
+{t:'Osmolalidade vs Tonicidade',b:'<strong>Osmolalidade</strong>: total de solutos dissolvidos (mOsm/kg). <strong>Tonicidade</strong>: efeito da solução sobre o volume celular — considera apenas solutos <em>impermeáveis</em> à membrana.'},
+{t:'Soluções Isotônicas',b:'Mesma osmolaridade efetiva que o plasma (~285 mOsm/L). Exemplo: <strong>NaCl 0,9%</strong> (salina normal). Células não ganham nem perdem volume.'},
+{t:'Soluções Hipotônicas',b:'Menor tonicidade que o plasma. A célula <strong>incha</strong> (ganho de água). Exemplo: água pura IV causaria lise celular.'},
+{t:'Soluções Hipertônicas',b:'Maior tonicidade que o plasma. A célula <strong>encolhe</strong> (perda de água). Exemplo: NaCl 3% — retira água das células.'},
+{t:'Reposição Volêmica',b:'Diarreia (perda hipotônica) → NaCl isotônico ou Ringer Lactato. Perda sanguínea → reposição com salina isotônica ou expansores plasmáticos. <strong>Nunca</strong> água pura IV.'},
+]},
+solutos:{theme:'esp',title:'Transporte de Solutos',flow:['Difusão<br><small>simples</small>','Canais<br><small>por comportas</small>','Difusão<br><small>facilitada</small>','Transporte<br><small>ativo</small>'],cards:[
+{t:'Difusão Simples',b:'Movimento aleatório de moléculas a favor do gradiente. <strong>Sem gasto energético</strong>. Substâncias lipossolúveis (O₂, CO₂, hormônios esteroides) atravessam diretamente a bicamada lipídica.'},
+{t:'Difusão por Canais (comportas)',b:'Canais proteicos altamente seletivos. <strong>Dependentes de voltagem</strong> (canais de Na⁺, K⁺) ou <strong>dependentes de ligante</strong>. Permitem passagem de H₂O (aquaporinas), íons.'},
+{t:'Seletividade dos Canais',b:'Cada canal apresenta alta seletividade para determinada substância. Podem ser <strong>abertos ou fechados</strong> conforme sinais elétricos ou químicos.'},
+{t:'Difusão Facilitada',b:'Mediada por <strong>proteína carreadora</strong> (uniporte). Molécula liga ao carreador → mudança conformacional → liberação do outro lado. Possui <strong>Vmáx</strong> (saturação). Exemplo: glicose (GLUT).'},
+{t:'Difusão Simples × Facilitada',b:'Difusão simples: velocidade proporcional à concentração (linear). Difusão facilitada: velocidade atinge <strong>Vmáx</strong> com saturação dos carreadores (curva hiperbólica).'},
+]},
+ativo:{theme:'s2',title:'Transporte Ativo',cards:[
+{t:'Conceito',b:'Transporte <strong>contra</strong> o gradiente eletroquímico. Requer <strong>gasto energético</strong>. Divide-se em primário (ATP diretamente) e secundário (gradiente criado pelo primário).'},
+{t:'Transporte Ativo Primário',b:'Degradação direta de ATP. Exemplos: <strong>Bomba Na⁺-K⁺-ATPase</strong> (3 Na⁺ para fora, 2 K⁺ para dentro), bomba de Ca²⁺, bomba de H⁺. Consome até ~70% da energia celular em células excitáveis.'},
+{t:'Bomba Na⁺-K⁺',b:'Mantém alto Na⁺ extracelular e alto K⁺ intracelular. Fundamental para o <strong>potencial de repouso</strong>, volume celular e transporte secundário.'},
+{t:'Simporte (cotransporte)',b:'Transporte ativo secundário. Usa o gradiente de Na⁺ para mover outra substância na <strong>mesma direção</strong>. Exemplo: cotransportador Na⁺-glicose no intestino e rim.'},
+{t:'Antiporte (contratransporte)',b:'Transporte ativo secundário. Usa gradiente de Na⁺ para mover outra substância na <strong>direção oposta</strong>. Exemplo: trocador Na⁺-Ca²⁺ (NCX), Na⁺-H⁺.'},
+{t:'Transporte Transcelular',b:'Atravessa toda a espessura do epitélio. Transporte ativo em um lado + difusão no outro. Exemplo: absorção de Na⁺ e glicose no intestino delgado.'},
+{t:'Transporte Paracelular',b:'Movimento de substâncias pelas <strong>junções entre células</strong>. Passivo, por gradiente. Permite passagem de água, íons e pequenos solutos sem carga.'},
+]},
+vesicular:{theme:'ovo',title:'Transporte Vesicular',cards:[
+{t:'Conceito',b:'Transporte de macromoléculas por <strong>vesículas</strong>. Inclui Endocitose, Exocitose e Fagocitose. Requer energia (ATP) e citoesqueleto.'},
+{t:'Fagocitose',b:'Célula projeta extensões de membrana ao redor de partículas grandes (bactérias). Forma <strong>fagossomo</strong> → funde com lisossomo → digestão. Exclusivamente <strong>estimulada</strong>.'},
+{t:'Endocitose',b:'Membrana se <strong>retrai</strong> (invagina) capturando material extracelular. Vesícula formada é <strong>menor</strong> que fagossomo. Pode ser constitutiva ou estimulada.'},
+{t:'Endocitose Mediada por Receptor',b:'Ligante liga ao receptor → complexo migra para <strong>poço coberto por clatrina</strong> → vesícula internalizada → perde clatrina → endossomo → ligante vai ao lisossomo/Golgi.'},
+{t:'Exocitose',b:'Processo inverso: vesícula intracelular <strong>funde com membrana</strong> e libera conteúdo para o meio extracelular. Exemplo: secreção de hormônios, neurotransmissores.'},
+{t:'Diferença Endocitose × Fagocitose',b:'1. Endocitose: membrana retrai; Fagocitose: projeta. 2. Vesícula endocítica é muito menor. 3. Endocitose pode ser constitutiva; fagocitose somente estimulada.'},
+]},
+},
+quiz:{
+obj:[
+{q:"Qual o principal íon do líquido extracelular?",opts:["K⁺","Na⁺","Ca²⁺","Mg²⁺"],ans:1,tag:"Composição"},
+{q:"Osmose é o movimento de qual substância?",opts:["Glicose","Sódio","Água","Proteína"],ans:2,tag:"Transporte de Água"},
+{q:"Solução NaCl 0,9% é classificada como:",opts:["Hipotônica","Hipertônica","Isotônica","Hiperosmótica"],ans:2,tag:"Tonicidade"},
+{q:"Célula colocada em solução hipotônica irá:",opts:["Encolher","Inchar","Permanecer igual","Sofrer lise imediata"],ans:1,tag:"Tonicidade"},
+{q:"Qual NÃO é exemplo de difusão simples sem comportas?",opts:["O₂","CO₂","Hormônio esteroide","Glicose"],ans:3,tag:"Difusão"},
+{q:"A difusão facilitada é mediada por:",opts:["ATP","Proteínas carreadoras","Vesículas","Gradiente elétrico"],ans:1,tag:"Difusão"},
+{q:"Vmáx é característico de qual tipo de transporte?",opts:["Difusão simples","Osmose","Difusão facilitada","Transporte paracelular"],ans:2,tag:"Difusão"},
+{q:"A Bomba Na⁺-K⁺-ATPase bombeia:",opts:["3 Na⁺ para dentro e 2 K⁺ para fora","3 Na⁺ para fora e 2 K⁺ para dentro","2 Na⁺ para fora e 3 K⁺ para dentro","Apenas Na⁺ para fora"],ans:1,tag:"Transporte Ativo"},
+{q:"Transporte ativo secundário por simporte move substâncias:",opts:["Contra o gradiente, sentidos opostos","A favor do gradiente, mesma direção","Contra o gradiente, mesma direção","A favor do gradiente, sentidos opostos"],ans:2,tag:"Transporte Ativo"},
+{q:"Cotransporte Na⁺-Glicose é exemplo de:",opts:["Antiporte","Simporte","Difusão simples","Endocitose"],ans:1,tag:"Transporte Ativo"},
+{q:"Na fagocitose, o fagossomo funde-se com:",opts:["Retículo endoplasmático","Mitocôndria","Lisossomo","Aparelho de Golgi"],ans:2,tag:"Transporte Vesicular"},
+{q:"Endocitose mediada por receptor usa qual proteína na invaginação?",opts:["Actina","Miosina","Clatrina","Tubulina"],ans:2,tag:"Transporte Vesicular"},
+{q:"Exocitose é utilizada para:",opts:["Captação de nutrientes","Destruição de patógenos","Secreção de hormônios","Síntese de ATP"],ans:2,tag:"Transporte Vesicular"},
+{q:"Transporte paracelular ocorre:",opts:["Através da membrana celular","Pelas junções entre células","Via vesículas","Por bomba de ATP"],ans:1,tag:"Transporte Ativo"},
+{q:"Qual solução é isosmótica mas hipotônica?",opts:["NaCl 0,9%","NaCl 0,45%","Dextrose 5% em água","NaCl 3%"],ans:2,tag:"Tonicidade"},
+],
+esc:[
+{q:"Compare difusão simples, facilitada e transporte ativo.",tag:"Comparação",ans:"Difusão simples: favor do gradiente, sem proteínas, linear. Facilitada: favor do gradiente, proteína carreadora, Vmáx. Transporte ativo: contra gradiente, gasto de ATP, primário (ATP direto) ou secundário (gradiente de Na⁺)."},
+{q:"Explique por que não se pode infundir água pura IV.",tag:"Tonicidade",ans:"Água pura é hipotônica. Ao entrar na corrente sanguínea, cria gradiente osmótico que força entrada de água nas células (hemácias, etc.) → inchaço → lise celular (hemólise). É necessária solução isotônica."},
+{q:"Descreva a bomba Na⁺-K⁺ e sua importância.",tag:"Transporte Ativo",ans:"ATPase que bombeia 3 Na⁺ para fora e 2 K⁺ para dentro por ciclo. Consome ATP diretamente. Mantém gradiente iônico essencial para potencial de repouso, volume celular, e serve de motor para o transporte ativo secundário."},
+],
+pra:[
+{q:"Paciente com diarreia há 7 dias, desidratado. Qual soro IV escolher?",desc:"Perda de eletrólitos e água, osmolalidade plasmática normal.",ans:"<strong>Soro fisiológico (NaCl 0,9%) ou Ringer Lactato</strong> — isotônicos. Repõe volume sem alterar osmolalidade celular.",tag:"Tonicidade"},
+{q:"Acidente com perda sanguínea aguda. Expansor volêmico adequado?",desc:"Perda de sangue total com queda de pressão.",ans:"<strong>Solução salina isotônica (SF 0,9%)</strong> como medida inicial. Repõe volume intravascular sem causar distúrbio osmótico.",tag:"Tonicidade"},
+{q:"Qual mecanismo de transporte a glicose usa para entrar na célula muscular?",desc:"Em repouso, sem insulina, via GLUT-4.",ans:"<strong>Difusão facilitada</strong> via proteína carreadora GLUT. A favor do gradiente de concentração, sem ATP.",tag:"Difusão"},
+]},
+resumoHTML:'<div class="res-title">Fenômenos de Membrana</div><div class="res-sub">Transporte de Água, Solutos, Difusão, Transporte Ativo e Vesicular<br>Prof. Dr. Vinícius Fernandes · Fisiologia 1 · UniRV Campus Formosa</div><div class="res-h1">1. Compartimentos Hídricos</div><p>O corpo humano de 70 kg contém ~42L de água total. O <strong>LIC</strong> corresponde a 2/3 (~28L) e o <strong>LEC</strong> a 1/3 (~14L). O LEC se divide em plasma (25% = ~3,5L) e líquido intersticial (75% = ~10,5L).</p><div class="res-h1">2. Transporte de Água — Osmose</div><p>Osmose é a difusão da água através de membrana semipermeável, do compartimento de <strong>menor concentração de solutos</strong> para o de maior, até equilíbrio osmótico.</p><div class="res-h2">Osmolalidade × Tonicidade</div><p><strong>Osmolalidade</strong>: total de partículas por kg de água (mOsm/kg H₂O). Normal = 285-295 mOsm/kg.<br><strong>Tonicidade</strong>: efeito sobre o volume celular; considera apenas solutos <em>impermeáveis</em> à membrana.</p><div class="res-h2">Soluções Intravenosas</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:280px"><tr style="background:rgba(0,184,148,.12)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(0,184,148,.3);color:#00b894;font-weight:600">Solução</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(0,184,148,.3);color:#00b894;font-weight:600">Osmolaridade</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(0,184,148,.3);color:#00b894;font-weight:600">Tonicidade</th></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">NaCl 0,9% (SF)</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Isosmótica</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Isotônica</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Dextrose 5% em água (D5W)</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Isosmótica</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Hipotônica</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">NaCl 0,45%</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Hiposmótica</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Hipotônica</td></tr><tr><td style="padding:5px 8px;color:var(--text)">D5% + NaCl 0,9%</td><td style="padding:5px 8px;color:var(--dim)">Hiperosmótica</td><td style="padding:5px 8px;color:var(--dim)">Isotônica</td></tr></table></div><div class="res-h1">3. Composição LIC × LEC</div><p>LEC: alto <strong>Na⁺</strong> (142 mEq/L), Cl⁻ (103 mEq/L), baixo K⁺ (4 mEq/L). LIC: alto <strong>K⁺</strong> (140 mEq/L), fosfatos (75 mEq/L), proteínas, baixo Na⁺ (10 mEq/L).</p><div class="res-h1">4. Vias de Transporte de Solutos</div><div class="res-h2">Difusão (Transporte Passivo)</div><p>A favor do gradiente eletroquímico, sem gasto de ATP.</p><p><strong>Simples sem comportas</strong>: substâncias lipossolúveis atravessam diretamente (O₂, CO₂, hormônios esteroides).<br><strong>Simples com comportas</strong>: canais proteicos seletivos, controlados por voltagem ou ligante (íons, H₂O via aquaporinas).<br><strong>Facilitada</strong>: mediada por proteína carreadora (GLUT para glicose). Possui Vmáx — sofre saturação.</p><div class="res-h2">Transporte Ativo</div><p>Contra o gradiente eletroquímico, com gasto energético.</p><p><strong>Primário</strong>: usa ATP diretamente. Bomba Na⁺-K⁺-ATPase (3 Na⁺ saem / 2 K⁺ entram), bomba Ca²⁺, bomba H⁺. Pode consumir ~70% da energia em células excitáveis.<br><strong>Secundário Simporte</strong>: usa gradiente de Na⁺ para mover substância na mesma direção (Na⁺-glicose, Na⁺-aminoácidos).<br><strong>Secundário Antiporte</strong>: usa gradiente de Na⁺ para mover substância em direção oposta (Na⁺-Ca²⁺, Na⁺-H⁺).</p><div class="res-h2">Transporte Transcelular e Paracelular</div><p><strong>Transcelular</strong>: atravessa toda a espessura do epitélio (ativo em um lado + difusão no outro). Exemplo: absorção intestinal de Na⁺ e glicose.<br><strong>Paracelular</strong>: passa pelas junções entre células. Passivo. Permite água, íons e pequenos solutos.</p><div class="res-h1">5. Transporte Vesicular</div><p><strong>Fagocitose</strong>: englobamento de partículas grandes → fagossomo → fusão com lisossomo → digestão. Exclusivamente estimulada.<br><strong>Endocitose</strong>: invaginação da membrana. Constitutiva ou estimulada. Mediada por receptor usa clatrina.<br><strong>Exocitose</strong>: vesícula funde com membrana e secreta conteúdo. Usada para hormônios, neurotransmissores.</p><div class="res-footer">Resumo Fisiologia 1 · Fenômenos de Membrana · Dr. Vinícius Fernandes · UniRV</div>',
+},
+{
+id:'potencial',name:'Potencial de Ação',desc:'Potencial de membrana, potencial de repouso, despolarização e propagação',icon:'🔋',color:'#e17055',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'membrana',label:'⚡ Potencial de Membrana'},{id:'acao',label:'🌊 Potencial de Ação'},{id:'propagacao',label:'➡️ Propagação'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+membrana:{theme:'s2',title:'Potencial de Membrana',flow:['Distribuição<br><small>desigual íons</small>','Desequilíbrio<br><small>elétrico</small>','Gradiente<br><small>eletroquímico</small>','Potencial<br><small>de repouso</small>'],cards:[
+{t:'Conceito',b:'Diferença de potencial elétrico entre o interior e exterior da célula. LIC tem excesso de <strong>ânions (−)</strong>; LEC tem excesso de <strong>cátions (+)</strong>. Todas as células vivas possuem potencial de membrana.'},
+{t:'Potencial de Repouso',b:'Estado estacionário da célula em repouso. Neurônios: <strong>−60 a −70 mV</strong>. Músculo esquelético: ~−95 mV. Resultado do gradiente eletroquímico de K⁺, Na⁺ e da bomba Na⁺-K⁺.'},
+{t:'Gradiente Eletroquímico',b:'Combinação do <strong>gradiente de concentração</strong> (difusão) com o <strong>gradiente elétrico</strong> (atração entre cargas opostas). O equilíbrio entre os dois determina o potencial de repouso.'},
+{t:'Equação de Nernst',b:'Calcula o potencial de equilíbrio para um único íon: <strong>E = (61/z) × log [íon]fora/[íon]dentro</strong>. K⁺: −94 mV; Na⁺: +60 mV. O potencial real está entre esses valores.'},
+{t:'Equação de Goldman (GHK)',b:'Considera múltiplos íons e suas permeabilidades. Potencial real ≈ −70 a −90 mV porque a membrana é ~100× mais permeável ao K⁺ do que ao Na⁺ em repouso.'},
+{t:'Papel da Bomba Na⁺-K⁺',b:'Mantém os gradientes iônicos contra o vazamento passivo. Bombeia 3 Na⁺ para fora e 2 K⁺ para dentro. Contribui diretamente com ~−4 mV ao potencial de repouso (eletrogênica).'},
+]},
+acao:{theme:'esp',title:'Potencial de Ação',flow:['Repouso<br><small>−70 mV</small>','Estímulo<br><small>limiar</small>','Despolarização<br><small>Na⁺ entra</small>','Repolarização<br><small>K⁺ sai</small>','Hiperpolarização<br><small>abaixo repouso</small>'],cards:[
+{t:'Definição',b:'Inversão rápida e reversível do potencial de membrana em células excitáveis (neurônios, músculo, endócrinas). Também chamado de <strong>impulso nervoso</strong>. Propaga-se com intensidade constante.'},
+{t:'Limiar de Excitação',b:'Para disparar um PA, o estímulo deve ser suficientemente forte para atingir o <strong>limiar</strong> (~−55 mV em neurônios = ~15-20 mV acima do repouso). Abaixo do limiar: potencial subliminar, sem PA.'},
+{t:'Estágios — Despolarização',b:'Estímulo → canais rápidos de Na⁺ VD abrem → influxo maciço de Na⁺ → potencial sobe rapidamente de −70 até <strong>+30 mV</strong> (inversão/ultrapassagem).'},
+{t:'Estágios — Repolarização',b:'Canais de Na⁺ se <strong>inativam</strong> (portão de inativação fecha). Canais lentos de K⁺ abrem → efluxo de K⁺ → potencial desce de volta.'},
+{t:'Hiperpolarização Pós-PA',b:'Canais de K⁺ permanecem abertos brevemente → potencial cai <strong>abaixo</strong> do repouso (−80 a −90 mV). Bomba Na⁺-K⁺ restaura gradientes.'},
+{t:'Períodos Refratários',b:'<strong>Absoluto</strong>: durante a fase ativa dos canais de Na⁺ — nenhum estímulo gera outro PA. <strong>Relativo</strong>: após inativação — necessário estímulo maior que o normal. Garante propagação unidirecional.'},
+{t:'Canais Voltagem-Dependentes',b:'<strong>Repouso</strong>: portão de ativação fechado. <strong>Ativado</strong> (−90 a +35 mV): portão de ativação abre → Na⁺ entra. <strong>Inativado</strong> (+35 a −90 mV): portão de inativação fecha → reabre só no repouso.'},
+]},
+propagacao:{theme:'ovo',title:'Propagação do PA',cards:[
+{t:'Mecanismo de Propagação',b:'Região despolarizada cria <strong>correntes locais</strong> que despolarizam segmentos adjacentes. PA propaga-se com mesma intensidade (lei do tudo-ou-nada) e de forma <strong>unidirecional</strong> (período refratário impede retorno).'},
+{t:'Velocidade de Condução',b:'Depende do <strong>diâmetro do axônio</strong> (maior → mais rápido) e da <strong>mielinização</strong>. Fibras mielinizadas conduzem por saltos entre nódulos de Ranvier (<strong>condução saltatória</strong>) — muito mais rápida.'},
+{t:'Impacto da Hipo/Hipercalemia',b:'<strong>Hipocalemia</strong> (K⁺ baixo): hiperpolariza a célula → mais difícil atingir limiar → paralisia muscular. <strong>Hipercalemia</strong> (K⁺ alto): despolariza parcialmente → canais inativados → reduz excitabilidade → arritmias.'},
+{t:'Lei do Tudo-ou-Nada',b:'O PA tem amplitude fixa: se o limiar é atingido, o PA ocorre com intensidade máxima; se não é atingido, não ocorre. A intensidade do estímulo é codificada pela <strong>frequência</strong> de PAs, não pela amplitude.'},
+]},
+},
+quiz:{
+obj:[
+{q:"Qual o potencial de repouso típico de um neurônio?",opts:["0 mV","−30 mV","−70 mV","+30 mV"],ans:2,tag:"Potencial de Membrana"},
+{q:"Na célula em repouso, qual compartimento tem excesso de ânions?",opts:["LEC","LIC","Ambos","Nenhum"],ans:1,tag:"Potencial de Membrana"},
+{q:"O potencial de equilíbrio do K⁺ é aproximadamente:",opts:["+60 mV","−94 mV","−70 mV","0 mV"],ans:1,tag:"Equação de Nernst"},
+{q:"O potencial de ação é iniciado quando o estímulo ultrapassa:",opts:["O potencial de repouso","O potencial de equilíbrio do Na⁺","O limiar de excitação","O potencial de equilíbrio do K⁺"],ans:2,tag:"Potencial de Ação"},
+{q:"Durante a despolarização, qual íon entra rapidamente na célula?",opts:["K⁺","Cl⁻","Ca²⁺","Na⁺"],ans:3,tag:"Potencial de Ação"},
+{q:"A repolarização ocorre principalmente pela saída de:",opts:["Na⁺","K⁺","Ca²⁺","Cl⁻"],ans:1,tag:"Potencial de Ação"},
+{q:"Portão de inativação do canal de Na⁺ reabre quando:",opts:["A célula despolariza","A célula atinge +30 mV","O potencial de repouso é reestabelecido","A célula hiperpolariza abaixo de −94 mV"],ans:2,tag:"Canais VD"},
+{q:"Durante o período refratário absoluto:",opts:["Qualquer estímulo gera PA","Apenas estímulo forte gera PA","Nenhum estímulo gera PA","A célula está despolarizada permanentemente"],ans:2,tag:"Potencial de Ação"},
+{q:"A condução saltatória ocorre em:",opts:["Axônios sem mielina","Axônios finos","Fibras mielinizadas (nódulos de Ranvier)","Dendritos"],ans:2,tag:"Propagação"},
+{q:"Hipercalemia (K⁺ alto no LEC) causa:",opts:["Hiperpolarização celular","Despolarização parcial e redução de excitabilidade","Aumento do potencial de repouso","Bloqueio das bombas de Ca²⁺"],ans:1,tag:"Clínica"},
+{q:"A lei do tudo-ou-nada significa que:",opts:["PA tem amplitude variável com o estímulo","Abaixo do limiar: PA parcial","Se limiar atingido: PA com amplitude máxima e fixa","O PA sempre propaga em ambas as direções"],ans:2,tag:"Potencial de Ação"},
+{q:"Qual célula NÃO é considerada excitável?",opts:["Neurônio","Célula muscular esquelética","Célula endócrina pancreática","Eritrócito"],ans:3,tag:"Conceitos"},
+],
+esc:[
+{q:"Explique os estágios do potencial de ação.",tag:"Potencial de Ação",ans:"1.Repouso (−70 mV). 2.Estímulo supralimiar. 3.Canais Na⁺ VD abrem → influxo Na⁺ → despolarização até +30 mV. 4.Canais Na⁺ inativam; canais K⁺ lentos abrem → efluxo K⁺ → repolarização. 5.Hiperpolarização transitória. 6.Bomba Na⁺-K⁺ restaura repouso."},
+{q:"Qual o impacto clínico da hipocalemia?",tag:"Clínica",ans:"K⁺ baixo no LEC aumenta o gradiente de K⁺ → mais K⁺ sai → célula hiperpolariza (potencial mais negativo). Maior distância do limiar → menor excitabilidade → fraqueza muscular, paralisia, arritmias."},
+],
+pra:[
+{q:"Paciente com K⁺=2,0 mEq/L apresenta paralisia muscular. Por quê?",desc:"Hipocalemia grave.",ans:"<strong>Hipocalemia → hiperpolarização</strong>. Célula fica mais negativa → mais longe do limiar → difícil disparar PA → fraqueza e paralisia.",tag:"Clínica"},
+{q:"Por que o PA se propaga em apenas uma direção?",desc:"Axônio estimulado na zona de gatilho.",ans:"O <strong>período refratário absoluto</strong> na região recém-despolarizada impede que correntes locais re-excitem essa área → propagação unidirecional anterógrada.",tag:"Propagação"},
+]},
+resumoHTML:'<div class="res-title">Potencial de Ação</div><div class="res-sub">Potencial de Membrana, Potencial de Repouso, Despolarização e Propagação<br>Prof. Dr. Vinícius Fernandes · Fisiologia 1 · UniRV Campus Formosa</div><div class="res-h1">1. Potencial de Membrana</div><p>Toda célula viva possui um desequilíbrio elétrico entre LIC e LEC chamado <strong>potencial de membrana</strong>. O LIC apresenta excesso de ânions (−) e o LEC excesso de cátions (+).</p><div class="res-h2">Potencial de Repouso</div><p>Estado estacionário: Neurônios −60 a −70 mV · Músculo esquelético ~−95 mV · Músculo liso ~−60 mV. Gerado pela distribuição desigual de íons e pela seletividade da membrana.</p><div class="res-h2">Forças que Criam o Potencial</div><p><strong>Gradiente de concentração</strong>: K⁺ tende a sair (140→4 mEq/L); Na⁺ tende a entrar (14→142 mEq/L).<br><strong>Gradiente elétrico</strong>: atrai K⁺ de volta; Na⁺ é atraído para dentro.<br><strong>Equilíbrio</strong>: quando gradiente elétrico = gradiente de concentração → Potencial de Equilíbrio (Nernst).</p><div class="res-h2">Equação de Nernst</div><p>E = (61/z) × log [íon]fora / [íon]dentro. Potencial de equilíbrio: K⁺ = −94 mV; Na⁺ = +60 mV. O potencial real (~−70 mV) resulta da maior permeabilidade ao K⁺ (Goldman-Hodgkin-Katz).</p><div class="res-h1">2. Potencial de Ação</div><p>Inversão rápida e transitória do potencial de membrana em células excitáveis. Propagado com amplitude constante (lei do tudo-ou-nada). Base da comunicação nervosa e muscular.</p><div class="res-h2">Estágios</div><p><strong>1. Repouso</strong> (−70 mV): canais VD fechados.<br><strong>2. Estímulo despolarizante</strong>: sinalização por neurotransmissores, sensorial ou autoestímulo.<br><strong>3. Limiar</strong> (~−55 mV): canais rápidos de Na⁺ VD começam a abrir.<br><strong>4. Despolarização</strong>: influxo rápido de Na⁺ → potencial sobe até ~+30 mV (ultrapassagem).<br><strong>5. Inativação de Na⁺ / Abertura de K⁺</strong>: portão de inativação do Na⁺ fecha; canais lentos de K⁺ abrem.<br><strong>6. Repolarização</strong>: efluxo de K⁺ → potencial desce.<br><strong>7-8. Hiperpolarização</strong>: K⁺ continua saindo → abaixo do repouso.<br><strong>9. Retorno ao repouso</strong>: canais K⁺ fecham; bomba Na⁺-K⁺ restaura gradientes.</p><div class="res-h2">Canais Voltagem-Dependentes de Na⁺</div><p><strong>Repouso</strong> (−90 mV): portão ativação fechado, portão inativação aberto.<br><strong>Ativado</strong> (−90 a +35 mV): ambos os portões abertos → Na⁺ entra.<br><strong>Inativado</strong> (+35 a −90 mV): portão ativação aberto, portão inativação fechado → canal bloqueado. Reabre somente após repolarização ao repouso.</p><div class="res-h2">Períodos Refratários</div><p><strong>Absoluto</strong>: canais Na⁺ inativados → nenhum estímulo gera novo PA (durante despolarização + início repolarização).<br><strong>Relativo</strong>: canais Na⁺ parcialmente recuperados + hiperpolarização → necessário estímulo supranormal para novo PA.</p><div class="res-h1">3. Propagação do Impulso</div><p>Região ativa despolariza regiões adjacentes por <strong>correntes locais</strong>. Período refratário impede propagação retrógrada → impulso unidirecional. Velocidade depende do diâmetro axonal e mielinização. Fibras mielinizadas: condução saltatória (nódulos de Ranvier) → muito mais rápida e eficiente energeticamente.</p><div class="res-h2">Aplicação Clínica — Distúrbios do K⁺</div><p><strong>Hipocalemia</strong> (K⁺ baixo): célula hiperpolariza → mais distante do limiar → músculo fraco, paralisia, arritmias.<br><strong>Hipercalemia</strong> (K⁺ alto): célula despolariza parcialmente → canais Na⁺ inativados → célula <em>menos</em> excitável → arritmias graves, parada cardíaca.</p><div class="res-footer">Resumo Fisiologia 1 · Potencial de Ação · Dr. Vinícius Fernandes · UniRV</div>',
+},
+{
+id:'muscular',name:'Fisiologia Muscular',desc:'Estrutura, contração, acoplamento excitação-contração, teoria dos filamentos deslizantes',icon:'💪',color:'#e84393',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'estrutura',label:'🏗️ Estrutura'},{id:'contracao',label:'⚡ Contração'},{id:'ciclo',label:'🔄 Ciclo'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+estrutura:{theme:'ovo',title:'Estrutura Muscular',flow:['Músculo<br><small>fascículos</small>','Fascículo<br><small>fibras</small>','Fibra<br><small>miofibrilas</small>','Miofibrila<br><small>sarcômeros</small>','Sarcômero<br><small>actina+miosina</small>'],cards:[
+{t:'Tipos de Músculo',b:'<strong>Esquelético</strong>: estriado, multinucleado, voluntário. <strong>Cardíaco</strong>: estriado, mononucleado, ramificado, discos intercalares, involuntário. <strong>Liso</strong>: não estriado, mononucleado, involuntário.'},
+{t:'Organização do Músculo Esquelético',b:'Músculo → fascículos (feixes) → fibras musculares (células) → miofibrilas. Cada nível envolto por tecido conectivo. Fibra muscular = célula cilíndrica <strong>multinucleada</strong>, comprimento de centímetros.'},
+{t:'Terminologia Específica',b:'<strong>Sarcolema</strong> = membrana plasmática. <strong>Sarcoplasma</strong> = citoplasma. <strong>Retículo sarcoplasmático</strong> = RE modificado (reservatório de Ca²⁺). <strong>Túbulos T</strong> = extensões do sarcolema que penetram a célula.'},
+{t:'Miofibrila e Sarcômero',b:'Cada fibra contém centenas a milhares de <strong>miofibrilas</strong>. Cada miofibrila é composta de <strong>sarcômeros</strong> em série (unidade contrátil). Sarcômero: de disco Z a disco Z. Contém filamentos grossos (miosina) e finos (actina).'},
+{t:'Filamento Grosso — Miosina',b:'Proteína com <strong>cauda</strong> (suporte) e <strong>cabeças</strong> (sítios de ligação à actina + atividade ATPase). Região flexível = dobradiça. Organizado na <strong>Banda A</strong>. Linha M centraliza os filamentos grossos.'},
+{t:'Filamento Fino — Actina',b:'Cadeia dupla de actina G + <strong>tropomiosina</strong> (cobre os sítios de ligação em repouso) + <strong>troponina</strong> (liga Ca²⁺ e regula a tropomiosina). Ancorado no <strong>Disco Z</strong>. <strong>Nebulina</strong> serve de régua estrutural. <strong>Titina</strong> é elástica.'},
+{t:'Bandas do Sarcômero',b:'<strong>Banda A</strong>: filamentos grossos (permanece constante). <strong>Banda I</strong>: apenas filamentos finos (encurta na contração). <strong>Zona H</strong>: centro da banda A, só miosina (encurta). <strong>Linha M</strong>: centro. <strong>Disco Z</strong>: âncora dos filamentos finos.'},
+{t:'Músculos Antagonistas',b:'A maioria das articulações precisa de pares antagônicos. Exemplo: bíceps braquial (flexor) + tríceps braquial (extensor). Quando um contrai, o outro relaxa para permitir o movimento.'},
+]},
+contracao:{theme:'esp',title:'Contração Muscular',flow:['PA no neurônio<br><small>motor</small>','Liberação<br><small>ACh (JNM)</small>','PA na fibra<br><small>muscular</small>','Túbulo T →<br><small>DHP → RyR</small>','Ca²⁺ liberado<br><small>do RS</small>','Actina+Miosina<br><small>contração</small>'],cards:[
+{t:'Visão Geral — 3 Etapas',b:'<strong>1.</strong> Eventos na junção neuromuscular (JNM). <strong>2.</strong> Acoplamento excitação-contração. <strong>3.</strong> Ciclo de contração-relaxamento (teoria dos filamentos deslizantes).'},
+{t:'Junção Neuromuscular (JNM)',b:'O neurônio motor somático libera <strong>acetilcolina (ACh)</strong> na fenda sináptica. ACh liga-se a receptores nicotínicos na placa motora terminal → influxo de Na⁺ → <strong>potencial de ação muscular</strong> (PA chega a +20 mV).'},
+{t:'Acoplamento Excitação-Contração',b:'PA propaga-se pelo sarcolema e desce pelos <strong>túbulos T</strong> → ativa receptor <strong>DHP</strong> (sensor de voltagem) → abertura mecânica do canal <strong>RyR</strong> (receptor rianodina) no RS → liberação de <strong>Ca²⁺</strong> no sarcoplasma.'},
+{t:'Papel do Ca²⁺',b:'Ca²⁺ liga-se à <strong>troponina</strong> → troponina puxa a <strong>tropomiosina</strong> para longe dos sítios de ligação da actina → sítios expostos → cabeça de miosina pode se ligar à actina → início da contração.'},
+{t:'Rigidez Cadavérica (Rigor Mortis)',b:'Sem ATP, a miosina não consegue se soltar da actina → estado de <strong>ligação forte permanente</strong>. Ocorre após a morte quando o ATP se esgota. ATP é necessário para <strong>desacoplamento</strong>, não para acoplamento.'},
+{t:'Unidade Motora',b:'<strong>Neurônio motor somático</strong> + todas as <strong>fibras musculares</strong> que ele inerva. Um único neurônio ativa todas suas fibras simultaneamente. A força do músculo é regulada pelo número de unidades motoras recrutadas.'},
+]},
+ciclo:{theme:'fec',title:'Ciclo Contração-Relaxamento',cards:[
+{t:'Teoria dos Filamentos Deslizantes',b:'Os filamentos de actina e miosina <strong>NÃO mudam de comprimento</strong>. A actina desliza sobre a miosina em direção à linha M → sarcômero encurta. Banda A constante; Banda I e Zona H diminuem.'},
+{t:'Ciclo — Etapa 1: Ligação do ATP',b:'<strong>ATP liga-se à cabeça de miosina</strong> → miosina se solta da actina. Sem ATP → rigidez (rigor mortis). ATP é necessário para o <strong>desacoplamento</strong>.'},
+{t:'Ciclo — Etapa 2: Hidrólise do ATP',b:'Miosina hidrolisa ATP → ADP + Pi permanecem ligados. A energia muda a cabeça de miosina para a <strong>posição engatilhada</strong> (carregada). Miosina interage fracamente com actina.'},
+{t:'Ciclo — Etapa 3: Movimento de Força',b:'Sinal de Ca²⁺ → tropomiosina se afasta → sítio de ligação exposto → cabeça de miosina prende fortemente à actina → <strong>movimento de força</strong>: cabeça se inclina, puxando a actina em direção à linha M. Pi é liberado.'},
+{t:'Ciclo — Etapa 4: Liberação do ADP',b:'A miosina libera o ADP ao final do movimento de força. A cabeça permanece ligada à actina (estado de rigidez temporário) até que novo ATP se ligue e reinicie o ciclo.'},
+{t:'Relaxamento',b:'Cessa o sinal nervoso → AChE degrada ACh → cessa PA muscular → bomba Ca²⁺-ATPase do RS recaptura Ca²⁺ (gasta ATP) → Ca²⁺ se desprende da troponina → tropomiosina recobre os sítios → miosina se desacopla → músculo relaxa.'},
+]},
+},
+quiz:{
+obj:[
+{q:"Qual é a terminologia correta para 'membrana plasmática' no músculo?",opts:["Sarcoplasma","Sarcolema","Retículo sarcoplasmático","Miofibrila"],ans:1,tag:"Estrutura"},
+{q:"O sarcômero é delimitado por:",opts:["Linha M","Banda A","Disco Z","Zona H"],ans:2,tag:"Estrutura"},
+{q:"Qual proteína nos filamentos finos cobre os sítios de ligação em repouso?",opts:["Troponina","Titina","Nebulina","Tropomiosina"],ans:3,tag:"Estrutura"},
+{q:"O que a Banda A contém?",opts:["Apenas actina","Apenas miosina","Actina e miosina sobrepostas","Apenas titina"],ans:1,tag:"Estrutura"},
+{q:"O neurotransmissor liberado na junção neuromuscular é:",opts:["Dopamina","Serotonina","Acetilcolina","GABA"],ans:2,tag:"Contração"},
+{q:"Nos túbulos T, qual receptor atua como sensor de voltagem?",opts:["RyR","DHP","GLUT","Canal de Na⁺"],ans:1,tag:"Contração"},
+{q:"Qual receptor libera Ca²⁺ do retículo sarcoplasmático?",opts:["DHP","Receptor nicotínico","RyR (receptor rianodina)","Canal de K⁺"],ans:2,tag:"Contração"},
+{q:"O Ca²⁺ liga-se a qual proteína para iniciar a contração?",opts:["Tropomiosina","Troponina","Titina","Nebulina"],ans:1,tag:"Contração"},
+{q:"Na teoria dos filamentos deslizantes, o que encurta durante a contração?",opts:["Banda A","Filamento de miosina","Filamento de actina","Banda I e Zona H"],ans:3,tag:"Ciclo"},
+{q:"Por que o rigor mortis ocorre?",opts:["Excesso de Ca²⁺","Falta de Ca²⁺","Falta de ATP — miosina não se solta da actina","Excesso de ACh"],ans:2,tag:"Ciclo"},
+{q:"ATP é necessário principalmente para:",opts:["Ligar miosina à actina","Liberar Ca²⁺ do RS","Desacoplar miosina da actina","Despolarizar o sarcolema"],ans:2,tag:"Ciclo"},
+{q:"Durante o relaxamento, o Ca²⁺ é recapturado pelo RS através de:",opts:["Difusão simples","Bomba Ca²⁺-ATPase","Canais RyR","Bomba Na⁺-K⁺"],ans:1,tag:"Ciclo"},
+{q:"Músculo cardíaco difere do esquelético por ser:",opts:["Multinucleado e estriado","Mononucleado e não estriado","Mononucleado, estriado, com discos intercalares","Multinucleado e não estriado"],ans:2,tag:"Estrutura"},
+{q:"Uma unidade motora é composta por:",opts:["Um músculo inteiro","Um neurônio + todas as fibras que ele inerva","Apenas fibras do tipo I","Um sarcômero e seu neurônio"],ans:1,tag:"Contração"},
+{q:"Qual evento ocorre imediatamente após o PA penetrar no túbulo T?",opts:["Liberação de ACh","Hidrólise de ATP","Mudança conformacional do DHP → abertura do RyR","Ligação de Ca²⁺ à tropomiosina"],ans:2,tag:"Contração"},
+],
+esc:[
+{q:"Descreva as 3 etapas gerais da contração muscular esquelética.",tag:"Contração",ans:"1. JNM: PA no neurônio motor → ACh → PA muscular. 2. Acoplamento excitação-contração: PA → túbulo T → DHP → RyR → Ca²⁺ do RS. 3. Ciclo: Ca²⁺ + troponina → expõe sítios de actina → ciclo actina-miosina (ATP) → filamentos deslizam → sarcômero encurta."},
+{q:"Explique a Teoria dos Filamentos Deslizantes.",tag:"Ciclo",ans:"Actina e miosina não mudam de tamanho. As cabeças de miosina ligam-se à actina e executam movimento de força, puxando actina em direção à linha M. Sarcômero encurta. Banda A constante; Banda I e Zona H diminuem. Cada ciclo requer 1 ATP."},
+{q:"Por que o rigor mortis ocorre e quanto tempo dura?",tag:"Ciclo",ans:"Sem ATP após a morte, a miosina não consegue se soltar da actina → estado de rigidez permanente. Aparece em ~2-6h, máximo em ~12h, desaparece em ~48-72h quando as proteínas se degradam."},
+],
+pra:[
+{q:"Paciente recebeu bloqueador neuromuscular (curare). O que acontece?",desc:"Curare bloqueia receptores nicotínicos de ACh na JNM.",ans:"ACh não consegue se ligar → nenhum PA muscular → <strong>paralisia flácida</strong>. Ca²⁺ não é liberado → actina e miosina não interagem. Músculo fica flácido (sem tônus).",tag:"Contração"},
+{q:"O que acontece com o músculo se o retículo sarcoplasmático falha em recapturar Ca²⁺?",desc:"Bomba Ca²⁺-ATPase inativada.",ans:"Ca²⁺ permanece no sarcoplasma → <strong>contração mantida</strong> → o músculo não relaxa → tetania/cãibra sustentada. O relaxamento depende da remoção do Ca²⁺.",tag:"Ciclo"},
+]},
+resumoHTML:'<div class="res-title">Fisiologia Muscular</div><div class="res-sub">Estrutura Muscular, Contração, Acoplamento Excitação-Contração, Teoria dos Filamentos Deslizantes<br>Prof. Dr. Vinícius Fernandes · Fisiologia 1 · UniRV Campus Formosa · Silverthorn Cap. 12</div><div class="res-h1">1. Tipos de Músculo</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:280px"><tr style="background:rgba(232,67,147,.12)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(232,67,147,.3);color:#e84393;font-weight:600">Característica</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(232,67,147,.3);color:#e84393;font-weight:600">Esquelético</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(232,67,147,.3);color:#e84393;font-weight:600">Cardíaco</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(232,67,147,.3);color:#e84393;font-weight:600">Liso</th></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Estriação</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Sim</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Sim</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Não</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Núcleos</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Multinucleada</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Mononucleada</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Mononucleada</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)">Controle</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Voluntário</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Involuntário</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Involuntário</td></tr><tr><td style="padding:5px 8px;color:var(--text)">Especial</td><td style="padding:5px 8px;color:var(--dim)">—</td><td style="padding:5px 8px;color:var(--dim)">Discos intercalares</td><td style="padding:5px 8px;color:var(--dim)">Sem sarcômeros típicos</td></tr></table></div><div class="res-h1">2. Hierarquia Estrutural do Músculo Esquelético</div><p>Músculo → fascículos → fibras musculares (células) → miofibrilas → sarcômeros.</p><div class="res-h2">Terminologia Especial</div><p>Membrana plasmática = <strong>Sarcolema</strong> · Citoplasma = <strong>Sarcoplasma</strong> · RE modificado = <strong>Retículo Sarcoplasmático (RS)</strong> · Extensões do sarcolema = <strong>Túbulos T</strong></p><div class="res-h2">Sarcômero — Unidade Contrátil</div><p><strong>Disco Z</strong>: âncora dos filamentos finos (limita o sarcômero)<br><strong>Banda A</strong>: filamentos grossos (comprimento constante)<br><strong>Banda I</strong>: apenas filamentos finos (encurta na contração)<br><strong>Zona H</strong>: centro da banda A, só miosina (encurta)<br><strong>Linha M</strong>: centraliza filamentos grossos</p><div class="res-h2">Proteínas dos Filamentos</div><p><strong>Filamento grosso (miosina)</strong>: cauda + cabeças (ATPase + sítio de ligação à actina) + dobradiça flexível.<br><strong>Filamento fino (actina)</strong>: actina G → cadeia dupla + tropomiosina (cobre sítios em repouso) + troponina (sensor de Ca²⁺) + nebulina (estrutural) + titina (elástica).</p><div class="res-h1">3. Contração Muscular — Sequência de Eventos</div><p><strong>1. Eventos na JNM</strong><br>PA no neurônio motor → terminal axonal libera <strong>ACh</strong> → ACh liga-se a receptores nicotínicos na placa motora terminal → influxo de Na⁺ → <strong>PA muscular</strong> gerado.</p><p><strong>2. Acoplamento Excitação-Contração</strong><br>PA propaga-se pelo sarcolema e desce pelos <strong>túbulos T</strong> → ativa receptor <strong>DHP</strong> (sensor de voltagem) mecanicamente → abre canal <strong>RyR</strong> do RS → <strong>Ca²⁺</strong> liberado no sarcoplasma.</p><p><strong>3. Sinal de Ca²⁺</strong><br>Ca²⁺ liga-se à <strong>troponina</strong> → troponina desloca a <strong>tropomiosina</strong> → sítios de ligação da actina expostos → ciclo actina-miosina pode ocorrer.</p><div class="res-h1">4. Ciclo de Contração-Relaxamento (Filamentos Deslizantes)</div><p><strong>Passo 1</strong>: ATP liga-se à cabeça de miosina → miosina se <strong>desacopla</strong> da actina.<br><strong>Passo 2</strong>: Miosina hidrolisa ATP → ADP + Pi ficam ligados → cabeça na <strong>posição engatilhada</strong>.<br><strong>Passo 3</strong>: Ca²⁺ expõe sítio → cabeça liga-se fortemente à actina → <strong>movimento de força</strong> (cabeça inclina, puxa actina em direção à linha M) → Pi liberado.<br><strong>Passo 4</strong>: <strong>ADP liberado</strong> → cabeça permanece ligada (rigidez transitória) → novo ATP reinicia o ciclo.</p><div class="res-h2">Teoria dos Filamentos Deslizantes</div><p>Actina e miosina <strong>NÃO mudam de comprimento</strong>. Os filamentos deslizam: actina caminha sobre miosina → sarcômero encurta. Banda A constante; Banda I e Zona H diminuem.</p><div class="res-h2">Relaxamento</div><p>Cessa o PA → AChE degrada ACh → bomba <strong>Ca²⁺-ATPase</strong> do RS recaptura Ca²⁺ (gasta ATP) → Ca²⁺ desprende da troponina → tropomiosina recobre sítios → miosina desacopla → músculo relaxa passivamente.</p><div class="res-h2">Rigor Mortis</div><p>Sem ATP após a morte → miosina não se solta da actina → <strong>rigidez permanente</strong>. Aparece em ~2-6h, máximo ~12h, desaparece em ~48-72h com degradação proteica.</p><div class="res-footer">Resumo Fisiologia 1 · Fisiologia Muscular · Dr. Vinícius Fernandes · UniRV</div>',
+},
+{
+id:'temperatura',name:'Regulação da Temperatura',desc:'Termorregulação, mecanismos de perda/produção de calor, febre',icon:'🌡️',color:'#e67e22',
+tabs:[{id:'resumo',label:'📄 Resumo'},{id:'intro',label:'🔥 Introdução'},{id:'perda',label:'❄️ Perda de Calor'},{id:'termo',label:'🌡️ Termorregulação'},{id:'termog',label:'💥 Termogênese'},{id:'febre',label:'🤒 Febre'},{id:'quiz',label:'📝 Quiz'}],
+sections:{
+intro:{theme:'temp',title:'Introdução',cards:[
+{t:'Homeotermia',b:'Humanos são <strong>homeotérmicos</strong>: mantêm temperatura interna em ~<strong>37°C</strong> (faixa: 35,5 a 37,7°C). Variações esperadas conforme horário do dia, local de aferição e condição fisiológica.'},
+{t:'Balanço Térmico',b:'<strong>Entrada de calor externo + Produção interna = Perda de calor</strong>. Produção: contrações musculares, metabolismo (fígado, cérebro, coração). Perda: sistema de isolamento, fluxo sanguíneo, vasoconstrição/dilatação (SNS).'},
+{t:'Zona Termoneutra',b:'Faixa de temperatura ambiente onde o corpo mantém a homeostasia com gasto energético mínimo: <strong>27,8 a 30°C</strong>. Limites de sobrevivência: ~10 a 55°C.'},
+{t:'Centro Regulatório',b:'O <strong>hipotálamo</strong> é o "termostato" do corpo. <strong>Área pré-óptica-hipotalâmica</strong>: contém neurônios sensíveis ao calor e ao frio. <strong>Hipotálamo posterior</strong>: integra respostas ao frio.'},
+{t:'Termorreceptores',b:'<strong>Periféricos</strong>: na pele, detectam mudanças na temperatura ambiental. <strong>Centrais</strong>: no hipotálamo, medula espinhal e vísceras, detectam mudanças na temperatura central do corpo.'},
+]},
+perda:{theme:'perda',title:'Mecanismos de Perda de Calor',flow:['Irradiação<br><small>60%</small>','Condução<br><small>ar 15%</small>','Condução<br><small>objetos 3%</small>','Evaporação<br><small>22%</small>'],cards:[
+{t:'Irradiação (60%)',b:'Emissão de <strong>ondas de calor eletromagnéticas</strong>. Principal mecanismo de perda. Funciona em duas vias: o corpo emite radiação E recebe radiação do ambiente. Responsável por ~60% da perda total.'},
+{t:'Condução',b:'Transferência de calor entre objetos <strong>em contato direto</strong>. Para o ar: ~15%. Para objetos (ex: cadeira): ~3%. Funciona em duas vias (saindo e entrando no corpo).'},
+{t:'Convecção',b:'O ar aquecido em contato com a pele <strong>sobe</strong> e é substituído por ar mais frio. As <strong>correntes de ar</strong> removem o calor transferido por condução. Roupas afetam este mecanismo.'},
+{t:'Evaporação (22%)',b:'Perda de calor pela <strong>vaporização da água</strong> na superfície da pele e no trato respiratório. Único mecanismo efetivo quando a temperatura ambiente é <strong>maior</strong> que a corporal.'},
+{t:'Efeito das Roupas',b:'Roupas afetam principalmente a <strong>condução e convecção</strong> — criam uma camada de ar isolante ao redor do corpo. Em temperatura alta: remover roupas facilita perda. Em temperatura baixa: adicionar camadas retém calor.'},
+]},
+termo:{theme:'termo',title:'Termorregulação — Respostas',cards:[
+{t:'Respostas ao Calor (↑ Temperatura)',b:'Via <strong>neurônio simpático colinérgico</strong>: 1) <strong>Glândulas sudoríparas</strong> → secreção de suor → perda evaporativa. 2) <strong>Vasos sanguíneos cutâneos</strong> → vasodilatação → perda de calor para o ambiente.'},
+{t:'Respostas ao Frio (↓ Temperatura)',b:'Via <strong>neurônio simpático adrenérgico</strong>: vasoconstrição cutânea → calor conservado. Gordura marrom → termogênese sem tremor. Via <strong>neurônio somático motor</strong>: músculos esqueléticos → termogênese com tremor.'},
+{t:'Vasodilatação/Vasoconstrição',b:'<strong>Vasodilatação</strong>: anastomoses arteriovenosas na pele se abrem → sangue quente flui para superfície → perda de calor. <strong>Vasoconstrição</strong>: sangue desviado da superfície → calor retido no núcleo do corpo.'},
+{t:'Sudorese',b:'Controlada pelo <strong>neurônio simpático colinérgico (ACh)</strong>. Produção normal: ~<strong>1,5 L/h</strong>. Repouso: reabsorção de Na⁺, Cl⁻ e água → suor concentrado em K⁺, ureia, ácido lático. Estímulo intenso: eliminação 10× maior de Na⁺, Cl⁻ e água.'},
+{t:'Aclimatação',b:'Exposição prolongada ao calor → sudorese pode aumentar até <strong>6 L/h</strong>. A <strong>aldosterona</strong> aumenta a reabsorção de Na⁺ nos ductos, reduzindo perda de sal. Umidade alta dificulta evaporação → superaquecimento mais rápido.'},
+{t:'Respostas Comportamentais — Calor',b:'Maximizar perda: ventiladores (convecção), imersão em água (condução), evitar sol (radiação), remoção de roupas. Minimizar produção: reduzir atividade física, diminuir ingestão de alimentos.'},
+{t:'Respostas Comportamentais — Frio',b:'Minimizar perda: adicionar roupas, encurvar-se (reduzir superfície exposta), aproximar-se de fonte de calor (radiação). Maximizar produção: atividade voluntária aumentada, termogênese com e sem tremor.'},
+]},
+termog:{theme:'temp',title:'Termogênese',flow:['Com tremor<br><small>calafrios</small>','Sem tremor<br><small>metabólica</small>','Gordura<br><small>marrom</small>','Hormônios<br><small>tireoidianos</small>'],cards:[
+{t:'Com Tremor (Calafrios)',b:'Contrações musculares involuntárias e rítmicas. Aumentam a produção de calor em <strong>4 a 6 vezes</strong>. Controlada pelo <strong>neurônio somático motor</strong>. Principal mecanismo de emergência contra o frio.'},
+{t:'Sem Tremor (Termogênese Química)',b:'Produção de calor pelo <strong>metabolismo</strong> sem contração muscular visível. Mecanismo: <strong>desacoplamento mitocondrial</strong> — energia é dissipada como calor em vez de produzir ATP. Estimulada por receptores <strong>β3 adrenérgicos</strong>.'},
+{t:'Tecido Adiposo Marrom',b:'Rico em mitocôndrias com <strong>proteína UCP-1 (termogenina)</strong>. Especializado em termogênese sem tremor. Muito importante em <strong>neonatos</strong>. Papel questionável (?) em adultos. Localização: interescapular, perirrenal, mediastinal.'},
+{t:'Hormônios Tireoidianos',b:'Aumentam a taxa metabólica basal em <strong>longo prazo</strong>. Exposição crônica ao frio → eixo hipotalâmico-hipofisário-tireoidiano → aumento de T3/T4 → maior produção de calor celular.'},
+{t:'Ponto de Ajuste (Set Point)',b:'Nível crítico de temperatura (~37,1°C) para o controle. Todos os mecanismos tentam trazer a temperatura corporal para este ponto. Regulado pelos receptores de calor na <strong>área hipotalâmica anterior pré-óptica</strong>.'},
+{t:'Alterações do Ponto de Ajuste',b:'Pode ser alterado fisiológica ou patologicamente. Se <strong>reduz</strong>: corpo "acha que está quente" → vasodilatação + sudorese (ex: fogacho pós-menopausa). Se <strong>aumenta</strong>: corpo "acha que está frio" → calafrios + vasoconstrição (ex: febre). <strong>Exercício NÃO modifica</strong> o ponto de ajuste.'},
+]},
+febre:{theme:'febr',title:'Febre e Pirogênios',cards:[
+{t:'Pirogênios',b:'Substâncias que <strong>elevam o ponto de ajuste</strong> hipotalâmico. <strong>Exógenos</strong>: toxinas de lipossacarídeos de membranas bacterianas, proteínas e produtos de degradação. <strong>Endógenos</strong>: IL-1, IL-6, TNF-α, prostaglandinas (PGE₂).'},
+{t:'Mecanismo da Febre',b:'Pirogênios → macrófagos liberam IL-1 → hipotálamo → PGE₂ → <strong>ponto de ajuste sobe</strong>. Corpo percebe temperatura atual como "baixa" → desencadeia respostas de aquecimento: vasoconstrição, piloereção, secreção de epinefrina, calafrios.'},
+{t:'Fases da Febre',b:'<strong>1. Início</strong>: ponto de ajuste sobe → calafrios, vasoconstrição → temperatura corporal sobe. <strong>2. Platô</strong>: corpo atinge novo ponto → cessa calafrio. <strong>3. Crise/Defervescência</strong>: ponto de ajuste retorna ao normal → vasodilatação + sudorese intensa → temperatura cai.'},
+{t:'Febre × Exercício',b:'<strong>Febre</strong>: ponto de ajuste está elevado → corpo tenta ativamente atingir a nova temperatura. <strong>Exercício</strong>: produção de calor excede dissipação, mas o ponto de ajuste permanece normal → mecanismos de perda estão ativos (sudorese, vasodilatação).'},
+]},
+},
+quiz:{
+obj:[
+{q:"Qual é a temperatura corporal normal?",opts:["36°C","37°C","38°C","39°C"],ans:1,tag:"Introdução"},
+{q:"Qual estrutura é o centro regulatório da temperatura?",opts:["Cerebelo","Hipotálamo","Tálamo","Medula oblonga"],ans:1,tag:"Introdução"},
+{q:"Qual o principal mecanismo de perda de calor (~60%)?",opts:["Evaporação","Condução","Convecção","Irradiação"],ans:3,tag:"Perda de Calor"},
+{q:"A evaporação é o único mecanismo efetivo quando:",opts:["Está frio","Está ventando","Temperatura ambiente > corporal","Umidade é alta"],ans:2,tag:"Perda de Calor"},
+{q:"As roupas afetam principalmente quais mecanismos?",opts:["Irradiação e evaporação","Condução e convecção","Apenas evaporação","Apenas irradiação"],ans:1,tag:"Perda de Calor"},
+{q:"A sudorese é regulada pelo neurônio simpático:",opts:["Adrenérgico","Colinérgico (ACh)","Dopaminérgico","Serotoninérgico"],ans:1,tag:"Termorregulação"},
+{q:"A aclimatação ao calor pode aumentar a sudorese até:",opts:["2 L/h","4 L/h","6 L/h","10 L/h"],ans:2,tag:"Termorregulação"},
+{q:"Umidade alta do ar dificulta a perda de calor por:",opts:["Irradiação","Condução","Convecção","Evaporação"],ans:3,tag:"Termorregulação"},
+{q:"A termogênese com tremor aumenta a produção de calor em:",opts:["2x","3x","4 a 6x","10x"],ans:2,tag:"Termogênese"},
+{q:"O tecido adiposo marrom produz calor por:",opts:["Contração muscular","Desacoplamento mitocondrial","Hidrólise de ATP","Glicólise anaeróbia"],ans:1,tag:"Termogênese"},
+{q:"O que modifica o ponto de ajuste hipotalâmico?",opts:["Exercício intenso","Febre (pirogênios)","Sudorese","Vasodilatação"],ans:1,tag:"Ponto de Ajuste"},
+{q:"Exercício NÃO modifica o ponto de ajuste. Verdadeiro?",opts:["Falso","Verdadeiro","Depende da intensidade","Apenas em atletas"],ans:1,tag:"Ponto de Ajuste"},
+{q:"Pirogênios são substâncias que:",opts:["Reduzem a temperatura","Elevam o ponto de ajuste","Causam vasodilatação","Inibem a sudorese"],ans:1,tag:"Febre"},
+{q:"Na fase inicial da febre, o paciente apresenta:",opts:["Sudorese e vasodilatação","Calafrios e vasoconstrição","Hipotermia","Hiperpolarização neuronal"],ans:1,tag:"Febre"},
+{q:"A zona termoneutra do corpo é:",opts:["20 a 25°C","27,8 a 30°C","35 a 37°C","37 a 39°C"],ans:1,tag:"Introdução"},
+{q:"Qual hormônio aumenta a reabsorção de Na⁺ durante aclimatação?",opts:["ADH","Cortisol","Aldosterona","Insulina"],ans:2,tag:"Termorregulação"},
+],
+esc:[
+{q:"Compare as respostas fisiológicas ao calor e ao frio.",tag:"Termorregulação",ans:"Calor: neurônio simpático colinérgico → vasodilatação cutânea + sudorese → perda de calor. Frio: neurônio simpático adrenérgico → vasoconstrição + termogênese sem tremor (gordura marrom); neurônio somático motor → termogênese com tremor (calafrios). Ambos incluem respostas comportamentais."},
+{q:"Explique o mecanismo da febre em suas 3 fases.",tag:"Febre",ans:"1. Início: pirogênios elevam ponto de ajuste → corpo percebe temperatura atual como baixa → calafrios, vasoconstrição, piloereção → temperatura sobe. 2. Platô: temperatura atinge novo ponto → equilíbrio. 3. Crise: ponto de ajuste retorna ao normal → vasodilatação + sudorese intensa → temperatura cai rapidamente."},
+{q:"Diferencie termogênese com tremor e sem tremor.",tag:"Termogênese",ans:"Com tremor: contrações musculares involuntárias (calafrios), via neurônio somático motor, 4-6x produção de calor. Sem tremor: desacoplamento mitocondrial (UCP-1/termogenina), via β3 adrenérgico, tecido adiposo marrom, importante em neonatos. Hormônios tireoidianos contribuem em longo prazo."},
+],
+pra:[
+{q:"Paciente com infecção bacteriana apresenta calafrios intensos e vasoconstrição. O que está acontecendo?",desc:"Toxinas bacterianas circulantes, temperatura axilar de 37,2°C subindo.",ans:"<strong>Fase inicial da febre</strong>. Pirogênios exógenos (LPS bacteriano) → macrófagos → IL-1 → PGE₂ → ponto de ajuste hipotalâmico elevado. Corpo \"acha\" que está frio → calafrios + vasoconstrição para atingir a nova temperatura-alvo.",tag:"Febre"},
+{q:"Atleta se exercitando em ambiente quente e úmido. Por que o risco de hipertermia é maior?",desc:"Temperatura ambiente 38°C, umidade 90%.",ans:"<strong>Umidade alta impede evaporação</strong> do suor (ar já saturado de vapor). Temperatura ambiente > corporal elimina irradiação e condução como vias de perda. Único mecanismo restante (evaporação) está comprometido → calor se acumula → risco de intermação.",tag:"Perda de Calor"},
+{q:"Recém-nascido em sala fria. Qual mecanismo de produção de calor é mais importante?",desc:"Neonato com pouca massa muscular.",ans:"<strong>Termogênese sem tremor</strong> via tecido adiposo marrom (gordura marrom). Neonatos possuem grande proporção de gordura marrom (interescapular, perirrenal). Proteína UCP-1 desacopla a cadeia mitocondrial → energia dissipada como calor. Calafrios são ineficientes em neonatos.",tag:"Termogênese"},
+]},
+resumoHTML:'<div class="res-title">Regulação da Temperatura Corporal</div><div class="res-sub">Termorregulação, Mecanismos de Perda e Produção de Calor, Febre<br>Prof. Dr. Vinícius Fernandes · Fisiologia 1 · UniRV Campus Formosa<br>Guyton Cap. 71/74 · Silverthorn Cap. 22</div><div class="res-h1">1. Introdução — Homeotermia</div><p>Humanos são animais <strong>homeotérmicos</strong>: mantêm temperatura corporal interna em ~<strong>37°C</strong> (faixa normal: 35,5 a 37,7°C). Variações normais ocorrem conforme horário do dia, local de aferição e condição fisiológica.</p><p><strong>Balanço térmico</strong>: Entrada de calor externo + Produção interna de calor = Perda de calor. Produção: contrações musculares, metabolismo do organismo (fígado, cérebro e coração). Perda: sistema de isolamento, fluxo sanguíneo, vasoconstrição/dilatação (SNS).</p><div class="res-h1">2. Mecanismos de Perda de Calor</div><div style="overflow-x:auto;margin:8px 0"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:280px"><tr style="background:rgba(230,126,34,.12)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(230,126,34,.3);color:#e67e22;font-weight:600">Mecanismo</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(230,126,34,.3);color:#e67e22;font-weight:600">%</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid rgba(230,126,34,.3);color:#e67e22;font-weight:600">Descrição</th></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Irradiação</strong></td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">60%</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Ondas eletromagnéticas emitidas pelo corpo</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Evaporação</strong></td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">22%</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Vaporização de água na pele e trato respiratório</td></tr><tr><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text)"><strong>Condução (ar)</strong></td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">15%</td><td style="padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--dim)">Transferência por contato direto com o ar</td></tr><tr><td style="padding:5px 8px;color:var(--text)"><strong>Condução (objetos)</strong></td><td style="padding:5px 8px;color:var(--dim)">3%</td><td style="padding:5px 8px;color:var(--dim)">Transferência por contato direto com objetos</td></tr></table></div><p>Roupas afetam principalmente <strong>condução e convecção</strong>, criando camada isolante de ar.</p><div class="res-h1">3. Termorregulação</div><p><strong>Zona termoneutra</strong>: 27,8 a 30°C. Centro regulatório: <strong>hipotálamo</strong> (área pré-óptica-hipotalâmica + hipotálamo posterior). Termorreceptores periféricos (pele) e centrais (hipotálamo, medula, vísceras).</p><div class="res-h2">Respostas ao Aumento de Temperatura</div><p>Via neurônio <strong>simpático colinérgico</strong>: glândulas sudoríparas → secreção de suor → perda evaporativa; vasos cutâneos → vasodilatação → perda de calor para o ambiente.</p><div class="res-h2">Respostas à Baixa Temperatura</div><p>Via neurônio <strong>simpático adrenérgico</strong>: vasos cutâneos → vasoconstrição → calor conservado; gordura marrom → termogênese sem tremor. Via neurônio <strong>somático motor</strong>: músculos esqueléticos → termogênese com tremor → produção metabólica de calor.</p><div class="res-h2">Sudorese</div><p>Neurônio simpático colinérgico (ACh). Produção: ~1,5 L/h. Em repouso: reabsorção de Na⁺, Cl⁻ e água (suor concentrado em K⁺, ureia, ácido lático). Estímulo intenso: eliminação ~10× maior. Aclimatação: até 6 L/h (aldosterona). Umidade alta dificulta evaporação → superaquecimento.</p><div class="res-h1">4. Termogênese</div><p><strong>Com tremor</strong> (calafrios): contrações musculares involuntárias, 4-6× produção de calor, neurônio somático motor.<br><strong>Sem tremor</strong> (química): desacoplamento mitocondrial (UCP-1/termogenina), receptores β3 adrenérgicos, tecido adiposo marrom (importante em neonatos), hormônios tireoidianos (longo prazo).</p><div class="res-h1">5. Ponto de Ajuste (Set Point)</div><p>Nível crítico de temperatura (~37,1°C). Todos os mecanismos tentam trazer a temperatura corporal para este ponto. Regulado por receptores na área hipotalâmica anterior pré-óptica.</p><p><strong>Alterações do ponto de ajuste</strong>: Se reduz → corpo percebe calor → vasodilatação + sudorese (ex: fogacho pós-menopausa). Se aumenta → corpo percebe frio → vasoconstrição + calafrios (ex: febre). <strong>Exercício NÃO modifica o ponto de ajuste.</strong></p><div class="res-h1">6. Febre</div><p><strong>Pirogênios</strong>: substâncias que elevam o ponto de ajuste. Exógenos: toxinas de LPS bacterianos, proteínas. Endógenos: IL-1, IL-6, TNF-α, PGE₂.</p><p><strong>Fases da febre</strong>: 1. Início — ponto de ajuste sobe → calafrios, vasoconstrição, piloereção, epinefrina. 2. Platô — temperatura atinge o novo ponto. 3. Crise — ponto retorna ao normal → vasodilatação + sudorese intensa → temperatura cai.</p><div class="res-footer">Resumo Fisiologia 1 · Regulação da Temperatura Corporal · Dr. Vinícius Fernandes · UniRV</div>',
+},
+{id:'locked1',name:'Histologia Básica',desc:'Em breve…',icon:'🔬',color:'#636e72',locked:true},
+{id:'locked2',name:'Anatomia Cardíaca',desc:'Em breve…',icon:'❤️',color:'#636e72',locked:true},
+];
+
+let curMod=null;
+function goPage(pg){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));document.getElementById('pg-'+pg).classList.add('on');document.querySelector('.bnav-btn[data-pg="'+pg+'"]').classList.add('on');if(pg==='home')renderHome();if(pg==='ranking')renderRanking();if(pg==='library')renderSugerir();if(pg==='profile'){loadFriendsData().then(()=>renderProfile());}}
+function goHome(){goPage('home');}
+function openModule(id){const m=MODULES.find(x=>x.id===id);if(!m||m.locked)return;curMod=m;document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById('pg-module').classList.add('on');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));renderModule(m);}
+
+/* ===== BUG #1 CORRIGIDO: '…' (U+2026) → '...' (spread operator válido) ===== */
+function renderHome(){
+const lv=getLevel(S.xp);const pct=lv.next?Math.min(100,Math.round(((S.xp-lv.xp)/(lv.next.xp-lv.xp))*100)):100;
+const ms=MODULES.filter(m=>!m.locked).map(m=>({...m,...(S.modules[m.id]||{stars:0,bestScore:0,attempts:0})}));
+const ts=ms.reduce((a,m)=>a+m.stars,0),ta=ms.reduce((a,m)=>a+m.attempts,0);
+let h=`<div class="xp-card"><div class="xp-top"><div class="xp-level"><div class="xp-badge lv${lv.idx+1}">${lv.idx+1}</div><div><div class="xp-lv-name">${lv.emoji} ${lv.name}</div><div class="xp-lv-sub">${S.xp} XP</div></div></div><div class="xp-streak">${S.streak>0?'🔥'+S.streak:''}${S.bestStreak>0?' <span style="color:var(--dim);font-size:10px">max:'+S.bestStreak+'</span>':''}</div></div><div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div><div class="xp-bar-label"><span>Nível ${lv.idx+1}</span><span>${lv.next?lv.next.xp+' XP → '+lv.next.emoji+' '+lv.next.name:'Máximo!'}</span></div></div>`;
+h+=`<div class="stats-row"><div class="stat-card"><div class="stat-num" style="color:var(--gold)">${ts}</div><div class="stat-label">⭐ Estrelas</div></div><div class="stat-card"><div class="stat-num" style="color:var(--green)">${ta}</div><div class="stat-label">📝 Quizzes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--accent2)">${S.bestStreak}</div><div class="stat-label">🔥 Streak</div></div></div>`;
+h+='<div class="mod-section-title">Módulos de Estudo</div>';
+MODULES.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
+if(m.locked){h+=`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;}
+else{h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div></div>`;}
+});
+document.getElementById('homeContent').innerHTML=h;}
+
+function renderModule(m){
+document.getElementById('modTitle').textContent=m.name;
+const ms=S.modules[m.id]||{stars:0,bestScore:0};
+document.getElementById('modXP').textContent=ms.bestScore>0?'⭐'+ms.stars+' · '+ms.bestScore+'%':'';
+let th='';m.tabs.forEach((t,i)=>{th+=`<button class="mod-tab ${i===0?'on':''}" data-tab="${t.id}" onclick="showTab('${t.id}')">${t.label}</button>`;});
+document.getElementById('modTabs').innerHTML=th;showTab(m.tabs[0].id);}
+
+function showTab(id){
+document.querySelectorAll('.mod-tab').forEach(t=>t.classList.remove('on'));
+document.querySelector('.mod-tab[data-tab="'+id+'"]').classList.add('on');
+if(id==='quiz'){renderQuiz();return;}
+if(id==='resumo'){document.getElementById('modContent').innerHTML='<div class="resumo-content">'+curMod.resumoHTML+'</div>';return;}
+const sec=curMod.sections[id];if(!sec)return;
+let h=`<div data-theme="${sec.theme}"><div class="sec-hdr"><div class="sec-dot" style="background:var(--${sec.theme})"></div><h3>${sec.title}</h3></div>`;
+if(sec.flow){h+='<div class="flow">';sec.flow.forEach((f,i)=>{if(i)h+='<div class="flow-a">→</div>';h+=`<div class="flow-s">${f}</div>`;});h+='</div>';}
+sec.cards.forEach((c,i)=>{h+=`<div class="card" onclick="tog(this)"><div class="card-h"><div class="card-num">${i+1}</div><div class="card-t">${c.t}</div><svg class="card-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div><div class="card-b"><p>${c.b}</p></div></div>`;});
+h+='</div>';document.getElementById('modContent').innerHTML=h;}
+
+function tog(el){const w=el.classList.contains('open');el.parentElement.querySelectorAll('.card.open').forEach(c=>{if(c!==el)c.classList.remove('open')});el.classList.toggle('open',!w);}
+
+let qz={mode:'obj',ans:{},score:0,streak:0,currentPlayer:null};
+function renderQuiz(){
+let h=`<div class="sec-hdr"><div class="sec-dot" style="background:var(--accent)"></div><h3>👥 Selecione o Jogador</h3></div>
+<p style="font-size:12px;color:var(--dim);margin-bottom:12px;text-align:center">Quem vai fazer o quiz agora?</p>
+<div style="margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px">`;
+
+let allPlayers=[{name:S.name,xp:S.xp,isYou:true}];if(S.participants){S.participants.forEach(p=>{allPlayers.push({name:p.name||p,xp:p.xp||0});});}
+
+if(allPlayers.length===1){h+=`<p style="grid-column:1/-1;color:var(--dim);font-size:12px;text-align:center;padding:20px;background:var(--bg2);border-radius:10px">Adicione amigos no <strong>Perfil (👤)</strong> para jogar juntos!</p>`;}
+
+allPlayers.forEach((p)=>{const lv=getLevel(p.xp);h+=`<button onclick="startQuizWithPlayer('${p.name}')" style="padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px"><div style="font-size:28px">${lv.emoji}</div><div style="font-weight:700;font-size:13px">${p.name}</div><div style="font-size:10px;color:var(--dim)">${p.xp} XP</div></button>`;});
+
+h+=`</div>`;
+document.getElementById('modContent').innerHTML=h;}
+
+function startQuizWithPlayer(playerName){qz={mode:'obj',ans:{},score:0,streak:0,currentPlayer:playerName};
+let h=`<div style="background:linear-gradient(135deg,rgba(108,92,231,.12),rgba(108,92,231,.06));border-radius:10px;padding:12px 16px;margin-bottom:12px;border-left:4px solid var(--accent);display:flex;justify-content:space-between;align-items:center">
+<div><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px">Jogador Atual</div><div style="font-size:14px;font-weight:700;margin-top:2px">${playerName}</div></div>
+<button onclick="renderQuiz()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);color:var(--text);cursor:pointer;font-size:12px;padding:6px 12px;border-radius:6px;font-weight:600">Trocar Jogador</button>
+</div>
+<div class="qz-mode-wrap"><button class="qz-mode on" data-m="obj" onclick="qzMode('obj')"><span>📋</span>Objetiva</button><button class="qz-mode" data-m="esc" onclick="qzMode('esc')"><span>✍️</span>Escrita</button><button class="qz-mode" data-m="pra" onclick="qzMode('pra')"><span>🔬</span>Prática</button></div>
+<div id="qzR" style="display:none"></div><div id="qzC"></div>`;
+document.getElementById('modContent').innerHTML=h;renderQs();}
+
+function qzMode(m){qz={...qz,mode:m,ans:{},score:0,streak:0};document.querySelectorAll('.qz-mode').forEach(b=>b.classList.remove('on'));document.querySelector('.qz-mode[data-m="'+m+'"]').classList.add('on');document.getElementById('qzR').style.display='none';renderQs();}
+
+function renderQs(){const items=curMod.quiz[qz.mode];let h='';
+if(qz.mode==='obj'){items.forEach((q,i)=>{h+=`<div class="qz-q"><div class="qz-q-num">Questão ${i+1}/${items.length}</div><div class="qz-q-tag">${q.tag}</div><div class="qz-q-text">${q.q}</div>`;q.opts.forEach((o,j)=>{h+=`<button class="qz-opt" onclick="qzAns(${i},${j})" id="qO${i}_${j}">${String.fromCharCode(65+j)}) ${o}</button>`;});h+='</div>';});}
+else if(qz.mode==='esc'){items.forEach((q,i)=>{h+=`<div class="qz-q"><div class="qz-q-num">Questão ${i+1}/${items.length}</div><div class="qz-q-tag">${q.tag}</div><div class="qz-q-text">${q.q}</div><textarea class="qz-textarea" placeholder="Escreva..."></textarea><button class="qz-reveal-btn" onclick="qzRev(this,${i})">Ver resposta</button><div class="qz-answer" id="qA${i}"><strong>Resposta:</strong><br>${q.ans}</div></div>`;});}
+else{items.forEach((q,i)=>{h+=`<div class="qz-q"><div class="qz-q-num">ID ${i+1}/${items.length}</div><div class="qz-q-tag">${q.tag}</div><div class="qz-prat-img"><strong>🔬 Cenário</strong>${q.desc}</div><div class="qz-q-text">${q.q}</div><textarea class="qz-textarea" placeholder="Identifique..."></textarea><button class="qz-reveal-btn" onclick="qzRev(this,${i})">Ver resposta</button><div class="qz-answer" id="qA${i}">${q.ans}</div></div>`;});}
+document.getElementById('qzC').innerHTML=h;}
+
+/* ===== BUGS #2, #3 CORRIGIDOS: '_' em vez de '*' nos IDs, e parâmetro válido '_' ===== */
+function qzAns(qi,oi){if(qz.ans[qi]!==undefined)return;qz.ans[qi]=oi;const q=curMod.quiz.obj[qi];const ok=q.ans===oi;if(ok){qz.score++;qz.streak++;}else qz.streak=0;
+document.getElementById('qO'+qi+'_'+oi).classList.add(ok?'right':'wrongsel');if(!ok)document.getElementById('qO'+qi+'_'+q.ans).classList.add('right');
+q.opts.forEach((_,j)=>{document.getElementById('qO'+qi+'_'+j).style.pointerEvents='none';});
+if(Object.keys(qz.ans).length===curMod.quiz.obj.length)finishQ();}
+
+function finishQ(){const t=curMod.quiz.obj.length,c=qz.score,pct=Math.round(c/t*100),perf=c===t;
+let xp=c*XP_CORRECT+(t-c)*XP_WRONG,sb=0;if(qz.streak>=3)sb=qz.streak*XP_STREAK;if(perf)xp+=XP_PERFECT;xp+=sb;
+
+const player=qz.currentPlayer||S.name;if(player===S.name){S.xp+=xp;if(c>0)S.streak++;else S.streak=0;if(S.streak>S.bestStreak)S.bestStreak=S.streak;}else{const pidx=S.participants.findIndex(p=>(p.name||p)===player);if(pidx>=0){if(!S.participants[pidx].xp)S.participants[pidx].xp=0;if(!S.participants[pidx].streak)S.participants[pidx].streak=0;if(!S.participants[pidx].bestStreak)S.participants[pidx].bestStreak=0;S.participants[pidx].xp+=xp;if(c>0)S.participants[pidx].streak++;else S.participants[pidx].streak=0;if(S.participants[pidx].streak>S.participants[pidx].bestStreak)S.participants[pidx].bestStreak=S.participants[pidx].streak;}}
+
+const ms=S.modules[curMod.id]||{stars:0,bestScore:0,attempts:0};ms.attempts++;if(pct>ms.bestScore)ms.bestScore=pct;
+ms.stars=pct>=90?5:pct>=75?4:pct>=60?3:pct>=40?2:pct>=20?1:0;S.modules[curMod.id]=ms;
+recordQuizResult(player,c,t,xp,pct);
+saveState(S);
+
+const lv=getLevel(player===S.name?S.xp:(S.participants.find(p=>(p.name||p)===player)||{xp:0}).xp||0);const r=document.getElementById('qzR');r.style.display='block';
+r.innerHTML=`<div class="qz-reward"><div class="qz-reward-xp">+${xp} XP</div><div class="qz-reward-label">${player} · ${c}/${t} · ${pct}%</div><div class="qz-reward-detail">${perf?'<strong>🏆 PERFEITO! +'+XP_PERFECT+'XP</strong><br>':''}${sb>0?'<strong>🔥 Streak '+qz.streak+'! +'+sb+'XP</strong><br>':''}${lv.emoji} ${lv.name} · ${'★'.repeat(ms.stars)+'☆'.repeat(5-ms.stars)}</div><button class="qz-restart" onclick="qzMode('obj')">Jogar Novamente</button></div>`;
+r.scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('modXP').textContent='⭐'+ms.stars+' · '+ms.bestScore+'%';}
+
+function qzRev(btn,i){const a=document.getElementById('qA'+i);a.classList.toggle('show');btn.textContent=a.classList.contains('show')?'Ocultar':'Ver resposta';}
+
+/* ===== BUG #4 CORRIGIDO + FIREBASE RANKING ===== */
+function renderRanking(){
+let h='<div style="margin-bottom:16px"><div class="mod-section-title">🏆 Ranking Global — Tempo Real</div><div style="font-size:11px;color:var(--dim);margin-top:-6px;margin-bottom:12px">Todos os usuários do MedMind</div></div>';
+h+='<div id="rankList"><div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Carregando ranking...</div></div>';
+document.getElementById('rankContent').innerHTML=h;
+if(unsubRanking){unsubRanking();unsubRanking=null;}
+unsubRanking=db.collection('users').orderBy('xp','desc').limit(50).onSnapshot(snap=>{
+const rl=document.getElementById('rankList');if(!rl)return;
+let rh='';
+snap.docs.forEach((doc,i)=>{
+const p=doc.data();const pos=i+1;const isYou=currentUser&&doc.id===currentUser.uid;
+const pc=pos===1?'p1':pos===2?'p2':pos===3?'p3':'pn';
+const md=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
+const lv=getLevel(p.xp||0);
+rh+=`<div class="rank-card ${isYou?'rank-you':''}"><div class="rank-pos ${pc}">${md||pos}</div><div class="rank-info"><div class="rank-name">${p.name||'Anônimo'}${isYou?' (você)':''}</div><div class="rank-xp">${p.xp||0} XP · ${lv.emoji} ${lv.name}</div></div><div class="rank-lv">${lv.emoji}</div></div>`;
+});
+if(!rh)rh='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Nenhum jogador ainda. Seja o primeiro!</div>';
+rl.innerHTML=rh;
+},e=>{console.error('Ranking error:',e);const rl=document.getElementById('rankList');if(rl)rl.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Erro ao carregar ranking</div>';});
+}
+
+function renderProfile(){const lv=getLevel(S.xp);
+const userEmail=currentUser?currentUser.email:'';
+let h=`<div class="profile-card"><div class="profile-avatar">${lv.emoji}</div><input class="profile-name-input" value="${S.name}" onchange="updName(this.value);renderProfile();" placeholder="Seu nome"><div class="profile-sub">${lv.emoji} ${lv.name} · ${S.xp} XP · 🔥 ${S.streak}</div>${userEmail?'<div style="font-size:10px;color:var(--dim2);margin-top:6px">☁️ '+userEmail+' · Dados salvos na nuvem</div>':''}</div>`;
+
+/* === Código de Amigo === */
+h+=`<div class="friend-code-box"><div class="friend-code-label">Seu código de amigo</div><div class="friend-code">${S.friendCode||'...'}</div><div class="friend-code-actions"><button class="friend-code-btn primary" onclick="shareFriendCode()">📤 Compartilhar</button><button class="friend-code-btn secondary" onclick="openFriendModal()">➕ Adicionar Amigo</button></div></div>`;
+
+/* === Solicitações Pendentes === */
+if(pendingRequests.length>0){
+h+=`<div class="mod-section-title">📬 Solicitações de Amizade (${pendingRequests.length})</div>`;
+pendingRequests.forEach(req=>{const rlv=getLevel(0);
+h+=`<div class="friend-req-card"><div class="friend-avatar">${rlv.emoji}</div><div class="friend-req-info"><div class="friend-req-name">${req.fromName||'Anônimo'}</div><div class="friend-req-sub">quer ser seu amigo</div></div><div class="friend-req-actions"><button class="friend-req-btn accept" onclick="acceptFriendRequest('${req.id}')">✓ Aceitar</button><button class="friend-req-btn reject" onclick="rejectFriendRequest('${req.id}')">✕</button></div></div>`;
+});}
+
+/* === Lista de Amigos === */
+h+=`<div class="mod-section-title" style="margin-top:16px">👥 Amigos (${friendsData.length})</div>`;
+if(friendsData.length>0){
+friendsData.forEach(f=>{const flv=getLevel(f.xp||0);
+h+=`<div class="friend-item"><div class="friend-avatar">${flv.emoji}</div><div class="friend-info"><div class="friend-name">${f.name||'Anônimo'}</div><div class="friend-xp">${f.xp||0} XP · ${flv.emoji} ${flv.name}</div></div><button class="friend-remove" onclick="removeFriend('${f.uid}','${(f.name||'Anônimo').replace(/'/g,"\\'")}')" title="Remover amigo">✕</button></div>`;
+});}else{h+=`<div class="friend-empty">Nenhum amigo ainda. Compartilhe seu código <strong>${S.friendCode||''}</strong> ou adicione amigos pelo código deles!</div>`;}
+
+/* === Estatísticas === */
+h+=`<div class="mod-section-title" style="margin-top:20px">📈 Sua Evolução</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+<div style="background:var(--bg2);padding:12px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,.05)"><div style="font-size:20px;font-weight:800;color:var(--accent2)">${S.xp}</div><div style="font-size:9px;color:var(--dim);margin-top:4px">TOTAL XP</div></div>
+<div style="background:var(--bg2);padding:12px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,.05)"><div style="font-size:20px;font-weight:800;color:var(--gold)">🔥${S.bestStreak}</div><div style="font-size:9px;color:var(--dim);margin-top:4px">MELHOR STREAK</div></div>
+<div style="background:var(--bg2);padding:12px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,.05)"><div style="font-size:20px;font-weight:800;color:var(--green)">${S.quizHistory.length}</div><div style="font-size:9px;color:var(--dim);margin-top:4px">QUIZZES</div></div>
+</div>`;
+
+h+=`<div class="mod-section-title">📋 Últimos Quizzes</div>`;
+if(!S.quizHistory.length)h+='<p style="color:var(--dim);font-size:12px;text-align:center;padding:20px;background:var(--bg2);border-radius:10px">Nenhum quiz realizado ainda. Vá ao módulo e comece a jogar!</p>';
+else S.quizHistory.slice(0,8).forEach(q=>{const c=q.pct>=75?'good':q.pct>=50?'ok':'bad';const by=q.by||S.name;h+=`<div class="history-item"><div class="history-left"><strong>${q.mod}</strong><br>👤 ${by} · ${q.date}<br>${q.score}/${q.total}</div><div class="history-right ${c}">${q.pct}%<br>+${q.xp}XP</div></div>`;});
+h+=`<button class="reset-btn" onclick="if(confirm('Tem certeza? Isso apagará TUDO.'))resetAll()">🗑️ Resetar Tudo</button>`;
+h+=`<button onclick="doLogout()" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid var(--dim2);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px">🚪 Sair do MedMind</button>`;
+document.getElementById('profileContent').innerHTML=h;updateFriendBadge();
+loadAdminSuggestions().then(ah=>{if(ah)document.getElementById('profileContent').innerHTML+=ah;});}
+
+function updName(n){S.name=n||'Estudante';saveState(S);saveToCloud();}
+function resetAll(){const conf=confirm('⚠️ ATENÇÃO!\n\nVai APAGAR:\n✓ Seu nome\n✓ Todos os XP\n✓ Todos os jogadores\n✓ Todo histórico\n\nTem certeza?');if(conf){localStorage.clear();location.reload();}}
+function addParticipant(){const inp=document.getElementById('newParticipantName');const name=inp.value.trim();if(!name){alert('❌ Digite um nome!');return;}if(!S.participants)S.participants=[];if(S.participants.some(p=>(p.name||p).toLowerCase()===name.toLowerCase())){alert('❌ Esse jogador já existe!');return;}S.participants.push({name:name,xp:0,streak:0,bestStreak:0});inp.value='';saveState(S);alert('✅ '+name+' adicionado com sucesso!');renderProfile();}
+function removeParticipant(idx){const pName=(S.participants[idx]||{}).name||S.participants[idx];const conf=confirm('🗑️ Remover jogador?\n\n'+pName+'\n\nSeus dados serão DELETADOS!\nTem certeza?');if(conf){S.participants.splice(idx,1);saveState(S);alert('✅ '+pName+' removido!');renderProfile();}}
+function recordQuizResult(participantName,score,total,xp,pct){if(!S.quizHistory)S.quizHistory=[];S.quizHistory.unshift({mod:curMod.name,score:score,total:total,pct:pct,xp:xp,by:participantName||S.name,date:new Date().toLocaleDateString('pt-BR')});if(S.quizHistory.length>50)S.quizHistory=S.quizHistory.slice(0,50);saveState(S);}
+function downloadResumo(){const txt='GAMETOGENESE\nEspermatogênese, Oogênese, Fecundação, 1ª e 2ª Semana\nProf. Ludmila Lima-Silveira - 2025\n\nESPERMATOGÊNESE:\nEspermatogônias (2n) → Espermatócito I (2n) → Espermatócitos II (n) → Espermátides (n) → Espermatozoides (n)\nInicia puberdade, ~120 milhões/dia, peça intermediária com mitocôndrias\n\nOOGÊNESE:\nOogônias (2n) → Oócito I (2n prófase I) → Oócito II (n metáfase II) → Óvulo (n)\n1-2 milhões ao nascer, 40 mil adolescência, 400 ovulam vida reprodutiva\n\nFECUNDAÇÃO:\nEspermatozoide (n) + Ovócito (n) = Zigoto (2n)\n5 Etapas: corona radiata, zona pelúcida, penetração, fusão membranas, pronúcleos\nResultado: 2n=46, sexo cromossômico, variabilidade genética\n\n1ª SEMANA:\nDia 0: Zigoto | Dia 1: 2 células | Dia 2: 4 células | Dia 3: 8 células | Dia 4: Mórula | Dia 5: Blastocisto | Dia 6-7: Implantação\nBlastocisto = Embrioblasto (embrião) + Trofoblasto (placenta) + Blastocele\n\n2ª SEMANA REGRA DOS 2:\n2 Camadas Trofoblasto (Citotrofoblasto + Sinciciotrofoblasto)\n2 Camadas Embrioblasto (Epiblasto + Hipoblasto)\n2 Cavidades (Amniótica + Exocelômica)\n2 Vesículas Umbilicais (Primitiva + Secundária)\nImplantação Ectópica: Tubária 98%, Ovariana, Abdominal, Cervical\n\nResumo Embriologia 2025';try{const blob=new Blob([txt],{type:'text/plain'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='Resumo_Gametogenese_2025.txt';document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);alert('✅ Resumo baixado com sucesso!');}catch(e){alert('❌ Erro: '+e);}}
+/* === SOLICITAR MÓDULO (Firebase Storage para PDF) === */
+const DISCIPLINES_LIST=['Embriologia','Fisiologia','Histologia','Anatomia','Bioquímica','Farmacologia','Patologia','Microbiologia','Imunologia','Genética','Outra'];
+const ADMIN_EMAIL='ranna@grupolead.com.br';
+let sugPdfFile=null;
+
+function renderSugerir(){
+sugPdfFile=null;
+let h=`<div style="text-align:center;padding:20px 0 16px"><div style="font-size:48px;margin-bottom:8px">📚</div><div style="font-size:18px;font-weight:700">Solicitar Novo Módulo</div><div style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5">Envie o PDF da aula e em até 48h<br>o módulo estará disponível no app!</div></div>`;
+h+=`<div style="background:var(--bg2);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)">
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📄 PDF da aula *</div>
+<div id="pdfUploadZone" onclick="document.getElementById('sugPdfInput').click()" style="border:2px dashed rgba(108,92,231,.3);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04)">
+<div style="font-size:32px;margin-bottom:6px">📄</div>
+<div style="font-size:14px;font-weight:600;color:var(--text)">Toque para selecionar o PDF</div>
+<div style="font-size:11px;color:var(--dim);margin-top:4px">Máximo 10MB</div>
+<div id="pdfFileName" style="display:none;font-size:13px;font-weight:600;color:var(--green);margin-top:8px"></div>
+</div>
+<input type="file" id="sugPdfInput" accept=".pdf" style="display:none" onchange="handleSugPDF(this)">
+
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Disciplina *</div>
+<select id="sugDisc" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;appearance:none;-webkit-appearance:none">
+<option value="">Selecione a disciplina...</option>
+${DISCIPLINES_LIST.map(d=>'<option value="'+d+'">'+d+'</option>').join('')}
+</select>
+
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Assunto / Título da aula *</div>
+<input id="sugTitulo" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none" placeholder="Ex: Gastrulação — 3ª Semana">
+
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Professor(a)</div>
+<input id="sugProf" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none" placeholder="Nome do professor(a)">
+
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Observações</div>
+<textarea id="sugObs" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;resize:none;height:60px" placeholder="Ex: Foco em questões de prova..."></textarea>
+</div>`;
+
+h+=`<button onclick="enviarSolicitacao()" id="btnSolicitacao" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s">📩 Enviar PDF + Solicitação</button>`;
+
+h+=`<div id="uploadProgress" style="display:none;margin-top:12px;background:var(--bg2);border-radius:10px;padding:12px 16px;border:1px solid rgba(255,255,255,.05)">
+<div style="font-size:12px;color:var(--dim);margin-bottom:6px">Enviando PDF...</div>
+<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div id="uploadBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width .3s"></div></div>
+<div id="uploadPct" style="font-size:11px;color:var(--dim);margin-top:4px;text-align:right;font-family:'JetBrains Mono',monospace">0%</div>
+</div>`;
+
+h+=`<div style="background:linear-gradient(135deg,rgba(0,184,148,.08),rgba(108,92,231,.06));border:1px solid rgba(0,184,148,.15);border-radius:var(--r);padding:14px;margin-top:16px;text-align:center">
+<div style="font-size:12px;color:var(--dim);line-height:1.6">Cada módulo inclui: <strong style="color:var(--text)">resumo completo</strong>, <strong style="color:var(--text)">abas temáticas</strong>,<br><strong style="color:var(--text)">15+ questões objetivas</strong>, <strong style="color:var(--text)">dissertativas</strong> e <strong style="color:var(--text)">casos clínicos</strong></div></div>`;
+
+document.getElementById('libraryContent').innerHTML=h;}
+
+function handleSugPDF(input){
+const file=input.files[0];if(!file)return;
+if(file.type!=='application/pdf'){alert('Selecione um arquivo PDF');input.value='';return;}
+if(file.size>10*1024*1024){alert('Arquivo muito grande (máx 10MB)');input.value='';return;}
+sugPdfFile=file;
+const zone=document.getElementById('pdfUploadZone');
+zone.style.borderColor='var(--green)';zone.style.background='rgba(0,184,148,.06)';
+const nameEl=document.getElementById('pdfFileName');
+nameEl.style.display='block';nameEl.textContent='✅ '+file.name+' ('+Math.round(file.size/1024)+'KB)';
+const titleInput=document.getElementById('sugTitulo');
+if(!titleInput.value){titleInput.value=file.name.replace(/\.pdf$/i,'').replace(/[_-]/g,' ');}}
+
+async function enviarSolicitacao(){
+const disc=document.getElementById('sugDisc').value;
+const titulo=document.getElementById('sugTitulo').value.trim();
+const prof=document.getElementById('sugProf').value.trim();
+const obs=document.getElementById('sugObs').value.trim();
+if(!sugPdfFile){alert('Selecione o PDF da aula');return;}
+if(!disc){alert('Selecione a disciplina');return;}
+if(!titulo){alert('Digite o assunto/título da aula');return;}
+const btn=document.getElementById('btnSolicitacao');
+btn.disabled=true;btn.innerHTML='<div style="width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite"></div> Enviando...';
+const progDiv=document.getElementById('uploadProgress');progDiv.style.display='block';
+try{
+/* 1. Upload PDF para Firebase Storage */
+const fileName=Date.now()+'_'+sugPdfFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+const ref=storage.ref('suggestions/'+currentUser.uid+'/'+fileName);
+const uploadTask=ref.put(sugPdfFile);
+await new Promise((resolve,reject)=>{
+uploadTask.on('state_changed',
+(snap)=>{const pct=Math.round((snap.bytesTransferred/snap.totalBytes)*100);document.getElementById('uploadBar').style.width=pct+'%';document.getElementById('uploadPct').textContent=pct+'%';},
+(err)=>{reject(err);},
+()=>{resolve();}
+);});
+const pdfURL=await ref.getDownloadURL();
+
+/* 2. Salvar solicitação no Firestore */
+await db.collection('suggestions').add({
+userId:currentUser.uid,
+userName:S.name||'Estudante',
+userEmail:currentUser.email||'',
+discipline:disc,
+title:titulo,
+professor:prof,
+observations:obs,
+pdfURL:pdfURL,
+pdfName:sugPdfFile.name,
+status:'pendente',
+createdAt:firebase.firestore.FieldValue.serverTimestamp()
+});
+
+/* 3. Tela de sucesso */
+document.getElementById('libraryContent').innerHTML=`
+<div style="text-align:center;padding:60px 16px">
+<div style="font-size:64px;margin-bottom:16px">✅</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:8px">Enviado com sucesso!</div>
+<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px">
+<strong>${titulo}</strong><br>${disc}</div>
+<div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:24px">PDF enviado e solicitação registrada.<br>Em até 48h o módulo estará no app!</div>
+<button onclick="renderSugerir()" style="padding:12px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Enviar outra solicitação</button>
+</div>`;
+sugPdfFile=null;
+}catch(e){console.error('Erro ao enviar:',e);alert('Erro ao enviar: '+e.message);btn.disabled=false;btn.innerHTML='📩 Enviar PDF + Solicitação';progDiv.style.display='none';}}
+
+/* === ADMIN: ver solicitações no perfil === */
+async function loadAdminSuggestions(){
+if(!currentUser||currentUser.email!==ADMIN_EMAIL)return'';
+try{const snap=await db.collection('suggestions').orderBy('createdAt','desc').limit(20).get();
+if(snap.empty)return'';
+let h='<div class="mod-section-title" style="margin-top:20px">📩 Solicitações de Módulos</div>';
+snap.docs.forEach(d=>{const s=d.data();const date=s.createdAt?s.createdAt.toDate().toLocaleDateString('pt-BR'):'';
+const statusColor=s.status==='pendente'?'var(--gold)':s.status==='concluido'?'var(--green)':'var(--blue)';
+h+=`<div style="background:var(--bg2);border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(255,255,255,.05)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+<div style="font-size:14px;font-weight:600">${s.title||''}</div>
+<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:${statusColor}22;color:${statusColor};font-weight:600">${s.status||'pendente'}</span>
+</div>
+<div style="font-size:11px;color:var(--dim);line-height:1.5">
+👤 ${s.userName||''} · 📚 ${s.discipline||''} · 📅 ${date}
+${s.professor?'<br>👨‍🏫 '+s.professor:''}
+${s.observations?'<br>💬 '+s.observations:''}
+</div>
+${s.pdfURL?'<a href="'+s.pdfURL+'" target="_blank" style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:6px;background:var(--accent-bg);color:var(--accent2);font-size:11px;font-weight:600;text-decoration:none">📄 Baixar PDF</a>':''}
+<div style="display:flex;gap:6px;margin-top:8px">
+${s.status==='pendente'?`<button onclick="updateSugStatus('${d.id}','em_andamento')" style="padding:4px 10px;border-radius:6px;border:none;background:var(--blue-bg);color:var(--blue);font-size:10px;font-weight:600;cursor:pointer">Em andamento</button><button onclick="updateSugStatus('${d.id}','concluido')" style="padding:4px 10px;border-radius:6px;border:none;background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;cursor:pointer">Concluído</button>`:''}
+</div></div>`;});
+return h;}catch(e){console.error('Erro admin:',e);return'';}}
+
+async function updateSugStatus(docId,status){
+try{await db.collection('suggestions').doc(docId).update({status:status});
+loadFriendsData().then(()=>renderProfile());}catch(e){alert('Erro: '+e.message);}}
+
+/* === Inicialização: Firebase Auth observer controla tudo === */
+document.getElementById('loginGate').classList.add('hidden');
+</script>
+
+</body>
+</html>
+
