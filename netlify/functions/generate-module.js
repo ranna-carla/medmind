@@ -24,19 +24,6 @@ exports.handler = async function(event, context) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Texto do PDF muito curto' }) };
     }
 
-    const systemPrompt = "Voce e um gerador de modulos educacionais para estudantes de medicina brasileiros. A partir do texto de uma aula, gere um modulo completo. Retorne APENAS JSON valido com: emoji (string), summary (HTML do resumo, minimo 500 palavras), tabs (array de abas com title, emoji, cards com title e content), quiz com objective (10 questoes com question, options array de 4, correct index, explanation), written (3 questoes com question e answer), clinical (2 casos com scenario, question, answer). Use portugues brasileiro e terminologia medica precisa.";
-
-    const requestBody = {
-      model: "claude-sonnet-4-6",
-      max_tokens: 8000,
-      messages: [
-        {
-          role: "user",
-          content: systemPrompt + "\n\nDisciplina: " + (discipline || "Medicina") + "\nTitulo: " + (title || "Modulo") + "\nTexto da aula:\n" + text.substring(0, 12000)
-        }
-      ]
-    };
-
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -44,16 +31,19 @@ exports.handler = async function(event, context) {
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: "Gere um modulo educacional em JSON para estudantes de medicina. Responda APENAS com JSON valido, sem markdown.\n\nEstrutura exata:\n{\"emoji\":\"string\",\"summary\":\"resumo HTML curto 200 palavras\",\"tabs\":[{\"title\":\"string\",\"emoji\":\"string\",\"cards\":[{\"title\":\"string\",\"content\":\"HTML\"}]}],\"quiz\":{\"objective\":[{\"question\":\"string\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correct\":0,\"explanation\":\"string\"}],\"written\":[{\"question\":\"string\",\"answer\":\"string\"}],\"clinical\":[{\"scenario\":\"string\",\"question\":\"string\",\"answer\":\"string\"}]}}\n\nGere: 5 objetivas, 1 dissertativa, 1 caso clinico, 2 abas com 2 cards cada. Portugues brasileiro.\n\nDisciplina: " + (discipline || "Medicina") + "\nTitulo: " + (title || "Modulo") + "\nTexto:\n" + text.substring(0, 5000)
+        }]
+      })
     });
 
     const responseText = await response.text();
-
     if (!response.ok) {
-      return {
-        statusCode: 502, headers,
-        body: JSON.stringify({ error: "Claude API " + response.status + ": " + responseText })
-      };
+      return { statusCode: 502, headers, body: JSON.stringify({ error: "Claude API " + response.status + ": " + responseText }) };
     }
 
     const data = JSON.parse(responseText);
