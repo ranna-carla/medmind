@@ -59,7 +59,7 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .mod-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .mod-info{flex:1;min-width:0}.mod-name{font-size:14px;font-weight:600;margin-bottom:2px}
 .mod-desc{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mod-progress{width:50px;text-align:right}.mod-stars{font-size:14px;letter-spacing:1px}
+.mod-progress{min-width:50px;text-align:right;flex-shrink:0}.mod-stars{font-size:11px;letter-spacing:0px;white-space:nowrap}
 .mod-pct{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
 .mod-card-locked{opacity:.4;pointer-events:none}
 .mod-hdr{display:flex;align-items:center;gap:10px}
@@ -352,11 +352,11 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 <div class="page on" id="pg-home"><div class="pg-hdr"><div class="home-hero"><div class="home-logo">🧠 MedMind</div><div class="home-tagline">Estude com Inteligência</div></div></div><div class="page-inner" id="homeContent"></div></div>
 <div class="page" id="pg-module"><div class="pg-hdr"><div class="mod-hdr"><button class="mod-back" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><div class="mod-hdr-title" id="modTitle"></div><div class="mod-hdr-xp" id="modXP"></div></div></div><div class="mod-tabs" id="modTabs"></div><div class="page-inner" id="modContent"></div></div>
 <div class="page" id="pg-ranking"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">🏆 Ranking</div></div><div class="page-inner" id="rankContent"></div></div>
-<div class="page" id="pg-library"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📚 Sugerir Módulo</div></div><div class="page-inner" id="libraryContent"></div></div>
+<div class="page" id="pg-library"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📢 Publicar</div></div><div class="page-inner" id="libraryContent"></div></div>
 <div class="page" id="pg-profile"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">👤 Perfil</div></div><div class="page-inner" id="profileContent"></div></div>
 <div class="bnav">
 <button class="bnav-btn on" data-pg="home" onclick="goPage('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Início</button>
-<button class="bnav-btn" data-pg="library" onclick="goPage('library')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Sugerir</button>
+<button class="bnav-btn" data-pg="library" onclick="goPage('library')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Publicar</button>
 <button class="bnav-btn" data-pg="ranking" onclick="goPage('ranking')"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Ranking</button>
 <button class="bnav-btn" data-pg="profile" onclick="goPage('profile')" style="position:relative"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil<span class="friend-badge" id="friendBadge" style="display:none">0</span></button>
 </div>
@@ -384,6 +384,7 @@ let unsubFriendReqs = null;
 let pendingRequests = [];
 let friendsData = [];
 let homeFilter = 'curadoria';
+let homeSearch = '';
 let generatedModulesCache = [];
 
 /* === Friend Code Generator === */
@@ -591,7 +592,8 @@ modules:S.modules||{},quizHistory:(S.quizHistory||[]).slice(0,30),participants:S
 friends:S.friends||[],friendCode:S.friendCode||'',
 savedModules:S.savedModules||[],createdModules:S.createdModules||[],
 lastActive:firebase.firestore.FieldValue.serverTimestamp()
-};await db.collection('users').doc(currentUser.uid).set(data,{merge:true});}catch(e){console.error('Erro ao salvar:',e);}}
+};await db.collection('users').doc(currentUser.uid).set(data,{merge:true});
+await db.collection('ranking').doc(currentUser.uid).set({name:S.name,xp:S.xp,lastActive:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error('Erro ao salvar:',e);}}
 
 const LEVELS=[{name:'Calouro',emoji:'🔬',xp:0},{name:'Acadêmico',emoji:'🧪',xp:200},{name:'Residente',emoji:'🩺',xp:500},{name:'Especialista',emoji:'⚕️',xp:1000},{name:'Mestre',emoji:'🧠',xp:2000}];
 const XP_CORRECT=15,XP_WRONG=2,XP_STREAK=5,XP_PERFECT=50;
@@ -1272,25 +1274,30 @@ h+=`<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollba
 filters.forEach(([f,label])=>{h+=`<button onclick="setHomeFilter('${f}')" style="flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid ${homeFilter===f?'transparent':'rgba(255,255,255,.08)'};background:${homeFilter===f?'var(--accent)':'transparent'};color:${homeFilter===f?'#fff':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});
 h+=`</div>`;
 
+h+=`<div style="margin-bottom:14px"><input type="text" id="homeSearchInput" value="${homeSearch.replace(/"/g,'&quot;')}" oninput="homeSearch=this.value;renderHome()" placeholder="🔍 Buscar módulo por nome, matéria ou palavra-chave..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box" /></div>`;
+const sq=homeSearch.toLowerCase().trim();
+
 if(homeFilter==='curadoria'){
   h+='<div class="mod-section-title">Módulos Selecionados</div>';
-  MODULES.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
+  const filteredMods=sq?MODULES.filter(m=>m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)||(m.id&&m.id.toLowerCase().includes(sq))):MODULES;
+  filteredMods.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
   if(m.locked){h+=`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;}
   else{h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div></div>`;}});
+  if(sq&&!filteredMods.length)h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);font-size:13px">Nenhum módulo encontrado para "${homeSearch}"</div>`;
 }else if(homeFilter==='meus'){
-  const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid);
+  const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
   h+='<div class="mod-section-title">Meus Módulos Gerados</div>';
-  if(!mine.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum módulo ainda</div><div style="font-size:12px;line-height:1.5">Use a aba <strong style="color:var(--accent2)">Sugerir</strong> para<br>gerar módulos automaticamente com IA</div></div>`;}
+  if(!mine.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum módulo ainda</div><div style="font-size:12px;line-height:1.5">Use a aba <strong style="color:var(--accent2)">Publicar</strong> para<br>gerar módulos automaticamente com IA</div></div>`;}
   mine.forEach(m=>h+=renderGenModCard(m));
 }else if(homeFilter==='publico'){
-  const pub=generatedModulesCache.filter(m=>m.visibility==='public');
+  const pub=generatedModulesCache.filter(m=>m.visibility==='public'&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
   h+='<div class="mod-section-title">Módulos da Comunidade</div>';
   if(!pub.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div><div style="font-size:12px;margin-top:6px">Seja o primeiro a compartilhar!</div></div>`;}
   pub.forEach(m=>h+=renderGenModCard(m));
 }else if(homeFilter==='favoritos'){
   const favIds=S.favorites||[];
-  const favs=generatedModulesCache.filter(m=>favIds.includes(m.docId));
-  const favStatic=MODULES.filter(m=>favIds.includes(m.id));
+  const favs=generatedModulesCache.filter(m=>favIds.includes(m.docId)&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
+  const favStatic=MODULES.filter(m=>favIds.includes(m.id)&&(!sq||m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
   h+='<div class="mod-section-title">Favoritos</div>';
   if(!favs.length&&!favStatic.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">⭐</div><div style="font-size:14px;font-weight:600">Nenhum favorito ainda</div><div style="font-size:12px;margin-top:6px">Toque em ⭐ em qualquer módulo para salvar</div></div>`;}
   favStatic.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
@@ -1299,6 +1306,7 @@ if(homeFilter==='curadoria'){
 }
 
 document.getElementById('homeContent').innerHTML=h;
+if(sq){const si=document.getElementById('homeSearchInput');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}}
 if(homeFilter!=='curadoria'&&!generatedModulesCache.length)loadGeneratedModules();}
 
 function renderGenModCard(m){
@@ -1313,19 +1321,37 @@ return`<div class="mod-card" style="position:relative" onclick="openGeneratedMod
 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
   <button onclick="event.stopPropagation();toggleFavorite('${m.docId}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px">${isFav?'⭐':'☆'}</button>
   ${m.visibility==='public'?'<span style="font-size:9px;padding:2px 6px;border-radius:100px;background:rgba(0,184,148,.12);color:var(--green);font-weight:600">público</span>':'<span style="font-size:9px;padding:2px 6px;border-radius:100px;background:rgba(108,92,231,.12);color:var(--accent2);font-weight:600">privado</span>'}
+  ${isOwn?`<button onclick="event.stopPropagation();deleteGenModule('${m.docId}','${m.visibility||'private'}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;opacity:.5;line-height:1" title="Apagar módulo">🗑️</button>`:''}
 </div>
 </div>`;}
+
+async function deleteGenModule(docId,visibility){
+const msg=visibility==='public'
+  ?'⚠️ Outros usuários podem estar usando seu módulo.\n\nDeseja mesmo apagar?'
+  :'Apagar este módulo? Esta ação não pode ser desfeita.';
+if(!confirm(msg))return;
+try{
+  await db.collection('generatedModules').doc(docId).delete();
+  generatedModulesCache=generatedModulesCache.filter(m=>m.docId!==docId);
+  renderHome();
+}catch(e){alert('Erro ao apagar: '+e.message);}}
 
 function setHomeFilter(f){homeFilter=f;if(f!=='curadoria')loadGeneratedModules().then(()=>renderHome());else renderHome();}
 
 async function loadGeneratedModules(){
 if(!currentUser)return;
 try{
-  const snap=await db.collection('generatedModules')
-    .where('status','==','ready')
-    .orderBy('createdAt','desc').limit(50).get();
-  generatedModulesCache=snap.docs.map(d=>({docId:d.id,...d.data()}));
-}catch(e){console.error('loadGeneratedModules:',e);}}
+  const snap=await db.collection('generatedModules').limit(100).get();
+  generatedModulesCache=snap.docs
+    .map(d=>({docId:d.id,...d.data()}))
+    .filter(d=>d.status==='ready')
+    .sort((a,b)=>(b.createdAt||'')>(a.createdAt||'')?1:-1);
+}catch(e){
+  console.error('loadGeneratedModules:',e);
+  generatedModulesCache=[];
+  const el=document.getElementById('homeContent')||document.getElementById('libraryContent');
+  if(el)el.innerHTML+=`<div style="margin:12px 16px;padding:10px 14px;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:10px;font-size:12px;color:#e74c3c">⚠️ Erro ao carregar módulos: ${e.message}</div>`;
+}}
 
 async function openGeneratedModule(docId){
   let m=generatedModulesCache.find(x=>x.docId===docId);
@@ -1420,13 +1446,8 @@ r.scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('mo
 
 function qzRev(btn,i){const a=document.getElementById('qA'+i);a.classList.toggle('show');btn.textContent=a.classList.contains('show')?'Ocultar':'Ver resposta';}
 
-/* ===== BUG #4 CORRIGIDO + FIREBASE RANKING ===== */
-function renderRanking(){
-let h='<div style="margin-bottom:16px"><div class="mod-section-title">🏆 Ranking Global — Tempo Real</div><div style="font-size:11px;color:var(--dim);margin-top:-6px;margin-bottom:12px">Todos os usuários do MedMind</div></div>';
-h+='<div id="rankList"><div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Carregando ranking...</div></div>';
-document.getElementById('rankContent').innerHTML=h;
-if(unsubRanking){unsubRanking();unsubRanking=null;}
-unsubRanking=db.collection('users').orderBy('xp','desc').limit(50).onSnapshot(snap=>{
+/* ===== FIREBASE RANKING (com fallback) ===== */
+function renderRankingList(snap){
 const rl=document.getElementById('rankList');if(!rl)return;
 let rh='';
 snap.docs.forEach((doc,i)=>{
@@ -1438,7 +1459,21 @@ rh+=`<div class="rank-card ${isYou?'rank-you':''}"><div class="rank-pos ${pc}">$
 });
 if(!rh)rh='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Nenhum jogador ainda. Seja o primeiro!</div>';
 rl.innerHTML=rh;
-},e=>{console.error('Ranking error:',e);const rl=document.getElementById('rankList');if(rl)rl.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Erro ao carregar ranking</div>';});
+}
+function renderRanking(){
+let h='<div style="margin-bottom:16px"><div class="mod-section-title">🏆 Ranking Global — Tempo Real</div><div style="font-size:11px;color:var(--dim);margin-top:-6px;margin-bottom:12px">Todos os usuários do MedMind</div></div>';
+h+='<div id="rankList"><div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Carregando ranking...</div></div>';
+document.getElementById('rankContent').innerHTML=h;
+if(unsubRanking){unsubRanking();unsubRanking=null;}
+unsubRanking=db.collection('users').orderBy('xp','desc').limit(50).onSnapshot(snap=>{
+renderRankingList(snap);
+},e=>{
+console.warn('Ranking users error, trying ranking collection:',e);
+if(unsubRanking){unsubRanking();unsubRanking=null;}
+unsubRanking=db.collection('ranking').orderBy('xp','desc').limit(50).onSnapshot(snap=>{
+renderRankingList(snap);
+},e2=>{console.error('Ranking fallback error:',e2);const rl=document.getElementById('rankList');if(rl)rl.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Erro ao carregar ranking. Tente novamente.</div>';});
+});
 }
 
 function renderProfile(){const lv=getLevel(S.xp);
@@ -1501,9 +1536,9 @@ let h=`<div style="text-align:center;padding:16px 0 12px">
 
 h+=`<div style="background:var(--bg2);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)">
 
-<div id="pdfUploadZone" onclick="document.getElementById('sugPdfInput').click()" style="border:2px dashed rgba(108,92,231,.3);border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04);margin-bottom:14px">
+<div id="pdfUploadZone" onclick="document.getElementById('sugPdfInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(108,92,231,.12)'" ondragleave="this.style.borderColor='rgba(108,92,231,.3)';this.style.background='rgba(108,92,231,.04)'" ondrop="event.preventDefault();this.style.borderColor='rgba(108,92,231,.3)';this.style.background='rgba(108,92,231,.04)';handleSugPDFDrop(event)" style="border:2px dashed rgba(108,92,231,.3);border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04);margin-bottom:14px">
 <div style="font-size:28px;margin-bottom:4px">📄</div>
-<div style="font-size:14px;font-weight:600">Toque para selecionar o PDF</div>
+<div style="font-size:14px;font-weight:600">Toque ou arraste o PDF aqui</div>
 <div style="font-size:11px;color:var(--dim);margin-top:3px">Máximo 10MB</div>
 <div id="pdfFileName" style="display:none;font-size:13px;font-weight:600;color:var(--green);margin-top:8px"></div>
 </div>
@@ -1557,10 +1592,10 @@ if(v==='private'){
   btnPriv.style.border='1px solid rgba(255,255,255,.1)';btnPriv.style.background='transparent';btnPriv.style.color='var(--dim)';
 }}
 
-function handleSugPDF(input){
-const file=input.files[0];if(!file)return;
-if(file.type!=='application/pdf'){alert('Selecione um arquivo PDF');input.value='';return;}
-if(file.size>10*1024*1024){alert('Arquivo muito grande (máx 10MB)');input.value='';return;}
+function applyPdfFile(file){
+if(!file)return;
+if(file.type!=='application/pdf'){alert('Selecione um arquivo PDF');return;}
+if(file.size>10*1024*1024){alert('Arquivo muito grande (máx 10MB)');return;}
 sugPdfFile=file;
 const zone=document.getElementById('pdfUploadZone');
 zone.style.borderColor='var(--green)';zone.style.background='rgba(0,184,148,.06)';
@@ -1568,6 +1603,9 @@ const nameEl=document.getElementById('pdfFileName');
 nameEl.style.display='block';nameEl.textContent='✅ '+file.name+' ('+Math.round(file.size/1024)+'KB)';
 const titleInput=document.getElementById('sugTitulo');
 if(!titleInput.value){titleInput.value=file.name.replace(/\.pdf$/i,'').replace(/[_-]/g,' ');}}
+
+function handleSugPDF(input){applyPdfFile(input.files[0]);}
+function handleSugPDFDrop(e){applyPdfFile(e.dataTransfer?.files?.[0]);}
 
 function setGerarStatus(msg,pct){
 const el=document.getElementById('gerarStatus');const bar=document.getElementById('gerarBar');
@@ -1585,43 +1623,72 @@ const btn=document.getElementById('btnGerar');
 const prog=document.getElementById('gerarProgress');
 btn.disabled=true;btn.style.opacity='0.6';prog.style.display='block';
 try{
-/* 1. Upload PDF para Firebase Storage */
-setGerarStatus('Enviando PDF...',20);
-const fileName=Date.now()+'_'+sugPdfFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-const ref=storage.ref('suggestions/'+currentUser.uid+'/'+fileName);
-const uploadTask=ref.put(sugPdfFile);
-await new Promise((resolve,reject)=>{uploadTask.on('state_changed',null,(err)=>reject(err),()=>resolve());});
-const pdfURL=await ref.getDownloadURL();
+/* 1. Ler PDF como base64 diretamente no browser */
+setGerarStatus('Lendo PDF...',15);
+const pdfBase64=await new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=e=>resolve(e.target.result.split(',')[1]);
+  reader.onerror=reject;
+  reader.readAsDataURL(sugPdfFile);
+});
 
-/* 2. Chamar servidor local para gerar módulo via Claude API */
-setGerarStatus('IA analisando o PDF...',45);
-const resp=await fetch('/generate-module',{
+/* 2. Iniciar job de geração — retorna jobId imediatamente */
+setGerarStatus('Iniciando geração com IA...',25);
+const startResp=await fetch('/generate-module',{
   method:'POST',
   headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({pdfUrl:pdfURL,discipline:disc,title:titulo,professor:prof,observations:obs})
+  body:JSON.stringify({pdfBase64,discipline:disc,title:titulo,professor:prof,observations:obs})
 });
-setGerarStatus('Estruturando módulo...',75);
-const data=await resp.json();
-if(!data.success)throw new Error(data.error||'Erro na geração');
-const moduleData=data.module;
+const startData=await startResp.json();
+if(!startData.jobId)throw new Error(startData.error||'Erro ao iniciar geração');
+const jobId=startData.jobId;
 
-/* 3. Salvar módulo gerado no Firestore */
-setGerarStatus('Salvando módulo...',90);
-await db.collection('generatedModules').add({
-userId:currentUser.uid,
-userName:S.name||'Estudante',
-userEmail:currentUser.email||'',
-discipline:disc,
-title:titulo,
-professor:prof,
-visibility:sugVisibility,
-module:moduleData,
-status:'ready',
-pdfUrl:pdfURL,
-createdAt:firebase.firestore.FieldValue.serverTimestamp()
+/* 3. Polling a cada 4s até o job terminar */
+const msgs=[
+  [30,'IA lendo o PDF...'],
+  [40,'Analisando o conteúdo...'],
+  [50,'Criando resumo...'],
+  [60,'Gerando questões...'],
+  [70,'Montando casos clínicos...'],
+  [80,'Finalizando módulo...'],
+  [88,'Quase pronto...']
+];
+let msgIdx=0;
+const moduleData=await new Promise((resolve,reject)=>{
+  const poll=setInterval(async()=>{
+    try{
+      if(msgIdx<msgs.length){setGerarStatus(msgs[msgIdx][1],msgs[msgIdx][0]);msgIdx++;}
+      const r=await fetch('/job-status/'+jobId);
+      const d=await r.json();
+      if(d.status==='ready'){clearInterval(poll);resolve(d.module);}
+      else if(d.status==='error'){clearInterval(poll);reject(new Error(d.error||'Erro na geração'));}
+      else if(d.progress){setGerarStatus(d.progress,Math.min(88,30+msgIdx*8));}
+    }catch(e){clearInterval(poll);reject(e);}
+  },4000);
 });
 
-/* 4. Tela de sucesso */
+/* 4. Salvar módulo no Firestore via servidor (bypassa regras de segurança do client) */
+setGerarStatus('Salvando módulo...',93);
+const idToken=await currentUser.getIdToken();
+const saveResp=await fetch('/save-module',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+    idToken,
+    userId:currentUser.uid,
+    userName:S.name||'Estudante',
+    userEmail:currentUser.email||'',
+    discipline:disc,
+    title:titulo,
+    professor:prof,
+    visibility:sugVisibility,
+    module:moduleData
+  })
+});
+const saveData=await saveResp.json();
+if(!saveData.success)throw new Error(saveData.error||'Erro ao salvar');
+
+/* 5. Tela de sucesso */
 setGerarStatus('Pronto!',100);
 await loadGeneratedModules();
 document.getElementById('libraryContent').innerHTML=`
