@@ -578,7 +578,7 @@ pendingRequests=[];friendsData=[];
 /* === Firestore Sync === */
 async function loadUserData(user){
 try{const doc=await db.collection('users').doc(user.uid).get();
-if(doc.exists){S={...ds(),...doc.data()};if(!S.participants)S.participants=[];if(!S.quizHistory)S.quizHistory=[];if(!S.modules)S.modules={};if(!S.friends)S.friends=[];if(!S.savedModules)S.savedModules=[];if(!S.createdModules)S.createdModules=[];}
+if(doc.exists){S={...ds(),...doc.data()};if(!S.participants)S.participants=[];if(!S.quizHistory)S.quizHistory=[];if(!S.modules)S.modules={};if(!S.friends)S.friends=[];if(!S.savedModules)S.savedModules=[];if(!S.createdModules)S.createdModules=[];if(!S.favorites)S.favorites=[];}
 else{S=ds();S.name=user.displayName||user.email.split('@')[0];S.email=user.email;await saveToCloud();}
 if(!S.friendCode)await ensureFriendCode(user.uid);
 await loadFriendsData();
@@ -590,7 +590,7 @@ try{const data={
 name:S.name,email:currentUser.email,xp:S.xp,streak:S.streak,bestStreak:S.bestStreak,
 modules:S.modules||{},quizHistory:(S.quizHistory||[]).slice(0,30),participants:S.participants||[],
 friends:S.friends||[],friendCode:S.friendCode||'',
-savedModules:S.savedModules||[],createdModules:S.createdModules||[],
+savedModules:S.savedModules||[],createdModules:S.createdModules||[],favorites:S.favorites||[],
 lastActive:firebase.firestore.FieldValue.serverTimestamp()
 };await db.collection('users').doc(currentUser.uid).set(data,{merge:true});
 await db.collection('ranking').doc(currentUser.uid).set({name:S.name,xp:S.xp,lastActive:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error('Erro ao salvar:',e);}}
@@ -601,7 +601,7 @@ function getLevel(xp){let lv={...LEVELS[0],idx:0};for(let i=LEVELS.length-1;i>=0
 let saveTimer=null;
 function loadState(){try{const raw=JSON.parse(localStorage.getItem('mm'));if(!raw)return ds();if(!raw.participants)raw.participants=[];if(!raw.quizHistory)raw.quizHistory=[];if(!raw.modules)raw.modules={};return raw;}catch(e){return ds();}}
 function saveState(s){localStorage.setItem('mm',JSON.stringify(s));localStorage.setItem('mm_version',APP_VERSION);if(saveTimer)clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveToCloud(),1500);}
-function ds(){return{name:'Estudante',xp:0,streak:0,bestStreak:0,quizHistory:[],modules:{},participants:[],friends:[],friendCode:'',photoURL:'',bio:'',savedModules:[],createdModules:[]};}
+function ds(){return{name:'Estudante',xp:0,streak:0,bestStreak:0,quizHistory:[],modules:{},participants:[],friends:[],friendCode:'',photoURL:'',bio:'',savedModules:[],createdModules:[],favorites:[]};}
 let S=loadState();
 const PEERS=[{name:'Ana Clara',xp:820},{name:'Pedro H.',xp:650},{name:'Mariana S.',xp:1150},{name:'Lucas R.',xp:430},{name:'Isabela M.',xp:980},{name:'Gabriel F.',xp:310},{name:'Camila O.',xp:560}];
 
@@ -1280,9 +1280,7 @@ const sq=homeSearch.toLowerCase().trim();
 if(homeFilter==='curadoria'){
   h+='<div class="mod-section-title">Módulos Selecionados</div>';
   const filteredMods=sq?MODULES.filter(m=>m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)||(m.id&&m.id.toLowerCase().includes(sq))):MODULES;
-  filteredMods.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
-  if(m.locked){h+=`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;}
-  else{h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div></div>`;}});
+  filteredMods.forEach(m=>h+=renderStaticModCard(m));
   if(sq&&!filteredMods.length)h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);font-size:13px">Nenhum módulo encontrado para "${homeSearch}"</div>`;
 }else if(homeFilter==='meus'){
   const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
@@ -1290,9 +1288,11 @@ if(homeFilter==='curadoria'){
   if(!mine.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum módulo ainda</div><div style="font-size:12px;line-height:1.5">Use a aba <strong style="color:var(--accent2)">Publicar</strong> para<br>gerar módulos automaticamente com IA</div></div>`;}
   mine.forEach(m=>h+=renderGenModCard(m));
 }else if(homeFilter==='publico'){
+  const pubStatic=MODULES.filter(m=>!m.locked&&(!sq||m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
   const pub=generatedModulesCache.filter(m=>m.visibility==='public'&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
   h+='<div class="mod-section-title">Módulos da Comunidade</div>';
-  if(!pub.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div><div style="font-size:12px;margin-top:6px">Seja o primeiro a compartilhar!</div></div>`;}
+  if(!pubStatic.length&&!pub.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div><div style="font-size:12px;margin-top:6px">Seja o primeiro a compartilhar!</div></div>`;}
+  pubStatic.forEach(m=>h+=renderStaticModCard(m));
   pub.forEach(m=>h+=renderGenModCard(m));
 }else if(homeFilter==='favoritos'){
   const favIds=S.favorites||[];
@@ -1300,14 +1300,19 @@ if(homeFilter==='curadoria'){
   const favStatic=MODULES.filter(m=>favIds.includes(m.id)&&(!sq||m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
   h+='<div class="mod-section-title">Favoritos</div>';
   if(!favs.length&&!favStatic.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">⭐</div><div style="font-size:14px;font-weight:600">Nenhum favorito ainda</div><div style="font-size:12px;margin-top:6px">Toque em ⭐ em qualquer módulo para salvar</div></div>`;}
-  favStatic.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
-  h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div></div></div>`;});
+  favStatic.forEach(m=>h+=renderStaticModCard(m));
   favs.forEach(m=>h+=renderGenModCard(m));
 }
 
 document.getElementById('homeContent').innerHTML=h;
 if(sq){const si=document.getElementById('homeSearchInput');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}}
 if(homeFilter!=='curadoria'&&!generatedModulesCache.length)loadGeneratedModules();}
+
+function renderStaticModCard(m){
+const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
+const isFav=(S.favorites||[]).includes(m.id);
+if(m.locked)return`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;
+return`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div><button onclick="event.stopPropagation();toggleFavorite('${m.id}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px">${isFav?'⭐':'☆'}</button></div></div>`;}
 
 function renderGenModCard(m){
 const isFav=(S.favorites||[]).includes(m.docId);
