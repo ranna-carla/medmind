@@ -383,6 +383,8 @@ let unsubRanking = null;
 let unsubFriendReqs = null;
 let pendingRequests = [];
 let friendsData = [];
+let homeFilter = 'curadoria';
+let generatedModulesCache = [];
 
 /* === Friend Code Generator === */
 function generateFriendCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<4;i++)code+=chars[Math.floor(Math.random()*chars.length)];return'MED-'+code;}
@@ -518,7 +520,7 @@ ${isFriend?'<span class="friend-result-status">✅ Amigos</span>':
 
 async function shareFriendCode(){
 const code=S.friendCode;if(!code)return;
-const text='Estude comigo no MedMind! Meu código: '+code+'\nhttps://medmindplus.netlify.app';
+const text='Estude comigo no MedMind! Meu código: '+code+'\nhttps://medmind.win7med.com.br';
 if(navigator.share){try{await navigator.share({title:'MedMind',text:text});return;}catch(e){}}
 try{await navigator.clipboard.writeText(code);alert('📋 Código copiado: '+code);}catch(e){prompt('Seu código de amigo:',code);}}
 
@@ -1263,12 +1265,86 @@ const ms=MODULES.filter(m=>!m.locked).map(m=>({...m,...(S.modules[m.id]||{stars:
 const ts=ms.reduce((a,m)=>a+m.stars,0),ta=ms.reduce((a,m)=>a+m.attempts,0);
 let h=`<div class="xp-card"><div class="xp-top"><div class="xp-level"><div class="xp-badge lv${lv.idx+1}">${lv.idx+1}</div><div><div class="xp-lv-name">${lv.emoji} ${lv.name}</div><div class="xp-lv-sub">${S.xp} XP</div></div></div><div class="xp-streak">${S.streak>0?'🔥'+S.streak:''}${S.bestStreak>0?' <span style="color:var(--dim);font-size:10px">max:'+S.bestStreak+'</span>':''}</div></div><div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div><div class="xp-bar-label"><span>Nível ${lv.idx+1}</span><span>${lv.next?lv.next.xp+' XP → '+lv.next.emoji+' '+lv.next.name:'Máximo!'}</span></div></div>`;
 h+=`<div class="stats-row"><div class="stat-card"><div class="stat-num" style="color:var(--gold)">${ts}</div><div class="stat-label">⭐ Estrelas</div></div><div class="stat-card"><div class="stat-num" style="color:var(--green)">${ta}</div><div class="stat-label">📝 Quizzes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--accent2)">${S.bestStreak}</div><div class="stat-label">🔥 Streak</div></div></div>`;
-h+='<div class="mod-section-title">Módulos de Estudo</div>';
-MODULES.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
-if(m.locked){h+=`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;}
-else{h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div></div>`;}
-});
-document.getElementById('homeContent').innerHTML=h;}
+
+// ── Filtros da biblioteca ──
+const filters=[['curadoria','📚 Curadoria'],['meus','🎓 Meus'],['publico','🌐 Público'],['favoritos','⭐ Favoritos']];
+h+=`<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">`;
+filters.forEach(([f,label])=>{h+=`<button onclick="setHomeFilter('${f}')" style="flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid ${homeFilter===f?'transparent':'rgba(255,255,255,.08)'};background:${homeFilter===f?'var(--accent)':'transparent'};color:${homeFilter===f?'#fff':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});
+h+=`</div>`;
+
+if(homeFilter==='curadoria'){
+  h+='<div class="mod-section-title">Módulos Selecionados</div>';
+  MODULES.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
+  if(m.locked){h+=`<div class="mod-card mod-card-locked"><div class="mod-icon" style="background:rgba(99,110,114,.1)">🔒</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div></div>`;}
+  else{h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div>${ms2.bestScore>0?'<div class="mod-pct">'+ms2.bestScore+'%</div>':''}</div></div>`;}});
+}else if(homeFilter==='meus'){
+  const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid);
+  h+='<div class="mod-section-title">Meus Módulos Gerados</div>';
+  if(!mine.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum módulo ainda</div><div style="font-size:12px;line-height:1.5">Use a aba <strong style="color:var(--accent2)">Sugerir</strong> para<br>gerar módulos automaticamente com IA</div></div>`;}
+  mine.forEach(m=>h+=renderGenModCard(m));
+}else if(homeFilter==='publico'){
+  const pub=generatedModulesCache.filter(m=>m.visibility==='public');
+  h+='<div class="mod-section-title">Módulos da Comunidade</div>';
+  if(!pub.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div><div style="font-size:12px;margin-top:6px">Seja o primeiro a compartilhar!</div></div>`;}
+  pub.forEach(m=>h+=renderGenModCard(m));
+}else if(homeFilter==='favoritos'){
+  const favIds=S.favorites||[];
+  const favs=generatedModulesCache.filter(m=>favIds.includes(m.docId));
+  const favStatic=MODULES.filter(m=>favIds.includes(m.id));
+  h+='<div class="mod-section-title">Favoritos</div>';
+  if(!favs.length&&!favStatic.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">⭐</div><div style="font-size:14px;font-weight:600">Nenhum favorito ainda</div><div style="font-size:12px;margin-top:6px">Toque em ⭐ em qualquer módulo para salvar</div></div>`;}
+  favStatic.forEach(m=>{const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
+  h+=`<div class="mod-card" onclick="openModule('${m.id}')"><div class="mod-icon" style="background:${m.color}22">${m.icon}</div><div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${m.desc}</div></div><div class="mod-progress"><div class="mod-stars" style="color:var(--gold)">${st}</div></div></div>`;});
+  favs.forEach(m=>h+=renderGenModCard(m));
+}
+
+document.getElementById('homeContent').innerHTML=h;
+if(homeFilter!=='curadoria'&&!generatedModulesCache.length)loadGeneratedModules();}
+
+function renderGenModCard(m){
+const isFav=(S.favorites||[]).includes(m.docId);
+const isOwn=m.userId===currentUser?.uid;
+return`<div class="mod-card" style="position:relative" onclick="openGeneratedModule('${m.docId}')">
+<div class="mod-icon" style="background:${(m.module?.color||'#6c5ce7')}22">${m.module?.icon||'📄'}</div>
+<div class="mod-info">
+  <div class="mod-name">${m.module?.name||m.title}</div>
+  <div class="mod-desc">${m.discipline}${isOwn?'':' · '+m.userName}</div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+  <button onclick="event.stopPropagation();toggleFavorite('${m.docId}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px">${isFav?'⭐':'☆'}</button>
+  ${m.visibility==='public'?'<span style="font-size:9px;padding:2px 6px;border-radius:100px;background:rgba(0,184,148,.12);color:var(--green);font-weight:600">público</span>':'<span style="font-size:9px;padding:2px 6px;border-radius:100px;background:rgba(108,92,231,.12);color:var(--accent2);font-weight:600">privado</span>'}
+</div>
+</div>`;}
+
+function setHomeFilter(f){homeFilter=f;if(f!=='curadoria')loadGeneratedModules().then(()=>renderHome());else renderHome();}
+
+async function loadGeneratedModules(){
+if(!currentUser)return;
+try{
+  const snap=await db.collection('generatedModules')
+    .where('status','==','ready')
+    .orderBy('createdAt','desc').limit(50).get();
+  generatedModulesCache=snap.docs.map(d=>({docId:d.id,...d.data()}));
+}catch(e){console.error('loadGeneratedModules:',e);}}
+
+async function openGeneratedModule(docId){
+  let m=generatedModulesCache.find(x=>x.docId===docId);
+  if(!m){const doc=await db.collection('generatedModules').doc(docId).get();if(!doc.exists)return;m={docId,...doc.data()};}
+  if(!m.module)return;
+  curMod=m.module;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pg-module').classList.add('on');
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+  renderModule(m.module);}
+
+async function toggleFavorite(docId){
+  if(!currentUser)return;
+  const favs=S.favorites||[];
+  const idx=favs.indexOf(docId);
+  if(idx>=0)favs.splice(idx,1);else favs.push(docId);
+  S.favorites=favs;
+  await db.collection('users').doc(currentUser.uid).update({favorites:favs});
+  renderHome();}
 
 function renderModule(m){
 document.getElementById('modTitle').textContent=m.name;
@@ -1413,47 +1489,73 @@ const DISCIPLINES_LIST=['Embriologia','Fisiologia','Histologia','Anatomia','Bioq
 const ADMIN_EMAIL='ranna@grupolead.com.br';
 let sugPdfFile=null;
 
+let sugVisibility='private';
+
 function renderSugerir(){
-sugPdfFile=null;
-let h=`<div style="text-align:center;padding:20px 0 16px"><div style="font-size:48px;margin-bottom:8px">📚</div><div style="font-size:18px;font-weight:700">Solicitar Novo Módulo</div><div style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5">Envie o PDF da aula e em até 48h<br>o módulo estará disponível no app!</div></div>`;
+sugPdfFile=null;sugVisibility='private';
+let h=`<div style="text-align:center;padding:16px 0 12px">
+<div style="font-size:40px;margin-bottom:6px">🤖</div>
+<div style="font-size:18px;font-weight:700">Gerar Módulo com IA</div>
+<div style="font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5">Suba o PDF e o módulo completo<br>é gerado automaticamente em minutos</div>
+</div>`;
+
 h+=`<div style="background:var(--bg2);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)">
-<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📄 PDF da aula *</div>
-<div id="pdfUploadZone" onclick="document.getElementById('sugPdfInput').click()" style="border:2px dashed rgba(108,92,231,.3);border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04)">
-<div style="font-size:32px;margin-bottom:6px">📄</div>
-<div style="font-size:14px;font-weight:600;color:var(--text)">Toque para selecionar o PDF</div>
-<div style="font-size:11px;color:var(--dim);margin-top:4px">Máximo 10MB</div>
+
+<div id="pdfUploadZone" onclick="document.getElementById('sugPdfInput').click()" style="border:2px dashed rgba(108,92,231,.3);border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(108,92,231,.04);margin-bottom:14px">
+<div style="font-size:28px;margin-bottom:4px">📄</div>
+<div style="font-size:14px;font-weight:600">Toque para selecionar o PDF</div>
+<div style="font-size:11px;color:var(--dim);margin-top:3px">Máximo 10MB</div>
 <div id="pdfFileName" style="display:none;font-size:13px;font-weight:600;color:var(--green);margin-top:8px"></div>
 </div>
 <input type="file" id="sugPdfInput" accept=".pdf" style="display:none" onchange="handleSugPDF(this)">
 
-<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Disciplina *</div>
-<select id="sugDisc" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;appearance:none;-webkit-appearance:none">
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Disciplina *</div>
+<select id="sugDisc" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;margin-bottom:14px">
 <option value="">Selecione a disciplina...</option>
 ${DISCIPLINES_LIST.map(d=>'<option value="'+d+'">'+d+'</option>').join('')}
 </select>
 
-<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Assunto / Título da aula *</div>
-<input id="sugTitulo" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none" placeholder="Ex: Gastrulação — 3ª Semana">
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Título da aula *</div>
+<input id="sugTitulo" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;margin-bottom:14px" placeholder="Ex: Gastrulação — 3ª Semana">
 
-<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Professor(a)</div>
-<input id="sugProf" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none" placeholder="Nome do professor(a)">
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Professor(a)</div>
+<input id="sugProf" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;margin-bottom:14px" placeholder="Nome do professor(a)">
 
-<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Observações</div>
-<textarea id="sugObs" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;resize:none;height:60px" placeholder="Ex: Foco em questões de prova..."></textarea>
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Observações</div>
+<textarea id="sugObs" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;outline:none;resize:none;height:56px;margin-bottom:16px" placeholder="Ex: Foco em questões de prova..."></textarea>
+
+<div style="font-size:12px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Visibilidade do módulo</div>
+<div style="display:flex;gap:8px">
+<button id="btnPriv" onclick="setSugVisibility('private')" style="flex:1;padding:12px;border-radius:10px;border:2px solid var(--accent);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🔒 Privado<br><span style="font-size:10px;font-weight:400;color:var(--dim)">só você vê</span></button>
+<button id="btnPub" onclick="setSugVisibility('public')" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🌐 Público<br><span style="font-size:10px;font-weight:400">todos podem usar</span></button>
+</div>
 </div>`;
 
-h+=`<button onclick="enviarSolicitacao()" id="btnSolicitacao" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s">📩 Enviar PDF + Solicitação</button>`;
+h+=`<button onclick="gerarModulo()" id="btnGerar" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">✨ Gerar Módulo com IA</button>`;
 
-h+=`<div id="uploadProgress" style="display:none;margin-top:12px;background:var(--bg2);border-radius:10px;padding:12px 16px;border:1px solid rgba(255,255,255,.05)">
-<div style="font-size:12px;color:var(--dim);margin-bottom:6px">Enviando PDF...</div>
-<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden"><div id="uploadBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width .3s"></div></div>
-<div id="uploadPct" style="font-size:11px;color:var(--dim);margin-top:4px;text-align:right;font-family:'JetBrains Mono',monospace">0%</div>
+h+=`<div id="gerarProgress" style="display:none;margin-top:16px;background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(108,92,231,.2);text-align:center">
+<div style="font-size:32px;margin-bottom:8px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px">Gerando seu módulo...</div>
+<div id="gerarStatus" style="font-size:12px;color:var(--dim)">Enviando PDF para IA</div>
+<div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:12px;overflow:hidden"><div id="gerarBar" style="height:100%;width:10%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:2px;transition:width 1s ease"></div></div>
 </div>`;
 
-h+=`<div style="background:linear-gradient(135deg,rgba(0,184,148,.08),rgba(108,92,231,.06));border:1px solid rgba(0,184,148,.15);border-radius:var(--r);padding:14px;margin-top:16px;text-align:center">
-<div style="font-size:12px;color:var(--dim);line-height:1.6">Cada módulo inclui: <strong style="color:var(--text)">resumo completo</strong>, <strong style="color:var(--text)">abas temáticas</strong>,<br><strong style="color:var(--text)">15+ questões objetivas</strong>, <strong style="color:var(--text)">dissertativas</strong> e <strong style="color:var(--text)">casos clínicos</strong></div></div>`;
+h+=`<div style="background:linear-gradient(135deg,rgba(108,92,231,.08),rgba(232,67,147,.06));border:1px solid rgba(108,92,231,.15);border-radius:var(--r);padding:12px 14px;margin-top:14px">
+<div style="font-size:11px;color:var(--dim);line-height:1.7">✅ Resumo completo · Abas temáticas · 15 questões objetivas · 7 dissertativas · 5 casos clínicos · Gerado em ~2 min</div></div>`;
 
 document.getElementById('libraryContent').innerHTML=h;}
+
+function setSugVisibility(v){
+sugVisibility=v;
+const btnPriv=document.getElementById('btnPriv');
+const btnPub=document.getElementById('btnPub');
+if(v==='private'){
+  btnPriv.style.border='2px solid var(--accent)';btnPriv.style.background='var(--accent-bg)';btnPriv.style.color='var(--accent2)';
+  btnPub.style.border='1px solid rgba(255,255,255,.1)';btnPub.style.background='transparent';btnPub.style.color='var(--dim)';
+}else{
+  btnPub.style.border='2px solid var(--green)';btnPub.style.background='var(--green-bg)';btnPub.style.color='var(--green)';
+  btnPriv.style.border='1px solid rgba(255,255,255,.1)';btnPriv.style.background='transparent';btnPriv.style.color='var(--dim)';
+}}
 
 function handleSugPDF(input){
 const file=input.files[0];if(!file)return;
@@ -1467,57 +1569,84 @@ nameEl.style.display='block';nameEl.textContent='✅ '+file.name+' ('+Math.round
 const titleInput=document.getElementById('sugTitulo');
 if(!titleInput.value){titleInput.value=file.name.replace(/\.pdf$/i,'').replace(/[_-]/g,' ');}}
 
-async function enviarSolicitacao(){
+function setGerarStatus(msg,pct){
+const el=document.getElementById('gerarStatus');const bar=document.getElementById('gerarBar');
+if(el)el.textContent=msg;if(bar)bar.style.width=pct+'%';}
+
+async function gerarModulo(){
 const disc=document.getElementById('sugDisc').value;
 const titulo=document.getElementById('sugTitulo').value.trim();
 const prof=document.getElementById('sugProf').value.trim();
 const obs=document.getElementById('sugObs').value.trim();
 if(!sugPdfFile){alert('Selecione o PDF da aula');return;}
 if(!disc){alert('Selecione a disciplina');return;}
-if(!titulo){alert('Digite o assunto/título da aula');return;}
-const btn=document.getElementById('btnSolicitacao');
-btn.disabled=true;btn.innerHTML='<div style="width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite"></div> Enviando...';
-const progDiv=document.getElementById('uploadProgress');progDiv.style.display='block';
+if(!titulo){alert('Digite o título da aula');return;}
+const btn=document.getElementById('btnGerar');
+const prog=document.getElementById('gerarProgress');
+btn.disabled=true;btn.style.opacity='0.6';prog.style.display='block';
 try{
 /* 1. Upload PDF para Firebase Storage */
+setGerarStatus('Enviando PDF...',20);
 const fileName=Date.now()+'_'+sugPdfFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
 const ref=storage.ref('suggestions/'+currentUser.uid+'/'+fileName);
 const uploadTask=ref.put(sugPdfFile);
-await new Promise((resolve,reject)=>{
-uploadTask.on('state_changed',
-(snap)=>{const pct=Math.round((snap.bytesTransferred/snap.totalBytes)*100);document.getElementById('uploadBar').style.width=pct+'%';document.getElementById('uploadPct').textContent=pct+'%';},
-(err)=>{reject(err);},
-()=>{resolve();}
-);});
+await new Promise((resolve,reject)=>{uploadTask.on('state_changed',null,(err)=>reject(err),()=>resolve());});
 const pdfURL=await ref.getDownloadURL();
 
-/* 2. Salvar solicitação no Firestore */
-await db.collection('suggestions').add({
+/* 2. Chamar servidor local para gerar módulo via Claude API */
+setGerarStatus('IA analisando o PDF...',45);
+const resp=await fetch('/generate-module',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({pdfUrl:pdfURL,discipline:disc,title:titulo,professor:prof,observations:obs})
+});
+setGerarStatus('Estruturando módulo...',75);
+const data=await resp.json();
+if(!data.success)throw new Error(data.error||'Erro na geração');
+const moduleData=data.module;
+
+/* 3. Salvar módulo gerado no Firestore */
+setGerarStatus('Salvando módulo...',90);
+await db.collection('generatedModules').add({
 userId:currentUser.uid,
 userName:S.name||'Estudante',
 userEmail:currentUser.email||'',
 discipline:disc,
 title:titulo,
 professor:prof,
-observations:obs,
-pdfURL:pdfURL,
-pdfName:sugPdfFile.name,
-status:'pendente',
+visibility:sugVisibility,
+module:moduleData,
+status:'ready',
+pdfUrl:pdfURL,
 createdAt:firebase.firestore.FieldValue.serverTimestamp()
 });
 
-/* 3. Tela de sucesso */
+/* 4. Tela de sucesso */
+setGerarStatus('Pronto!',100);
+await loadGeneratedModules();
 document.getElementById('libraryContent').innerHTML=`
-<div style="text-align:center;padding:60px 16px">
-<div style="font-size:64px;margin-bottom:16px">✅</div>
-<div style="font-size:20px;font-weight:700;margin-bottom:8px">Enviado com sucesso!</div>
-<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px">
-<strong>${titulo}</strong><br>${disc}</div>
-<div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:24px">PDF enviado e solicitação registrada.<br>Em até 48h o módulo estará no app!</div>
-<button onclick="renderSugerir()" style="padding:12px 24px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:600;cursor:pointer">Enviar outra solicitação</button>
+<div style="text-align:center;padding:50px 16px">
+<div style="font-size:64px;margin-bottom:12px">🎉</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:6px">Módulo gerado!</div>
+<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px"><strong style="color:var(--text)">${moduleData.name}</strong></div>
+<div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:8px">${disc} · ${sugVisibility==='public'?'🌐 Público':'🔒 Privado'}</div>
+<div style="background:var(--bg2);border-radius:12px;padding:12px;margin:12px 0 20px;display:flex;justify-content:space-around;border:1px solid rgba(255,255,255,.05)">
+<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--green)">${(moduleData.quiz?.obj||[]).length}</div><div style="font-size:10px;color:var(--dim)">objetivas</div></div>
+<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--accent2)">${(moduleData.quiz?.esc||[]).length}</div><div style="font-size:10px;color:var(--dim)">dissertativas</div></div>
+<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gold)">${(moduleData.quiz?.pra||[]).length}</div><div style="font-size:10px;color:var(--dim)">casos clínicos</div></div>
+<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:10px;color:var(--dim)">seções</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<button onclick="homeFilter='meus';loadGeneratedModules().then(()=>{goPage('home');})" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
+<button onclick="renderSugerir()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Gerar outro módulo</button>
+</div>
 </div>`;
 sugPdfFile=null;
-}catch(e){console.error('Erro ao enviar:',e);alert('Erro ao enviar: '+e.message);btn.disabled=false;btn.innerHTML='📩 Enviar PDF + Solicitação';progDiv.style.display='none';}}
+}catch(e){
+console.error('Erro ao gerar:',e);
+prog.style.display='none';btn.disabled=false;btn.style.opacity='1';
+document.getElementById('libraryContent').innerHTML+=`<div style="margin-top:12px;padding:12px 14px;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;font-size:13px;color:var(--red)">❌ Erro: ${e.message}</div>`;
+}}
 
 /* === ADMIN: ver solicitações no perfil === */
 async function loadAdminSuggestions(){
