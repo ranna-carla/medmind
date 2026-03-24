@@ -312,7 +312,11 @@ function patchFirestoreDoc(collection, docId, fields, idToken) {
 
 // Extrai e valida JSON de uma resposta Anthropic
 function parseAnthropicJSON(result, label) {
-  if (result?.type === 'error') throw new Error('Anthropic API (' + label + '): ' + (result?.error?.message || JSON.stringify(result.error)));
+  if (result?.type === 'error') {
+    const msg = result?.error?.message || JSON.stringify(result.error);
+    if (msg.includes('PDF') && msg.includes('not valid')) throw new Error('O PDF enviado não é válido ou está corrompido. Tente: (1) reexportar o PDF, (2) enviar apenas as páginas necessárias, ou (3) usar um PDF diferente.');
+    throw new Error('Anthropic API (' + label + '): ' + msg);
+  }
   const raw = result?.content?.[0]?.text || '';
   if (!raw) throw new Error('Resposta vazia (' + label + '). stop_reason: ' + (result?.stop_reason || '?'));
   // Remove markdown code fences e caracteres de controle
@@ -320,8 +324,8 @@ function parseAnthropicJSON(result, label) {
   cleaned = cleaned.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, ' ');
   // Tenta parse direto primeiro
   try { return JSON.parse(cleaned); } catch {}
-  // Fallback: extrai objeto JSON
-  const match = cleaned.match(/\{[\s\S]*\}/);
+  // Fallback: extrai objeto JSON ou array JSON
+  const match = cleaned.match(/\[[\s\S]*\]/) || cleaned.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('JSON ausente (' + label + '). Início da resposta: ' + raw.slice(0, 300));
   try { return JSON.parse(match[0]); } catch {}
   // Corrige trailing commas
@@ -432,20 +436,20 @@ async function processRevisionJob(jobId, topics) {
     for (const topic of topics) {
       // Objetivas
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2500, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] })
-        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 4096, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] })
+        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (obj ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'obj', error: e.message }; })
       );
       // Dissertativas
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] })
-        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] })
+        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (esc ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'esc', error: e.message }; })
       );
       // Casos clínicos
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] })
-        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] })
+        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (pra ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'pra', error: e.message }; })
       );
     }
