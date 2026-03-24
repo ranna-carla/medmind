@@ -2171,7 +2171,7 @@ el.innerHTML=h;
 function _renderRevisionList(){
 let h='';
 h+=`<button onclick="revScreen='create';revTopicInputs=[''];renderReview()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">📝 Nova Revisao</button>`;
-h+=`<div id="revListArea"><div style="text-align:center;padding:20px;color:var(--dim);font-size:12px">Carregando...</div></div>`;
+h+=`<div id="revListArea"></div>`;
 /* Card AI Flashcards */
 h+=`<div style="margin-top:20px;background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(255,255,255,.05)">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -2893,6 +2893,39 @@ fcState=null;
 }
 
 /* Gerar novos cards via IA sobre os mesmos módulos */
+/* Gerar flashcards com IA a partir de tema livre */
+async function _generateAIFlashcards(){
+const topic=(document.getElementById('aiFlashTopic')?.value||'').trim();
+if(!topic){_showToast('Digite um tema');return;}
+const status=document.getElementById('aiFlashStatus');
+if(status)status.textContent='Gerando flashcards...';
+try{
+  const topics=topic.split(',').map(t=>t.trim()).filter(Boolean).slice(0,3);
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15})});
+  const ct=resp.headers.get('content-type')||'';
+  if(!ct.includes('json')){throw new Error('Servidor precisa ser reiniciado para esta funcao');}
+  const data=await resp.json();
+  if(!data.jobId)throw new Error(data.error||'Erro ao iniciar');
+  if(status)status.textContent='Processando...';
+  const pollAI=async()=>{
+    try{
+      const r=await fetch('/job-status/'+data.jobId);
+      const d=await r.json();
+      if(d.status==='ready'&&d.cards){
+        if(status)status.textContent='';
+        _launchFlashcards('Flashcards: '+topic,d.cards,[{type:'ai',id:'ai_'+Date.now(),name:topic}]);
+      }else if(d.status==='error'){
+        if(status)status.textContent='Erro: '+(d.error||'Falha');
+      }else{
+        if(status)status.textContent=d.progress||'Gerando...';
+        setTimeout(pollAI,2000);
+      }
+    }catch(e){setTimeout(pollAI,3000);}
+  };
+  setTimeout(pollAI,2000);
+}catch(e){if(status)status.textContent='⚠️ '+e.message;}
+}
+
 async function _regenerateFlashcards(){
 if(!fcState||!fcState.modules||!fcState.modules.length){_showToast('Sem modulos para regenerar');return;}
 const modules=fcState.modules;
