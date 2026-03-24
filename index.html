@@ -286,34 +286,41 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .gate-footer a{color:var(--accent2);text-decoration:none}
 .gate-shake{animation:gshake .4s ease}
 @keyframes gshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
-/* === FLASHCARD 3D === */
-.fc-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
-.fc-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
-.fc-hdr-title{font-size:14px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fc-hdr-counter{font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace}
-.fc-progress{height:3px;background:var(--bg3);flex-shrink:0}
-.fc-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--pink));transition:width .3s ease}
-.fc-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;overflow-y:auto}
-.fc-card-wrap{perspective:800px;width:100%;max-width:400px}
-.fc-card{width:100%;min-height:280px;position:relative;transform-style:preserve-3d;transition:transform .5s ease;cursor:pointer}
-.fc-card.flipped{transform:rotateY(180deg)}
-.fc-card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid rgba(255,255,255,.08);overflow-y:auto}
-.fc-front{background:var(--bg2)}
-.fc-back{background:var(--bg3);transform:rotateY(180deg)}
-.fc-module-tag{font-size:9px;font-weight:600;color:var(--dim2);margin-bottom:6px;letter-spacing:.3px}
-.fc-tag{font-size:10px;font-weight:600;color:var(--accent2);background:var(--accent-bg);padding:3px 10px;border-radius:100px;margin-bottom:10px}
-.fc-question{font-size:15px;font-weight:600;line-height:1.6;max-width:340px}
-.fc-answer{font-size:14px;line-height:1.7;color:var(--text);max-width:340px;text-align:left}
-.fc-answer-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.fc-hint{font-size:11px;color:var(--dim2);margin-top:16px}
-.fc-btns{display:flex;gap:10px;width:100%;max-width:400px;margin-top:16px;flex-shrink:0}
-.fc-btn{flex:1;padding:12px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s}
-.fc-btn:active{transform:scale(.95)}
-.fc-btn-wrong{background:var(--red-bg);color:var(--red);border:1px solid var(--red)}
-.fc-btn-mid{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
-.fc-btn-right{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
-@keyframes fcSlideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
-.fc-slide-in{animation:fcSlideIn .25s ease}
+/* === FLASHCARD SESSION === */
+.fcs-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
+.fcs-scroll{flex:1;overflow-y:auto;padding:0 16px 20px}
+.fcs-back{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:100px;background:var(--bg2);color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;border:none;cursor:pointer;margin:max(12px,var(--safe-top)) 0 12px}
+.fcs-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
+.fcs-subtitle{font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:16px}
+.fcs-stats{display:flex;gap:8px;margin-bottom:16px}
+.fcs-stat{flex:1;background:var(--bg2);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.05)}
+.fcs-stat-num{font-size:22px;font-weight:800;line-height:1.2}
+.fcs-stat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.fcs-progress-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.fcs-progress-count{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:28px}
+.fcs-progress-bar{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex}
+.fcs-progress-done{height:100%;background:var(--pink);border-radius:3px;transition:width .4s ease}
+.fcs-progress-pct{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:32px;text-align:right}
+.fcs-card-label{text-align:center;font-size:11px;color:var(--dim2);margin:10px 0 12px}
+.fcs-card-wrap{perspective:800px;width:100%;max-width:420px;margin:0 auto}
+.fcs-card{width:100%;min-height:200px;position:relative;transform-style:preserve-3d;transition:transform .5s ease;cursor:pointer}
+.fcs-card.flipped{transform:rotateY(180deg)}
+.fcs-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid rgba(255,255,255,.1);background:var(--bg2)}
+.fcs-face-back{background:var(--bg3);transform:rotateY(180deg)}
+.fcs-q{font-size:15px;font-weight:600;line-height:1.6;color:var(--text);max-width:360px}
+.fcs-a-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.fcs-a{font-size:14px;line-height:1.7;color:var(--text);max-width:360px;text-align:left}
+.fcs-hint{font-size:11px;color:var(--dim2);margin-top:16px}
+.fcs-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;max-width:420px;width:100%;margin-left:auto;margin-right:auto}
+.fcs-btn{padding:14px 8px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.fcs-btn:active{transform:scale(.95)}
+.fcs-btn-wrong{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,107,107,.3)}
+.fcs-btn-mid{background:var(--bg2);color:var(--text);border:1px solid rgba(255,255,255,.1)}
+.fcs-btn-right{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,184,148,.3)}
+.fcs-btn-emoji{font-size:18px}
+.fcs-streak{text-align:center;padding:6px;font-size:11px;color:var(--gold);font-weight:700}
+@keyframes fcsSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.fcs-slide{animation:fcsSlide .25s ease}
 /* === QUIZ REVISÃO === */
 .quiz-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
 .quiz-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
@@ -2633,46 +2640,59 @@ _renderFlashcardOverlay();
 function _renderFlashcardOverlay(){
 const fc=fcState;if(!fc)return;
 let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
-const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
+const div=document.createElement('div');div.id='fc-overlay';div.className='fcs-overlay';
 const total=fc.cards.length;
 const answered=fc.results.right+fc.results.mid+fc.results.wrong;
-const pct=Math.round((answered/total)*100);
+const pending=total-answered;
+const dominated=fc.results.right;
+const pct=total?Math.round((answered/total)*100):0;
 const c=fc.cards[fc.idx];
 const backText=c.back||c.ans||c.answer||'Sem resposta';
-const topLabel=c.module?(c.module+(c.tag?' · '+c.tag:'')):(c.tag||'');
-/* Cor da barra muda: accent → green conforme avança */
-const barColor=pct<40?'var(--accent)':pct<70?'var(--gold)':'var(--green)';
-div.innerHTML=`
-<div class="fc-hdr">
-<button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
-<div class="fc-hdr-title">${fc.title}</div>
-<div class="fc-hdr-counter">${fc.idx+1}/${total}</div>
+const modNames=(fc.modules||[]).map(m=>m.name).join(' · ');
+const cardNum=fc.idx+1;
+const remaining=total-fc.idx;
+
+div.innerHTML=`<div class="fcs-scroll">
+<button class="fcs-back" onclick="closeFlashcards()">← Voltar</button>
+
+<div class="fcs-title">${fc.title}</div>
+${modNames?`<div class="fcs-subtitle">${modNames}</div>`:''}
+
+<div class="fcs-stats">
+<div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--text)">${total}</div><div class="fcs-stat-label" style="color:var(--dim)">Total</div></div>
+<div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--pink)">${remaining}</div><div class="fcs-stat-label" style="color:var(--pink)">Pendentes</div></div>
+<div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--green)">${dominated}</div><div class="fcs-stat-label" style="color:var(--green)">Dominados</div></div>
 </div>
-<div style="height:4px;background:var(--bg3);flex-shrink:0;position:relative">
-<div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .4s ease,background .4s ease"></div>
-<div style="position:absolute;right:8px;top:-14px;font-size:9px;color:var(--dim2);font-family:'JetBrains Mono',monospace">${pct}%</div>
+
+<div class="fcs-progress-row">
+<div class="fcs-progress-count">${answered}/${total}</div>
+<div class="fcs-progress-bar"><div class="fcs-progress-done" style="width:${pct}%"></div></div>
+<div class="fcs-progress-pct">${pct}%</div>
 </div>
-${fc.streak>=3?`<div style="text-align:center;padding:4px;font-size:10px;color:var(--gold);font-weight:700">🔥 ${fc.streak} seguidas!</div>`:''}
-<div class="fc-body">
-<div class="fc-card-wrap fc-slide-in">
-<div class="fc-card${fc.flipped?' flipped':''}" onclick="flipCard()">
-<div class="fc-card-face fc-front">
-${topLabel?`<div class="fc-module-tag">${topLabel}</div>`:''}
-<div class="fc-question">${c.front||c.q||c.question||'Sem pergunta'}</div>
-${!fc.firstFlipDone?'<div class="fc-hint">Toque para virar</div>':''}
+
+${fc.streak>=3?`<div class="fcs-streak">🔥 ${fc.streak} seguidas!</div>`:''}
+
+<div class="fcs-card-label">Card ${cardNum} / ${total}</div>
+
+<div class="fcs-card-wrap fcs-slide">
+<div class="fcs-card${fc.flipped?' flipped':''}" onclick="flipCard()">
+<div class="fcs-face">
+<div class="fcs-q">${c.front||c.q||c.question||'Sem pergunta'}</div>
+${!fc.firstFlipDone?'<div class="fcs-hint">Toque para virar</div>':''}
 </div>
-<div class="fc-card-face fc-back">
-${topLabel?`<div class="fc-module-tag">${topLabel}</div>`:''}
-<div class="fc-answer-label">✓ Resposta</div>
-<div class="fc-answer">${backText}</div>
+<div class="fcs-face fcs-face-back">
+<div class="fcs-a-label">✓ Resposta</div>
+<div class="fcs-a">${backText}</div>
 </div>
 </div>
 </div>
-${fc.flipped?`<div class="fc-btns">
-<button class="fc-btn fc-btn-wrong" onclick="fcAnswer('wrong')">😬 Errei</button>
-<button class="fc-btn fc-btn-mid" onclick="fcAnswer('mid')">😅 Quase</button>
-<button class="fc-btn fc-btn-right" onclick="fcAnswer('right')">💪 Acertei</button>
+
+${fc.flipped?`<div class="fcs-btns">
+<button class="fcs-btn fcs-btn-wrong" onclick="fcAnswer('wrong')"><span class="fcs-btn-emoji">❌</span>Errei</button>
+<button class="fcs-btn fcs-btn-mid" onclick="fcAnswer('mid')"><span class="fcs-btn-emoji">🤔</span>Quase</button>
+<button class="fcs-btn fcs-btn-right" onclick="fcAnswer('right')"><span class="fcs-btn-emoji">✅</span>Acertei</button>
 </div>`:''}
+
 </div>`;
 document.body.appendChild(div);
 }
@@ -2715,25 +2735,23 @@ const pctRight=total?Math.round(fc.results.right/total*100):0;
 const emoji=pctRight>=80?'🏆':pctRight>=60?'🎉':pctRight>=40?'💪':'📖';
 S.xp+=xp;saveState(S);
 let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
-const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
-div.innerHTML=`<div class="fc-hdr">
-<button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
-<div class="fc-hdr-title">${fc.title}</div>
-</div>
-<div class="fc-body" style="justify-content:flex-start;padding-top:30px">
+const div=document.createElement('div');div.id='fc-overlay';div.className='fcs-overlay';
+div.innerHTML=`<div class="fcs-scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%">
+<div style="text-align:center;width:100%;max-width:360px">
 <div style="font-size:56px;margin-bottom:8px">${emoji}</div>
 <div style="font-size:22px;font-weight:800;margin-bottom:2px">${pctRight}% dominado</div>
 <div style="font-size:13px;color:var(--dim);margin-bottom:20px">${min}min ${sec}s · +${xp} XP</div>
-<div style="display:flex;gap:10px;margin-bottom:24px">
-<div style="text-align:center;padding:14px 18px;background:var(--green-bg);border-radius:12px;border:1px solid var(--green);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--green)">${fc.results.right}</div><div style="font-size:10px;color:var(--green);margin-top:2px">✅ Acertei</div></div>
-<div style="text-align:center;padding:14px 18px;background:var(--gold-bg);border-radius:12px;border:1px solid var(--gold);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--gold)">${fc.results.mid}</div><div style="font-size:10px;color:var(--gold);margin-top:2px">🤔 Quase</div></div>
-<div style="text-align:center;padding:14px 18px;background:var(--red-bg);border-radius:12px;border:1px solid var(--red);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--red)">${fc.results.wrong}</div><div style="font-size:10px;color:var(--red);margin-top:2px">❌ Errei</div></div>
+<div class="fcs-stats" style="margin-bottom:24px">
+<div class="fcs-stat" style="border-color:rgba(0,184,148,.2)"><div class="fcs-stat-num" style="color:var(--green)">${fc.results.right}</div><div class="fcs-stat-label" style="color:var(--green)">✅ Acertei</div></div>
+<div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--text)">${fc.results.mid}</div><div class="fcs-stat-label" style="color:var(--dim)">🤔 Quase</div></div>
+<div class="fcs-stat" style="border-color:rgba(255,107,107,.2)"><div class="fcs-stat-num" style="color:var(--red)">${fc.results.wrong}</div><div class="fcs-stat-label" style="color:var(--red)">❌ Errei</div></div>
 </div>
-<div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px">
-${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
-<button onclick="restartFlashcards()" style="padding:13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🔁 Refazer</button>
-<button onclick="_regenerateFlashcards()" style="padding:13px;border-radius:10px;border:1px solid rgba(108,92,231,.3);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">✨ Gerar novos cards</button>
-<button onclick="closeFlashcards()" style="padding:11px;border-radius:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">🧹 Limpar e voltar</button>
+<div style="display:flex;flex-direction:column;gap:10px;width:100%">
+${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
+<button onclick="restartFlashcards()" style="padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🔁 Refazer</button>
+<button onclick="_regenerateFlashcards()" style="padding:14px;border-radius:12px;border:1px solid rgba(108,92,231,.3);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">✨ Gerar novos cards</button>
+<button onclick="closeFlashcards()" style="padding:12px;border-radius:12px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">🧹 Limpar e voltar</button>
+</div>
 </div>
 </div>`;
 document.body.appendChild(div);
