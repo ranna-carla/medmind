@@ -2493,76 +2493,74 @@ quizState.objCorrect=0;quizState.objTotal=0;quizState.startTime=Date.now();
 _renderQuizOverlay();
 }
 
-/* ── AI FLASHCARDS (via servidor) ── */
-async function _generateAIFlashcards(){
-const topic=(document.getElementById('aiFlashTopic')?.value||'').trim();
-if(!topic){alert('Digite um tema');return;}
-const status=document.getElementById('aiFlashStatus');
-if(status)status.textContent='Gerando flashcards...';
-try{
-  const topics=topic.split(',').map(t=>t.trim()).filter(Boolean).slice(0,3);
-  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:20})});
-  const data=await resp.json();
-  if(!data.jobId)throw new Error(data.error||'Erro');
-  /* Poll */
-  const pollFC=async()=>{
-    const r=await fetch('/job-status/'+data.jobId);
-    const d=await r.json();
-    if(d.status==='ready'&&d.cards){
-      if(status)status.textContent='';
-      _launchFlashcards('Flashcards: '+topic,d.cards);
-    }else if(d.status==='error'){
-      if(status)status.textContent='Erro: '+(d.error||'');
-    }else{
-      if(status)status.textContent=d.progress||'Gerando...';
-      setTimeout(pollFC,2000);
-    }
-  };
-  setTimeout(pollFC,2000);
-}catch(e){if(status)status.textContent='Erro: '+e.message;}
+/* ── F1: Seleção multi-módulo para flashcards ── */
+let _fcSelectedModules=[]; /* [{type:'gen'|'static', id, name, icon, color}] */
+
+function _toggleFcModule(type,id,name,icon,color){
+  const idx=_fcSelectedModules.findIndex(m=>m.id===id);
+  if(idx>=0){_fcSelectedModules.splice(idx,1);}
+  else if(_fcSelectedModules.length<3){_fcSelectedModules.push({type,id,name,icon,color});}
+  else{_showToast('Maximo 3 modulos');return;}
+  renderReview();
 }
 
-/* ── F1: Lista de módulos para flashcards ── */
 function _renderFlashcardsList(){
 let h='';
-const myGen=getActiveModules().filter(m=>m.userId===currentUser?.uid);
+const selIds=_fcSelectedModules.map(m=>m.id);
+const totalCards=_fcSelectedModules.length===0?0:15;
+
+/* Header */
+h+=`<div style="text-align:center;margin-bottom:14px">
+<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Selecione ate 3 modulos · sempre 15 cards</div>
+<div style="font-size:10px;color:var(--dim2);margin-top:3px">${_fcSelectedModules.length===1?'15 cards do modulo':_fcSelectedModules.length===2?'8 + 7 cards':'5 cards de cada'}</div>
+</div>`;
+
+/* Chips selecionados */
+if(_fcSelectedModules.length){
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+  _fcSelectedModules.forEach(m=>{
+    h+=`<span style="font-size:11px;padding:5px 12px;border-radius:100px;background:var(--accent-bg);color:var(--accent2);font-weight:600;display:flex;align-items:center;gap:4px;border:1px solid var(--accent)">${m.icon||'📄'} ${m.name} <button onclick="event.stopPropagation();_toggleFcModule('${m.type}','${m.id}','','')" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:14px;padding:0 2px;margin-left:2px">✕</button></span>`;
+  });
+  h+=`</div>`;
+  h+=`<button onclick="_startFlashcardSession()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">▶ Iniciar Sessao (${totalCards} cards)</button>`;
+}
+
+/* Seus módulos */
+const myGen=getActiveModules().filter(m=>m.userId===currentUser?.uid&&m.module);
 if(myGen.length){
-h+='<div class="mod-section-title">📚 Seus Modulos</div>';
-myGen.forEach(m=>{
-const mod=m.module;if(!mod)return;
-const qCount=_countQuizCards(mod);
-h+=`<div class="mod-card" onclick="startFlashcards('gen','${m.docId}')">
-<div class="mod-icon" style="background:${mod.color||'var(--accent)'}22;color:${mod.color||'var(--accent)'}">${mod.icon||'📄'}</div>
-<div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${qCount} cards</div></div>
-<div style="color:var(--accent2);font-size:18px">▶</div>
-</div>`;
-});
+  h+='<div class="mod-section-title">📚 Seus Modulos</div>';
+  myGen.forEach(m=>{
+    const mod=m.module;const sel=selIds.includes(m.docId);
+    h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('gen','${m.docId}','${(mod.name||m.title||'').replace(/'/g,"\\'")}','${mod.icon||'📄'}','${mod.color||'#6c5ce7'}')">
+    <div class="mod-icon" style="background:${mod.color||'var(--accent)'}22">${mod.icon||'📄'}</div>
+    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${_countQuizCards(mod)} cards</div></div>
+    <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
+    </div>`;
+  });
 }
-const pubGen=getActiveModules().filter(m=>m.userId!==currentUser?.uid&&m.visibility==='public');
+/* Públicos */
+const pubGen=getActiveModules().filter(m=>m.userId!==currentUser?.uid&&m.visibility==='public'&&m.module);
 if(pubGen.length){
-h+='<div class="mod-section-title">🌐 Modulos Publicos</div>';
-pubGen.slice(0,10).forEach(m=>{
-const mod=m.module;if(!mod)return;
-const qCount=_countQuizCards(mod);
-h+=`<div class="mod-card" onclick="startFlashcards('gen','${m.docId}')">
-<div class="mod-icon" style="background:rgba(108,92,231,.12);color:var(--accent)">${mod.icon||'📄'}</div>
-<div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${qCount} cards · ${m.userName||''}</div></div>
-<div style="color:var(--accent2);font-size:18px">▶</div>
-</div>`;
-});
+  h+='<div class="mod-section-title">🌐 Publicos</div>';
+  pubGen.slice(0,10).forEach(m=>{
+    const mod=m.module;const sel=selIds.includes(m.docId);
+    h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('gen','${m.docId}','${(mod.name||m.title||'').replace(/'/g,"\\'")}','${mod.icon||'📄'}','${mod.color||'#6c5ce7'}')">
+    <div class="mod-icon" style="background:rgba(108,92,231,.12)">${mod.icon||'📄'}</div>
+    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${_countQuizCards(mod)} cards · ${m.userName||''}</div></div>
+    <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
+    </div>`;
+  });
 }
+/* Curadoria */
 h+='<div class="mod-section-title">📖 Curadoria</div>';
 MODULES.filter(m=>!m.locked).forEach(m=>{
-const qCount=_countQuizCards(m);
-h+=`<div class="mod-card" onclick="startFlashcards('static','${m.id}')">
-<div class="mod-icon" style="background:${m.color}22;color:${m.color}">${m.icon}</div>
-<div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${qCount} cards</div></div>
-<div style="color:var(--accent2);font-size:18px">▶</div>
-</div>`;
+  const sel=selIds.includes(m.id);
+  h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('static','${m.id}','${m.name.replace(/'/g,"\\'")}','${m.icon}','${m.color}')">
+  <div class="mod-icon" style="background:${m.color}22">${m.icon}</div>
+  <div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${_countQuizCards(m)} cards</div></div>
+  <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
+  </div>`;
 });
-if(!myGen.length&&!pubGen.length&&!MODULES.filter(m=>!m.locked).length){
-h+='<div style="text-align:center;padding:40px;color:var(--dim)">Nenhum modulo disponivel</div>';
-}
 return h;
 }
 
@@ -2572,30 +2570,35 @@ return (mod.quiz.obj||[]).length+(mod.quiz.esc||[]).length+(mod.quiz.pra||[]).le
 }
 
 /* ── Motor de Flashcards ── */
+function _startFlashcardSession(){
+if(!_fcSelectedModules.length){_showToast('Selecione pelo menos 1 modulo');return;}
+const count=_fcSelectedModules.length;
+const perMod=Math.floor(15/count);
+const extra=15%count;
+let allCards=[];
+_fcSelectedModules.forEach((sel,i)=>{
+  const quota=perMod+(i<extra?1:0);
+  let mod=null;
+  if(sel.type==='static'){mod=MODULES.find(x=>x.id===sel.id);}
+  else{const m=generatedModulesCache.find(x=>x.docId===sel.id);if(m)mod=m.module;}
+  if(!mod)return;
+  const cards=_extractCards(mod);
+  _shuffle(cards);
+  allCards=allCards.concat(cards.slice(0,quota));
+});
+if(!allCards.length){_showToast('Nenhum card disponivel');return;}
+const title=_fcSelectedModules.map(m=>m.name).join(' · ');
+_launchFlashcards(title,allCards,_fcSelectedModules);
+}
+
+/* Compat: antigo startFlashcards para sessão diária etc */
 function startFlashcards(type,id){
-let cards=[];let title='';
-if(type==='static'){
-const m=MODULES.find(x=>x.id===id);if(!m){_showToast('Modulo nao encontrado');return;}title=m.name;
-cards=_extractCards(m);
-}else{
-const m=generatedModulesCache.find(x=>x.docId===id);
-if(!m||!m.module){
-  /* Tenta recarregar cache e tentar de novo */
-  _showToast('Carregando modulo...');
-  loadGeneratedModules().then(()=>{
-    const m2=generatedModulesCache.find(x=>x.docId===id);
-    if(!m2||!m2.module){_showToast('Modulo nao encontrado');return;}
-    const c2=_extractCards(m2.module);
-    if(!c2.length){_showToast('Nenhum card neste modulo');return;}
-    _launchFlashcards(m2.module.name||m2.title,c2);
-  });
-  return;
-}
-title=m.module.name||m.title;
-cards=_extractCards(m.module);
-}
-if(!cards.length){_showToast('Nenhum card disponivel neste modulo');return;}
-_launchFlashcards(title,cards);
+_fcSelectedModules=[];
+let mod=null,name='',icon='',color='';
+if(type==='static'){mod=MODULES.find(x=>x.id===id);if(!mod)return;name=mod.name;icon=mod.icon;color=mod.color;}
+else{const m=generatedModulesCache.find(x=>x.docId===id);if(!m||!m.module){_showToast('Carregando...');loadGeneratedModules().then(()=>startFlashcards(type,id));return;}mod=m.module;name=mod.name||m.title;icon=mod.icon||'📄';color=mod.color||'#6c5ce7';}
+_fcSelectedModules=[{type,id,name,icon,color}];
+_startFlashcardSession();
 }
 
 function _extractCards(mod){
@@ -2606,7 +2609,7 @@ if(mod.quiz?.obj)mod.quiz.obj.forEach(q=>{
   const opts=q.opts||q.options||[];
   const correctOpt=opts[ansIdx];
   const letters=['A','B','C','D','E'];
-  const backText=correctOpt?(letters[ansIdx]||'')+'  '+correctOpt:(q.exp||'Sem resposta');
+  const backText=correctOpt?(letters[ansIdx]||'')+') '+correctOpt:(q.exp||'Sem resposta');
   cards.push({front:q.q||q.question||'',back:backText,tag:q.tag||q.topic||'',module:modName,type:'obj'});
 });
 if(mod.quiz?.esc)mod.quiz.esc.forEach(q=>{
@@ -2621,9 +2624,9 @@ return cards;
 /* Fisher-Yates shuffle */
 function _shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 
-function _launchFlashcards(title,cards){
+function _launchFlashcards(title,cards,modules){
 _shuffle(cards);
-fcState={title:title,cards:cards,idx:0,flipped:false,results:{right:0,mid:0,wrong:0},wrongCards:[],startTime:Date.now(),firstFlipDone:false};
+fcState={title:title,cards:cards,idx:0,flipped:false,results:{right:0,mid:0,wrong:0},wrongCards:[],startTime:Date.now(),firstFlipDone:false,streak:0,modules:modules||_fcSelectedModules};
 _renderFlashcardOverlay();
 }
 
@@ -2631,28 +2634,35 @@ function _renderFlashcardOverlay(){
 const fc=fcState;if(!fc)return;
 let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
 const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
-const total=fc.cards.length;const pct=Math.round((fc.idx/total)*100);
+const total=fc.cards.length;
+const answered=fc.results.right+fc.results.mid+fc.results.wrong;
+const pct=Math.round((answered/total)*100);
 const c=fc.cards[fc.idx];
 const backText=c.back||c.ans||c.answer||'Sem resposta';
-const moduleLabel=c.module?`<div class="fc-module-tag">${c.module}${c.tag?' · '+c.tag:''}</div>`:(c.tag?`<div class="fc-tag">${c.tag}</div>`:'');
-const frontModuleLabel=c.module?`<div class="fc-module-tag">${c.module}${c.tag?' · '+c.tag:''}</div>`:(c.tag?`<div class="fc-tag">${c.tag}</div>`:'');
+const topLabel=c.module?(c.module+(c.tag?' · '+c.tag:'')):(c.tag||'');
+/* Cor da barra muda: accent → green conforme avança */
+const barColor=pct<40?'var(--accent)':pct<70?'var(--gold)':'var(--green)';
 div.innerHTML=`
 <div class="fc-hdr">
 <button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
 <div class="fc-hdr-title">${fc.title}</div>
-<div class="fc-hdr-counter">Card ${fc.idx+1}/${total}</div>
+<div class="fc-hdr-counter">${fc.idx+1}/${total}</div>
 </div>
-<div class="fc-progress"><div class="fc-progress-fill" style="width:${pct}%"></div></div>
+<div style="height:4px;background:var(--bg3);flex-shrink:0;position:relative">
+<div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .4s ease,background .4s ease"></div>
+<div style="position:absolute;right:8px;top:-14px;font-size:9px;color:var(--dim2);font-family:'JetBrains Mono',monospace">${pct}%</div>
+</div>
+${fc.streak>=3?`<div style="text-align:center;padding:4px;font-size:10px;color:var(--gold);font-weight:700">🔥 ${fc.streak} seguidas!</div>`:''}
 <div class="fc-body">
 <div class="fc-card-wrap fc-slide-in">
 <div class="fc-card${fc.flipped?' flipped':''}" onclick="flipCard()">
 <div class="fc-card-face fc-front">
-${frontModuleLabel}
+${topLabel?`<div class="fc-module-tag">${topLabel}</div>`:''}
 <div class="fc-question">${c.front||c.q||c.question||'Sem pergunta'}</div>
 ${!fc.firstFlipDone?'<div class="fc-hint">Toque para virar</div>':''}
 </div>
 <div class="fc-card-face fc-back">
-${moduleLabel}
+${topLabel?`<div class="fc-module-tag">${topLabel}</div>`:''}
 <div class="fc-answer-label">✓ Resposta</div>
 <div class="fc-answer">${backText}</div>
 </div>
@@ -2676,21 +2686,22 @@ _renderFlashcardOverlay();
 function fcAnswer(result){
 if(!fcState)return;
 fcState.results[result]++;
+/* Streak tracking */
+if(result==='right'){fcState.streak++;}else{fcState.streak=0;}
 if(result==='wrong'){
-fcState.wrongCards.push(fcState.cards[fcState.idx]);
-/* Salvar erro para Sessão Diária */
-if(!S.flashcardErrors)S.flashcardErrors={};
-const key=fcState.title||'default';
-if(!S.flashcardErrors[key])S.flashcardErrors[key]=[];
-S.flashcardErrors[key].push(fcState.cards[fcState.idx]);
-if(S.flashcardErrors[key].length>30)S.flashcardErrors[key]=S.flashcardErrors[key].slice(-30);
-saveState(S);
+  fcState.wrongCards.push(fcState.cards[fcState.idx]);
+  if(!S.flashcardErrors)S.flashcardErrors={};
+  const key=fcState.title||'default';
+  if(!S.flashcardErrors[key])S.flashcardErrors[key]=[];
+  S.flashcardErrors[key].push(fcState.cards[fcState.idx]);
+  if(S.flashcardErrors[key].length>30)S.flashcardErrors[key]=S.flashcardErrors[key].slice(-30);
+  saveState(S);
 }
 fcState.idx++;fcState.flipped=false;
 if(fcState.idx>=fcState.cards.length){
-_renderFlashcardComplete();
+  _renderFlashcardComplete();
 }else{
-_renderFlashcardOverlay();
+  _renderFlashcardOverlay();
 }
 }
 
@@ -2700,6 +2711,8 @@ const total=fc.cards.length;
 const elapsed=Math.round((Date.now()-fc.startTime)/1000);
 const min=Math.floor(elapsed/60);const sec=elapsed%60;
 const xp=fc.results.right*5+fc.results.mid*2;
+const pctRight=total?Math.round(fc.results.right/total*100):0;
+const emoji=pctRight>=80?'🏆':pctRight>=60?'🎉':pctRight>=40?'💪':'📖';
 S.xp+=xp;saveState(S);
 let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
 const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
@@ -2707,19 +2720,20 @@ div.innerHTML=`<div class="fc-hdr">
 <button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
 <div class="fc-hdr-title">${fc.title}</div>
 </div>
-<div class="fc-body" style="justify-content:flex-start;padding-top:40px">
-<div style="font-size:48px;margin-bottom:12px">🎉</div>
-<div style="font-size:20px;font-weight:700;margin-bottom:4px">Sessão concluída!</div>
-<div style="font-size:14px;color:var(--dim);margin-bottom:20px">${min}min ${sec}s · +${xp} XP</div>
-<div style="display:flex;gap:12px;margin-bottom:24px">
-<div style="text-align:center;padding:12px 20px;background:var(--green-bg);border-radius:12px;border:1px solid var(--green)"><div style="font-size:20px;font-weight:800;color:var(--green)">${fc.results.right}</div><div style="font-size:10px;color:var(--green)">Acertei</div></div>
-<div style="text-align:center;padding:12px 20px;background:var(--gold-bg);border-radius:12px;border:1px solid var(--gold)"><div style="font-size:20px;font-weight:800;color:var(--gold)">${fc.results.mid}</div><div style="font-size:10px;color:var(--gold)">Quase</div></div>
-<div style="text-align:center;padding:12px 20px;background:var(--red-bg);border-radius:12px;border:1px solid var(--red)"><div style="font-size:20px;font-weight:800;color:var(--red)">${fc.results.wrong}</div><div style="font-size:10px;color:var(--red)">Errei</div></div>
+<div class="fc-body" style="justify-content:flex-start;padding-top:30px">
+<div style="font-size:56px;margin-bottom:8px">${emoji}</div>
+<div style="font-size:22px;font-weight:800;margin-bottom:2px">${pctRight}% dominado</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:20px">${min}min ${sec}s · +${xp} XP</div>
+<div style="display:flex;gap:10px;margin-bottom:24px">
+<div style="text-align:center;padding:14px 18px;background:var(--green-bg);border-radius:12px;border:1px solid var(--green);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--green)">${fc.results.right}</div><div style="font-size:10px;color:var(--green);margin-top:2px">✅ Acertei</div></div>
+<div style="text-align:center;padding:14px 18px;background:var(--gold-bg);border-radius:12px;border:1px solid var(--gold);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--gold)">${fc.results.mid}</div><div style="font-size:10px;color:var(--gold);margin-top:2px">🤔 Quase</div></div>
+<div style="text-align:center;padding:14px 18px;background:var(--red-bg);border-radius:12px;border:1px solid var(--red);min-width:70px"><div style="font-size:22px;font-weight:800;color:var(--red)">${fc.results.wrong}</div><div style="font-size:10px;color:var(--red);margin-top:2px">❌ Errei</div></div>
 </div>
-<div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px">
-${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
-<button onclick="restartFlashcards()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">📝 Refazer tudo</button>
-<button onclick="closeFlashcards()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">← Voltar</button>
+<div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px">
+${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
+<button onclick="restartFlashcards()" style="padding:13px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🔁 Refazer</button>
+<button onclick="_regenerateFlashcards()" style="padding:13px;border-radius:10px;border:1px solid rgba(108,92,231,.3);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">✨ Gerar novos cards</button>
+<button onclick="closeFlashcards()" style="padding:11px;border-radius:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">🧹 Limpar e voltar</button>
 </div>
 </div>`;
 document.body.appendChild(div);
@@ -2729,12 +2743,14 @@ function retryWrongCards(){
 if(!fcState||!fcState.wrongCards.length)return;
 const title=fcState.title+' (errados)';
 const cards=[...fcState.wrongCards];
-_launchFlashcards(title,cards);
+const modules=fcState.modules;
+fcState=null;
+_launchFlashcards(title,cards,modules);
 }
 
 function restartFlashcards(){
 if(!fcState)return;
-fcState.idx=0;fcState.flipped=false;fcState.results={right:0,mid:0,wrong:0};fcState.wrongCards=[];fcState.startTime=Date.now();
+fcState.idx=0;fcState.flipped=false;fcState.results={right:0,mid:0,wrong:0};fcState.wrongCards=[];fcState.startTime=Date.now();fcState.streak=0;
 _shuffle(fcState.cards);
 _renderFlashcardOverlay();
 }
@@ -2742,6 +2758,32 @@ _renderFlashcardOverlay();
 function closeFlashcards(){
 const el=document.getElementById('fc-overlay');if(el)el.remove();
 fcState=null;
+}
+
+/* Gerar novos cards via IA sobre os mesmos módulos */
+async function _regenerateFlashcards(){
+if(!fcState||!fcState.modules||!fcState.modules.length){_showToast('Sem modulos para regenerar');return;}
+const modules=fcState.modules;
+const topics=modules.map(m=>m.name);
+closeFlashcards();
+_showToast('Gerando novos cards...');
+try{
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15})});
+  const data=await resp.json();
+  if(!data.jobId)throw new Error(data.error||'Erro');
+  const pollRegen=async()=>{
+    const r=await fetch('/job-status/'+data.jobId);
+    const d=await r.json();
+    if(d.status==='ready'&&d.cards){
+      _launchFlashcards(topics.join(' · '),d.cards,modules);
+    }else if(d.status==='error'){
+      _showToast('Erro: '+(d.error||''));
+    }else{
+      setTimeout(pollRegen,2000);
+    }
+  };
+  setTimeout(pollRegen,2000);
+}catch(e){_showToast('Erro: '+e.message);}
 }
 
 /* ===== BUG #1 CORRIGIDO: '…' (U+2026) → '...' (spread operator válido) ===== */
