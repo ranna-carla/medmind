@@ -3630,7 +3630,7 @@ ${DISCIPLINES_LIST.map(d=>'<option value="'+d+'">'+d+'</option>').join('')}
 h+=`<button onclick="gerarModulo()" id="btnGerar" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">✨ Gerar Módulo com IA</button>`;
 
 h+=`<div style="background:linear-gradient(135deg,rgba(108,92,231,.08),rgba(232,67,147,.06));border:1px solid rgba(108,92,231,.15);border-radius:var(--r);padding:12px 14px;margin-top:14px">
-<div style="font-size:11px;color:var(--dim);line-height:1.7">✅ Resumo completo · Abas temáticas · 15 questões objetivas · 7 dissertativas · 5 casos clínicos · Gerado em ~2 min</div></div>`;
+<div style="font-size:11px;color:var(--dim);line-height:1.7">✅ Resumo · Abas temáticas · 10 objetivas · 4 dissertativas · 3 casos clínicos · ~1 min</div></div>`;
 
 document.getElementById('libraryContent').innerHTML=h;}
 
@@ -3696,7 +3696,7 @@ async function _resumePendingJob(pj){
       }else if(d.status==='error'){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}overlay.innerHTML=`<div style="text-align:center;padding:20px;max-width:340px"><div style="font-size:48px;margin-bottom:12px">😔</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Erro na geração</div><div style="font-size:13px;color:var(--red);margin-bottom:20px">${d.error||'Erro desconhecido'}</div><button onclick="document.getElementById('gerar-overlay')?.remove()" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Fechar</button></div>`;}
       else if(d.progress){setStatus(d.progress,60);}
     }catch(e){retryCount++;if(retryCount>=8){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}overlay.remove();_showToast('Conexão perdida');}}
-  },4000);
+  },2000);
 }
 
 async function gerarModulo(){
@@ -3786,7 +3786,7 @@ try{localStorage.setItem('_pendingJob',JSON.stringify({jobId,title:titulo,starte
 /* 3. Polling com retry */
 setStatus('IA processando o PDF...',25);
 const estEl=document.getElementById('gerarStatus2');
-if(estEl){const est=document.createElement('div');est.style.cssText='font-size:10px;color:var(--dim2);margin-top:4px';est.textContent='Tempo estimado: ~2 min';estEl.parentNode.insertBefore(est,estEl.nextSibling);}
+if(estEl){const est=document.createElement('div');est.style.cssText='font-size:10px;color:var(--dim2);margin-top:4px';est.textContent='Tempo estimado: ~1 min';estEl.parentNode.insertBefore(est,estEl.nextSibling);}
 const msgs=['IA lendo o PDF...','Analisando conteúdo...','Criando resumo...','Gerando questões...','Montando casos clínicos...','Finalizando módulo...','Quase pronto...'];
 let msgIdx=0;let retryCount=0;
 const moduleData=await new Promise((resolve,reject)=>{
@@ -3809,7 +3809,7 @@ const moduleData=await new Promise((resolve,reject)=>{
       retryCount++;
       if(retryCount>=8){clearInterval(poll);reject(new Error('Conexão perdida. Tente novamente.'));}
     }
-  },4000);
+  },2000);
 });
 
 /* 4. Salvar no Firestore */
