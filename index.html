@@ -1441,17 +1441,29 @@ el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)">
 
 /* ===== BUG #1 CORRIGIDO: '…' (U+2026) → '...' (spread operator válido) ===== */
 
-/* ── Header compacto da Home ── */
+/* ── Header personalizado da Home (Bloco C) ── */
 function renderHomeHero(){
 const el=document.getElementById('homeHero');if(!el)return;
 const lv=getLevel(S.xp);
 const streakVal=S.streak||0;
+const firstName=(S.name||'Estudante').split(' ')[0];
+const hr=new Date().getHours();
+const greeting=hr>=5&&hr<12?'Bom dia':hr>=12&&hr<18?'Boa tarde':'Boa noite';
+/* Subtexto contextual */
+const pendingCards=Object.keys(S.flashcardErrors||{}).reduce((a,k)=>(a+(S.flashcardErrors[k]||[]).length),0);
+const infos=[];
+if(pendingCards>0)infos.push(pendingCards+' cards pra revisar');
+if(!infos.length&&S.streak>0)infos.push(S.streak+' dias seguidos');
+if(!infos.length)infos.push(lv.emoji+' '+lv.name+' · '+S.xp+' XP');
 el.innerHTML=`<div class="home-hdr-row">
-<div class="home-hdr-logo">🧠 MedMind</div>
-<span class="home-hdr-xp">${lv.emoji} ${S.xp} XP</span>
-${streakVal>0?`<span class="home-hdr-streak">🔥${streakVal}</span>`:''}
-<div onclick="goPage('profile')" style="cursor:pointer">${getUserAvatar({size:32})}</div>
-</div>`;
+<div onclick="goPage('profile')" style="cursor:pointer">${getUserAvatar({size:44})}</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:16px;font-weight:700">${greeting}, ${firstName}! 👋</div>
+<div style="font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${infos.join(' · ')}</div>
+</div>
+${streakVal>0?`<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--gold)">🔥${streakVal}</div></div>`:''}
+</div>
+<div style="text-align:center;margin-top:4px;font-size:11px;color:var(--dim2)">🧠 MedMind</div>`;
 }
 
 /* ── Módulo mais fraco (menor bestScore com attempts>0) ── */
@@ -1473,18 +1485,6 @@ openModule(pick.id);
 function renderHome(){
 renderHomeHero();
 let h='';
-
-/* === 1. SAUDAÇÃO === */
-const firstName=(S.name||'Estudante').split(' ')[0];
-const hr=new Date().getHours();
-const greeting=hr>=5&&hr<12?'Bom dia':hr>=12&&hr<18?'Boa tarde':'Boa noite';
-const infos=[];
-const pendingCards=(S.flashcardErrors||[]).length;
-if(pendingCards>0)infos.push(pendingCards+' cards pra revisar');
-if(S.rankPosition)infos.push(S.rankPosition+'º no ranking');
-if(!infos.length&&S.streak>0)infos.push('🔥 '+S.streak+' dias seguidos');
-const summary=infos.length?infos.join(' · '):'Bora estudar?';
-h+=`<div class="home-greeting"><div class="home-greeting-text">${greeting}, ${firstName}! 👋</div><div class="home-greeting-sub">${summary}</div></div>`;
 
 /* === BUSCA === */
 h+=`<div style="margin:12px 0 14px"><input type="text" id="homeSearchInput" value="${homeSearch.replace(/"/g,'&quot;')}" oninput="homeSearch=this.value;renderHome()" placeholder="🔍 Buscar módulo..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box" /></div>`;
