@@ -19,6 +19,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+<script>
+/* pdf.js text extraction helper — carrega sob demanda */
+async function extractPdfText(file){
+  const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjsLib.getDocument({data:buf}).promise;
+  let text='';
+  for(let i=1;i<=doc.numPages;i++){const pg=await doc.getPage(i);const tc=await pg.getTextContent();text+=tc.items.map(it=>it.str).join(' ')+'\n';}
+  return text.trim();
+}
+</script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#080e1a;--bg2:#0f1729;--bg3:#172035;--bg4:#1e2a42;--text:#eef2f7;--dim:#7b8ba5;--dim2:#4a5568;--accent:#6c5ce7;--accent2:#a29bfe;--accent-bg:rgba(108,92,231,.12);--accent-border:rgba(108,92,231,.25);--gold:#f9ca24;--gold-bg:rgba(249,202,36,.12);--green:#00b894;--green-bg:rgba(0,184,148,.12);--red:#ff6b6b;--red-bg:rgba(255,107,107,.12);--blue:#0984e3;--blue-bg:rgba(9,132,227,.12);--pink:#e84393;--pink-bg:rgba(232,67,147,.12);--orange:#e17055;--esp:#3b8df0;--esp-bg:rgba(59,141,240,.12);--ovo:#d44d7a;--ovo-bg:rgba(212,77,122,.12);--fec:#10a37f;--fec-bg:rgba(16,163,127,.12);--s1:#6da030;--s1-bg:rgba(109,160,48,.12);--s2:#c08420;--s2-bg:rgba(192,132,32,.12);--correct:#22c55e;--wrong:#ef4444;--r:16px;--safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px)}
@@ -3059,8 +3072,8 @@ function setStatus(msg,pct){
 }
 
 try{
-/* 1. Ler PDF como base64 */
-setStatus('Lendo PDF...',10);
+/* 1. Ler PDF — base64 + texto extraído (fallback) */
+setStatus('Lendo PDF...',8);
 const pdfBase64=await new Promise((resolve,reject)=>{
   const reader=new FileReader();
   reader.onload=e=>resolve(e.target.result.split(',')[1]);
@@ -3068,14 +3081,29 @@ const pdfBase64=await new Promise((resolve,reject)=>{
   reader.readAsDataURL(sugPdfFile);
 });
 
-/* 2. Iniciar job */
+/* 1b. Extrair texto do PDF com pdf.js (usado como fallback ou se PDF > 5MB) */
+setStatus('Extraindo texto do PDF...',14);
+let pdfText='';
+try{pdfText=await extractPdfText(sugPdfFile);}catch(e){console.warn('pdf.js extract fail:',e);}
+
+/* 2. Iniciar job — prefere pdfText (mais confiável), fallback base64 */
 setStatus('Enviando para IA...',20);
+const payload={discipline:disc,title:titulo,professor:prof,observations:obs};
+if(pdfText.length>100){
+  /* Texto extraído com sucesso — usa texto puro (mais confiável, funciona com qualquer PDF) */
+  payload.pdfText=pdfText;
+}else if(pdfBase64){
+  /* Sem texto extraído — envia base64 direto */
+  payload.pdfBase64=pdfBase64;
+}else{
+  throw new Error('Não foi possível ler o PDF. Tente outro arquivo.');
+}
 let startResp;
 try{
   startResp=await fetch('/generate-module',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({pdfBase64,discipline:disc,title:titulo,professor:prof,observations:obs})
+    body:JSON.stringify(payload)
   });
 }catch(netErr){throw new Error('Sem conexão com o servidor. Verifique se está online.');}
 if(!startResp.ok)throw new Error('Servidor retornou erro '+startResp.status);
