@@ -2777,7 +2777,7 @@ let list=[...friendsData.map(f=>({name:f.name||'Anônimo',xp:f.xp||0,uid:f.uid,p
 list.push({name:S.name,xp:S.xp,uid:currentUser?.uid,photoURL:S.photoURL||'',avatar:S.avatar||''});
 list.sort((a,b)=>b.xp-a.xp);
 if(list.length<=1&&!friendsData.length){
-rl.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:10px">👥</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Adicione amigos para competir!</div><div style="font-size:12px;line-height:1.6">Compartilhe seu código <strong style="color:var(--accent2)">${S.friendCode||''}</strong><br>no perfil para convidar amigos</div></div>';
+rl.innerHTML=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:10px">👥</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Adicione amigos para competir!</div><div style="font-size:12px;line-height:1.6">Compartilhe seu código <strong style="color:var(--accent2)">${S.friendCode||''}</strong><br>no perfil para convidar amigos</div></div>`;
 return;
 }
 let rh='';
