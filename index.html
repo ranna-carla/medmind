@@ -2267,12 +2267,102 @@ played.sort((a,b)=>(S.modules[a.id].bestScore||0)-(S.modules[b.id].bestScore||0)
 return played[0];
 }
 
-/* ── Sprint rápido: abre módulo aleatório ── */
+/* ── Sprint rápido: 10 perguntas com timer 15s ── */
 function _startSprintRapido(){
-const unlocked=MODULES.filter(m=>!m.locked&&m.quiz&&m.quiz.obj&&m.quiz.obj.length>0);
-if(!unlocked.length){alert('Nenhum módulo com questões disponível.');return;}
-const pick=unlocked[Math.floor(Math.random()*unlocked.length)];
-openModule(pick.id);
+const allQ=[];
+MODULES.filter(m=>!m.locked&&m.quiz?.obj).forEach(m=>{m.quiz.obj.forEach(q=>{allQ.push({...q,modName:m.name});});});
+generatedModulesCache.filter(m=>m.userId===currentUser?.uid&&m.module?.quiz?.obj).forEach(m=>{m.module.quiz.obj.forEach(q=>{allQ.push({...q,modName:m.module.name});});});
+if(allQ.length<5){alert('Precisa de mais módulos para Sprint');return;}
+_shuffle(allQ);const questions=allQ.slice(0,10);
+_launchSprint(questions);
+}
+
+function _launchSprint(questions){
+const overlay=document.createElement('div');overlay.id='sprint-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease';
+let qIdx=0,score=0,startTime=Date.now(),timerInterval=null,timeLeft=15;
+
+function render(){
+if(timerInterval)clearInterval(timerInterval);
+if(qIdx>=questions.length){
+const elapsed=Math.round((Date.now()-startTime)/1000);
+const bonus=elapsed<120?30:elapsed<180?15:elapsed<300?5:0;
+const xp=score*XP_CORRECT+bonus;
+S.xp+=xp;saveState(S);
+overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="font-size:48px;margin-bottom:12px">⚡</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:4px">Sprint Concluído!</div>
+<div style="font-size:28px;font-weight:800;color:var(--accent2);margin-bottom:4px">${score}/${questions.length}</div>
+<div style="font-size:14px;color:var(--dim);margin-bottom:4px">${Math.floor(elapsed/60)}min ${elapsed%60}s</div>
+<div style="font-size:14px;color:var(--gold);font-weight:600;margin-bottom:20px">+${xp} XP${bonus>0?' (bônus velocidade +'+bonus+')':''}</div>
+<button onclick="document.getElementById('sprint-overlay').remove()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+</div>`;
+return;
+}
+const q=questions[qIdx];timeLeft=15;
+timerInterval=setInterval(()=>{
+timeLeft--;
+const bar=document.getElementById('sprint-timer-bar');
+if(bar)bar.style.width=(timeLeft/15*100)+'%';
+const lbl=document.getElementById('sprint-timer-label');
+if(lbl)lbl.textContent=timeLeft+'s';
+if(timeLeft<=0){clearInterval(timerInterval);qIdx++;render();}
+},1000);
+overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px;flex:1;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+<button onclick="clearInterval(${timerInterval});document.getElementById('sprint-overlay').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:14px;font-weight:700;flex:1">⚡ Sprint</div>
+<div id="sprint-timer-label" style="font-size:14px;font-weight:700;color:${timeLeft<=5?'var(--red)':'var(--gold)'};font-family:'JetBrains Mono',monospace">${timeLeft}s</div>
+<div style="font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace">${qIdx+1}/${questions.length}</div>
+</div>
+<div style="height:4px;background:var(--bg3);border-radius:2px;margin-bottom:20px;overflow:hidden"><div id="sprint-timer-bar" style="height:100%;width:100%;background:linear-gradient(90deg,var(--gold),var(--red));transition:width 1s linear;border-radius:2px"></div></div>
+${q.tag?`<div style="font-size:10px;font-weight:600;color:var(--accent2);background:var(--accent-bg);padding:3px 10px;border-radius:100px;display:inline-block;margin-bottom:8px;align-self:flex-start">${q.tag}</div>`:''}
+<div style="font-size:15px;font-weight:600;line-height:1.5;margin-bottom:20px">${q.q}</div>
+<div style="display:flex;flex-direction:column;gap:8px;flex:1">
+${(q.opts||[]).map((o,i)=>`<button onclick="sprintAnswer(${i},${q.ans})" style="text-align:left;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;line-height:1.4">${o}</button>`).join('')}
+</div></div>`;
+}
+window.sprintAnswer=function(c,a){clearInterval(timerInterval);if(c===a)score++;qIdx++;render();};
+render();document.body.appendChild(overlay);
+}
+
+/* ── Sessão Diária: cards dos módulos que mais errou ── */
+function _startSessaoDiaria(){
+const errKeys=Object.keys(S.flashcardErrors||{});
+let cards=[];
+/* Priorizar cards errados */
+errKeys.forEach(k=>{
+(S.flashcardErrors[k]||[]).forEach(c=>cards.push(c));
+});
+/* Se não tem erros: últimos 3 módulos */
+if(!cards.length){
+const recent=MODULES.filter(m=>!m.locked).slice(0,3);
+recent.forEach(m=>{const extracted=_extractCards(m);cards.push(...extracted);});
+}
+if(!cards.length){alert('Nenhum card disponível. Estude um módulo primeiro!');return;}
+_shuffle(cards);cards=cards.slice(0,15);
+_launchFlashcards('Sessão Diária',cards);
+}
+
+/* ── PDF rápido da Home ── */
+function quickStudyFromPDF(){
+const input=document.createElement('input');
+input.type='file';input.accept='.pdf';
+input.onchange=async function(){
+if(!input.files[0])return;
+goPage('library');
+/* Preencher o form automaticamente */
+setTimeout(()=>{
+const pdfInput=document.getElementById('sugPdfInput');
+if(pdfInput){
+/* Simular arquivo carregado */
+sugPdfFile=input.files[0];
+const label=document.getElementById('sugPdfLabel');
+if(label)label.textContent='📄 '+input.files[0].name;
+}
+},300);
+};
+input.click();
 }
 
 function renderHome(){
@@ -2296,12 +2386,43 @@ if(sq){
   return;
 }
 
-/* === 2. CTA DE UPLOAD (destaque máximo) === */
-h+=`<div class="home-cta-upload" onclick="goPage('library')">
-<div style="font-size:42px;margin-bottom:8px">📄</div>
-<div style="font-size:18px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Nova aula</div>
-<div style="font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:14px">Suba o PDF e o MedMind gera<br><strong style="color:var(--text)">resumo + quiz + flashcards</strong> com IA</div>
-<div style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-size:13px;font-weight:700">📎 Enviar PDF da aula</div>
+/* === ESTADO VAZIO (usuário novo) === */
+const hasModules=generatedModulesCache.some(m=>m.userId===currentUser?.uid)||Object.keys(S.modules||{}).some(k=>(S.modules[k].attempts||0)>0);
+if(!hasModules){
+h+=`<div style="text-align:center;padding:24px 16px;background:linear-gradient(135deg,rgba(108,92,231,.1),rgba(232,67,147,.06));border-radius:var(--r);margin-bottom:16px;border:1px solid rgba(108,92,231,.15)">
+<div style="font-size:36px;margin-bottom:8px">🧠</div>
+<div style="font-size:18px;font-weight:800;margin-bottom:4px">Bem-vindo ao MedMind!</div>
+<div style="font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:16px">3 passos para começar:</div>
+<div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
+<div style="text-align:center"><div style="font-size:24px">📎</div><div style="font-size:10px;color:var(--dim);margin-top:2px">PDF</div></div>
+<div style="color:var(--dim);font-size:16px;padding-top:6px">→</div>
+<div style="text-align:center"><div style="font-size:24px">🤖</div><div style="font-size:10px;color:var(--dim);margin-top:2px">IA gera</div></div>
+<div style="color:var(--dim);font-size:16px;padding-top:6px">→</div>
+<div style="text-align:center"><div style="font-size:24px">📝</div><div style="font-size:10px;color:var(--dim);margin-top:2px">Estude</div></div>
+</div>
+<button onclick="quickStudyFromPDF()" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📎 Começar com meu primeiro PDF</button>
+</div>`;
+}
+
+/* === 2. AÇÕES RÁPIDAS === */
+h+=`<div class="home-actions">
+<div class="home-action-card" onclick="_startSessaoDiaria()" style="background:linear-gradient(135deg,rgba(108,92,231,.1),var(--bg2));border-color:rgba(108,92,231,.15)">
+  <div class="home-action-icon">📝</div>
+  <div class="home-action-title">Sessão Diária</div>
+  <div class="home-action-sub">Cards que mais errou · ~5 min</div>
+</div>
+<div class="home-action-card" onclick="_startSprintRapido()" style="background:linear-gradient(135deg,rgba(249,202,36,.1),var(--bg2));border-color:rgba(249,202,36,.15)">
+  <div class="home-action-icon">⚡</div>
+  <div class="home-action-title">Sprint</div>
+  <div class="home-action-sub">10 questões · Timer 15s</div>
+</div>
+</div>`;
+
+/* === 3. CTA DE UPLOAD === */
+h+=`<div class="home-cta-upload" onclick="quickStudyFromPDF()">
+<div style="font-size:28px;margin-bottom:6px">📄</div>
+<div style="font-size:15px;font-weight:700;margin-bottom:2px">Estudar nova aula</div>
+<div style="font-size:11px;color:var(--dim)">📎 Enviar PDF da aula</div>
 </div>`;
 
 /* === 3. MÓDULOS RECENTES DO ESTUDANTE === */
@@ -2331,24 +2452,7 @@ h+=`<div style="text-align:center;padding:20px 16px;color:var(--dim);margin-bott
 </div>`;
 }
 
-/* === 4. AÇÕES RÁPIDAS (só se tem quiz feito) === */
-const hasQuizDone=Object.keys(S.modules||{}).some(k=>(S.modules[k].attempts||0)>0);
-if(hasQuizDone){
-const weakMod=_getWeakestModule();
-h+=`<div class="home-section-title">⚡ Ações rápidas</div>`;
-h+=`<div class="home-actions">
-<div class="home-action-card" onclick="${weakMod?`openModule('${weakMod.id}')`:`goPage('library')`}" style="background:linear-gradient(135deg,rgba(108,92,231,.1),var(--bg2));border-color:rgba(108,92,231,.15)">
-  <div class="home-action-icon">🎯</div>
-  <div class="home-action-title">Sessão Diária</div>
-  <div class="home-action-sub">5 questões do módulo mais fraco</div>
-</div>
-<div class="home-action-card" onclick="_startSprintRapido()" style="background:linear-gradient(135deg,rgba(232,67,147,.1),var(--bg2));border-color:rgba(232,67,147,.15)">
-  <div class="home-action-icon">⚡</div>
-  <div class="home-action-title">Sprint Rápido</div>
-  <div class="home-action-sub">5 questões aleatórias · 2 min</div>
-</div>
-</div>`;
-}
+/* (ações rápidas movidas para cima) */
 
 /* === 5. FAVORITOS (chips compactos) === */
 const favIds=S.favorites||[];
