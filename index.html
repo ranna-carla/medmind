@@ -309,7 +309,9 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .fcs-q{font-size:14px;font-weight:600;line-height:1.6;color:var(--text);word-break:break-word}
 @media(min-width:400px){.fcs-q{font-size:15px}}
 .fcs-a-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.fcs-a{font-size:14px;line-height:1.7;color:var(--text);word-break:break-word}
+.fcs-a{font-size:14px;line-height:1.6;color:var(--text);word-break:break-word}
+.fcs-card-back .fcs-a{font-size:13px}
+.fcs-card-back{max-height:260px}
 .fcs-hint{font-size:11px;color:var(--dim2);margin-top:14px}
 .fcs-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
 .fcs-btn{padding:12px 6px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -2608,6 +2610,12 @@ _fcSelectedModules=[{type,id,name,icon,color}];
 _startFlashcardSession();
 }
 
+function _truncateAnswer(text,maxLen){
+  if(!text||text.length<=maxLen)return text||'Sem resposta';
+  /* Corta no último espaço antes do limite */
+  const cut=text.lastIndexOf(' ',maxLen);
+  return text.slice(0,cut>0?cut:maxLen)+'...';
+}
 function _extractCards(mod){
 const cards=[];
 const modName=mod.name||'';
@@ -2616,14 +2624,17 @@ if(mod.quiz?.obj)mod.quiz.obj.forEach(q=>{
   const opts=q.opts||q.options||[];
   const correctOpt=opts[ansIdx];
   const letters=['A','B','C','D','E'];
-  const backText=correctOpt?(letters[ansIdx]||'')+') '+correctOpt:(q.exp||'Sem resposta');
+  /* Obj: só a alternativa correta, sem explicação */
+  const backText=correctOpt?(letters[ansIdx]||'')+') '+correctOpt:'Sem resposta';
   cards.push({front:q.q||q.question||'',back:backText,tag:q.tag||q.topic||'',module:modName,type:'obj'});
 });
 if(mod.quiz?.esc)mod.quiz.esc.forEach(q=>{
-  cards.push({front:q.q||q.question||'',back:q.ans||q.answer||'Sem resposta',tag:q.tag||q.topic||'',module:modName,type:'writ'});
+  /* Esc: resumir resposta longa em até 120 chars */
+  cards.push({front:q.q||q.question||'',back:_truncateAnswer(q.ans||q.answer,120),tag:q.tag||q.topic||'',module:modName,type:'writ'});
 });
 if(mod.quiz?.pra)mod.quiz.pra.forEach(q=>{
-  cards.push({front:q.q||q.question||q.case||'',back:q.ans||q.answer||'Sem resposta',tag:q.tag||q.topic||'Caso Clinico',module:modName,type:'case'});
+  /* Pra: resumir em até 120 chars */
+  cards.push({front:q.q||q.question||q.case||'',back:_truncateAnswer(q.ans||q.answer,120),tag:q.tag||q.topic||'Caso Clinico',module:modName,type:'case'});
 });
 return cards;
 }

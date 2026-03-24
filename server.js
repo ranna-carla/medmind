@@ -167,19 +167,16 @@ IMPORTANTE: 'a' deve ser o ÍNDICE numérico (0,1,2,3 ou 4) da opção correta. 
 As opções NÃO devem ter prefixo "A.", "B." etc. Apenas o texto. Devem ser EXATAMENTE 5 opções.`;
 
 // Prompt 4: gera flashcards para memorização
-const PROMPT_FLASHCARDS = `Você é um especialista em criar flashcards de alta qualidade para estudantes de medicina.
-Dado um ou mais temas, gere flashcards no formato frente/verso otimizados para memorização ativa.
+const PROMPT_FLASHCARDS = `Gere flashcards de recall rápido para estudantes de medicina.
 
-Regras:
-- Frente: pergunta objetiva, definição a completar, ou conceito-chave (1-2 frases)
-- Verso: resposta concisa e direta (1-3 frases), com o essencial para memorizar
-- Varie os tipos: definições, mecanismos, classificações, diagnósticos diferenciais, tratamentos, valores de referência
-- Cada card deve ser independente e auto-contido
-- Use linguagem técnica precisa mas acessível
-- Inclua mnemônicos quando útil
+REGRAS OBRIGATÓRIAS:
+- FRENTE: pergunta CURTA testando 1 conceito. Máximo 1-2 frases. Ex: "Qual estrutura induz a placa neural?", "Defeito do fechamento cranial do tubo neural?"
+- VERSO: resposta CURTA. Máximo 1-2 frases ou palavra-chave. Ex: "Notocorda", "Anencefalia", "3 Na+ pra fora, 2 K+ pra dentro"
+- NUNCA parágrafos longos. Flashcard testa recall, não explica conteúdo.
+- Perguntas diretas: "O que é X?", "Qual a função de Y?", "Onde ocorre Z?", "Qual o mecanismo de X?"
+- Varie: definições, mecanismos, classificações, valores, tratamentos
 
-Retorne APENAS o JSON puro, sem markdown, sem blocos de código:
-{"cards":[{"front":"Pergunta ou conceito","back":"Resposta concisa"}]}`;
+Retorne APENAS JSON puro: {"cards":[{"front":"pergunta curta","back":"resposta curta"}]}`;
 
 // Prompt 5: feedback individual para resposta do aluno
 const PROMPT_FEEDBACK = `Você é um professor de medicina avaliando a resposta de um aluno.
