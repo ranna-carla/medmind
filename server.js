@@ -121,7 +121,7 @@ Schema exato:
     {"id":"resumo","label":"📖 Resumo"},
     {"id":"SECID","label":"EMOJI Nome da Seção"}
   ],
-  "resumoHTML": "<h2>Titulo</h2><p>Texto com <strong>destaques</strong></p><ul><li>item</li></ul>. Tags: h2,h3,p,strong,em,ul,li. 150 palavras max. Aspas simples em atributos.",
+  "resumoHTML": "<h2>Titulo</h2><p>Texto com <strong>destaques</strong></p><ul><li>item</li></ul>. Tags: h2,h3,p,strong,em,ul,li,table,tr,td,th. Mínimo 300 palavras. Aspas simples em atributos HTML.",
   "sections": {
     "SECID": {
       "theme": "esp",
@@ -135,7 +135,7 @@ Schema exato:
 }
 
 Themes disponíveis: esp, ovo, fec, s1, s2, temp, perda, termo, febr, gast
-Use temas variados. Mínimo 2 sections, máximo 4. Seja conciso — cards curtos e diretos.`;
+Use temas variados. Mínimo 3 sections. Conteúdo completo e detalhado.`;
 
 // Prompt 2: gera apenas o quiz
 const PROMPT_QUIZ = `Você é um especialista em questões médicas para o app MedMind.
@@ -145,9 +145,9 @@ Retorne APENAS o JSON puro, sem markdown, sem blocos de código, sem explicaçõ
 Schema exato:
 {
   "quiz": {
-    "obj": [10 objetos: {"q":"Pergunta?","opts":["A","B","C","D"],"a":INDEX_0a3,"exp":"Explicação breve"}],
-    "esc": [4 objetos: {"q":"Pergunta dissertativa?","ans":"Resposta modelo"}],
-    "pra": [3 objetos: {"q":"Caso clínico breve...","ans":"Conduta e raciocínio"}]
+    "obj": [EXATAMENTE 15 objetos: {"q":"Pergunta?","opts":["A. opção","B. opção","C. opção","D. opção"],"a":INDEX_CORRETO,"exp":"Explicação clara"}],
+    "esc": [EXATAMENTE 7 objetos: {"q":"Pergunta dissertativa?","ans":"Resposta modelo completa"}],
+    "pra": [EXATAMENTE 5 objetos: {"q":"Caso clínico detalhado...","ans":"Conduta e raciocínio clínico"}]
   }
 }`;
 
@@ -360,7 +360,7 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
     const ctx = `Disciplina: ${discipline}\nTítulo: ${title}\n${professor ? 'Professor(a): ' + professor + '\n' : ''}${observations ? 'Observações: ' + observations + '\n' : ''}`;
 
     // Trunca texto se muito grande (evita respostas truncadas)
-    const truncatedText = pdfText && pdfText.length > 60000 ? pdfText.slice(0, 60000) + '\n\n[...texto truncado por limite]' : pdfText;
+    const truncatedText = pdfText && pdfText.length > 40000 ? pdfText.slice(0, 40000) + '\n\n[...texto truncado]' : pdfText;
     // Monta a parte do PDF (igual para as duas chamadas)
     const pdfPart = pdfBase64
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } }
@@ -368,7 +368,7 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 
     // Dispara as duas chamadas ao mesmo tempo
     const contentPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 12000, system: PROMPT_CONTENT,
+      model: 'claude-sonnet-4-6', max_tokens: 16000, temperature: 0, system: PROMPT_CONTENT,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere o módulo para:\n' + ctx }] }]
     }).then(r => {
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso — envie apenas as páginas mais importantes da aula.');
@@ -376,7 +376,7 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
     });
 
     const quizPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 7000, system: PROMPT_QUIZ,
+      model: 'claude-sonnet-4-6', max_tokens: 10000, temperature: 0, system: PROMPT_QUIZ,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere as questões para:\n' + ctx }] }]
     }).then(r => {
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso para gerar todas as questões — envie um PDF menor.');
