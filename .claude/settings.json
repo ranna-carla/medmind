@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read", "Write",
+      "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)",
+      "Bash(python3:*)", "Bash(ls:*)", "Bash(mkdir:*)",
+      "Bash(cp:*)", "Bash(mv:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)", "Bash(sudo:*)", "Bash(su:*)"
+    ]
+  }
+}

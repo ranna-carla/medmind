@@ -1,0 +1,7 @@
+tunnel: medmind
+credentials-file: /Users/ranna/.cloudflared/medmind.json
+
+ingress:
+  - hostname: medmind.win7med.com.br
+    service: http://127.0.0.1:3737
+  - service: http_status:404

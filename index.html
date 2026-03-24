@@ -28,13 +28,41 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--dim);font-family:'Sora',sans-serif;font-size:10px;font-weight:500;cursor:pointer;padding:4px 12px;transition:color .2s}
 .bnav-btn.on{color:var(--accent2)}
 .bnav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+.challenge-badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .page.on{display:flex;flex-direction:column}
 .page-inner{padding:16px 14px 30px;flex:1}
 .pg-hdr{padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0}
-.home-hero{padding:20px 0 16px;text-align:center;background:linear-gradient(135deg,rgba(108,92,231,.08),rgba(232,67,147,.06));border-radius:var(--r);margin-bottom:0}
-.home-logo{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.home-tagline{font-size:12px;color:var(--dim);margin-top:2px}
+.home-hero{padding:10px 4px 8px;background:none;border-radius:0;margin-bottom:0}
+.home-hdr-row{display:flex;align-items:center;gap:10px}
+.home-hdr-logo{font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1}
+.home-hdr-streak{font-size:12px;font-weight:700;color:var(--gold);display:flex;align-items:center;gap:3px}
+.home-hdr-xp{font-size:10px;font-weight:700;color:var(--accent2);background:var(--accent-bg);padding:2px 8px;border-radius:6px;margin-right:4px}
+.home-hdr-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:linear-gradient(135deg,var(--accent),var(--pink));flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,.1);cursor:pointer}
+.home-hdr-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.home-greeting{padding:12px 0 2px}
+.home-greeting-text{font-size:17px;font-weight:700}
+.home-greeting-sub{font-size:11px;color:var(--dim);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* === HOME SECTIONS === */
+.home-cta-upload{background:linear-gradient(135deg,rgba(108,92,231,.18),rgba(232,67,147,.12));border:1.5px solid rgba(108,92,231,.3);border-radius:var(--r);padding:20px 16px;margin-bottom:16px;cursor:pointer;transition:transform .15s;text-align:center}
+.home-cta-upload:active{transform:scale(.98)}
+.home-section-title{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.home-horiz-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:16px}
+.home-horiz-scroll::-webkit-scrollbar{display:none}
+.home-recent-card{flex-shrink:0;width:140px;background:var(--bg2);border-radius:12px;padding:12px;cursor:pointer;border:1px solid rgba(255,255,255,.05);transition:transform .15s}
+.home-recent-card:active{transform:scale(.97)}
+.home-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.home-action-card{background:var(--bg2);border-radius:var(--r);padding:16px 14px;border:1px solid rgba(255,255,255,.05);cursor:pointer;transition:transform .15s;text-align:center}
+.home-action-card:active{transform:scale(.97)}
+.home-action-icon{font-size:28px;margin-bottom:6px}
+.home-action-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.home-action-sub{font-size:10px;color:var(--dim);line-height:1.4}
+.home-fav-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.home-fav-chip{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:100px;background:var(--bg2);border:1px solid rgba(255,255,255,.06);cursor:pointer;font-size:12px;font-weight:600;transition:transform .15s;white-space:nowrap}
+.home-fav-chip:active{transform:scale(.95)}
+.home-explore-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.home-explore-card{background:var(--bg2);border-radius:12px;padding:12px;cursor:pointer;border:1px solid rgba(255,255,255,.05);transition:transform .15s}
+.home-explore-card:active{transform:scale(.97)}
 .xp-card{background:var(--bg2);border-radius:var(--r);padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05)}
 .xp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .xp-level{display:flex;align-items:center;gap:8px}
@@ -242,7 +270,7 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .gate-shake{animation:gshake .4s ease}
 @keyframes gshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 /* === CRIAR MÓDULO + BIBLIOTECA + RATING === */
-.create-fab{position:fixed;bottom:80px;right:16px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;border:none;font-size:28px;font-weight:300;cursor:pointer;z-index:25;box-shadow:0 4px 20px rgba(108,92,231,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.create-fab{position:fixed;bottom:calc(70px + max(8px,var(--safe-bot)));right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;border:none;font-size:28px;font-weight:300;cursor:pointer;z-index:40;box-shadow:0 4px 20px rgba(108,92,231,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .create-fab:active{transform:scale(.9)}
 .create-page{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto}
 .create-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;padding-top:max(14px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
@@ -349,14 +377,19 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 
 <!-- === APP === -->
 <div class="app" id="mainApp" style="display:none">
-<div class="page on" id="pg-home"><div class="pg-hdr"><div class="home-hero"><div class="home-logo">🧠 MedMind</div><div class="home-tagline">Estude com Inteligência</div></div></div><div class="page-inner" id="homeContent"></div></div>
+<div class="page on" id="pg-home"><div class="pg-hdr"><div class="home-hero" id="homeHero"></div></div><div class="page-inner" id="homeContent"></div></div>
 <div class="page" id="pg-module"><div class="pg-hdr"><div class="mod-hdr"><button class="mod-back" onclick="goHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><div class="mod-hdr-title" id="modTitle"></div><div class="mod-hdr-xp" id="modXP"></div></div></div><div class="mod-tabs" id="modTabs"></div><div class="page-inner" id="modContent"></div></div>
-<div class="page" id="pg-ranking"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">🏆 Ranking</div></div><div class="page-inner" id="rankContent"></div></div>
-<div class="page" id="pg-library"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📢 Publicar</div></div><div class="page-inner" id="libraryContent"></div></div>
+<div class="page" id="pg-challenges"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">⚡ Desafios</div></div><div class="page-inner" id="challengesContent"></div></div>
+<div class="page" id="pg-review"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📝 Revisão</div></div><div class="page-inner" id="reviewContent"></div></div>
+<div class="page" id="pg-ranking"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">⭐ Ranking</div></div><div class="page-inner" id="rankContent"></div></div>
+<div class="page" id="pg-library" style="display:none"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📢 Publicar</div></div><div class="page-inner" id="libraryContent"></div></div>
 <div class="page" id="pg-profile"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">👤 Perfil</div></div><div class="page-inner" id="profileContent"></div></div>
+<!-- FAB Publicar -->
+<button class="create-fab" onclick="goPage('library');renderSugerir();" title="Publicar módulo">+</button>
 <div class="bnav">
 <button class="bnav-btn on" data-pg="home" onclick="goPage('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Início</button>
-<button class="bnav-btn" data-pg="library" onclick="goPage('library')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Publicar</button>
+<button class="bnav-btn" data-pg="challenges" onclick="goPage('challenges')"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Desafios</button>
+<button class="bnav-btn" data-pg="review" onclick="goPage('review')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Revisão</button>
 <button class="bnav-btn" data-pg="ranking" onclick="goPage('ranking')"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Ranking</button>
 <button class="bnav-btn" data-pg="profile" onclick="goPage('profile')" style="position:relative"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil<span class="friend-badge" id="friendBadge" style="display:none">0</span></button>
 </div>
@@ -564,6 +597,8 @@ document.getElementById('mainApp').style.display='none';
 await loadUserData(user);
 document.getElementById('loadingScreen').classList.add('hidden');
 document.getElementById('mainApp').style.display='flex';
+navHistory=['home'];
+history.replaceState({page:'home'},'','');
 renderHome();
 }else{
 currentUser=null;
@@ -1256,57 +1291,279 @@ resumoHTML:'<div class="res-title">Sinais e Sintomas Gerais</div><div class="res
 ];
 
 let curMod=null;
-function goPage(pg){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));document.getElementById('pg-'+pg).classList.add('on');document.querySelector('.bnav-btn[data-pg="'+pg+'"]').classList.add('on');if(pg==='home')renderHome();if(pg==='ranking')renderRanking();if(pg==='library')renderSugerir();if(pg==='profile'){loadFriendsData().then(()=>renderProfile());}}
+let navHistory=['home'];
+let _skipPush=false;
+
+function goPage(pg){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+const el=document.getElementById('pg-'+pg);
+if(el)el.classList.add('on');
+const btn=document.querySelector('.bnav-btn[data-pg="'+pg+'"]');
+if(btn)btn.classList.add('on');
+if(pg==='home')renderHome();
+if(pg==='challenges')renderChallenges();
+if(pg==='review')renderReview();
+if(pg==='ranking')renderRanking();
+if(pg==='library')renderSugerir();
+if(pg==='profile'){loadFriendsData().then(()=>renderProfile());}
+/* History API */
+if(!_skipPush){
+navHistory.push(pg);
+history.pushState({page:pg},'','');
+}
+_skipPush=false;
+}
+
 function goHome(){goPage('home');}
-function openModule(id){const m=MODULES.find(x=>x.id===id);if(!m||m.locked)return;curMod=m;document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById('pg-module').classList.add('on');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));renderModule(m);}
+
+function openModule(id){
+const m=MODULES.find(x=>x.id===id);if(!m||m.locked)return;curMod=m;
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+document.getElementById('pg-module').classList.add('on');
+document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+renderModule(m);
+navHistory.push('module:'+id);
+history.pushState({page:'module',id:id},'','');
+}
+
+/* History API — botão voltar do navegador / swipe back iPhone */
+window.addEventListener('popstate',function(e){
+if(navHistory.length>1){
+navHistory.pop();
+const prev=navHistory[navHistory.length-1];
+_skipPush=true;
+if(prev.startsWith('module:')){
+const mid=prev.split(':')[1];
+const m=MODULES.find(x=>x.id===mid);if(m&&!m.locked){curMod=m;document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.getElementById('pg-module').classList.add('on');document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));renderModule(m);}else{goPage('home');}
+}else if(prev.startsWith('genmod:')){
+const gid=prev.split(':')[1];openGeneratedModule(gid);
+}else{
+goPage(prev);
+}
+}else{
+_skipPush=true;
+goPage('home');
+}
+});
+
+/* Placeholder renders para novas páginas (serão implementados nos blocos F e G) */
+function renderChallenges(){
+const el=document.getElementById('challengesContent');
+if(!el)return;
+el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)"><div style="font-size:48px;margin-bottom:12px">⚡</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Desafios</div><div style="font-size:13px;line-height:1.6">Em breve: Desafio Diário, Duelos 1v1 e Arenas em grupo!</div></div>';
+}
+function renderReview(){
+const el=document.getElementById('reviewContent');
+if(!el)return;
+el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)"><div style="font-size:48px;margin-bottom:12px">📝</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Revisão</div><div style="font-size:13px;line-height:1.6">Em breve: Flashcards, Revisões Salvas e Geração com IA!</div></div>';
+}
 
 /* ===== BUG #1 CORRIGIDO: '…' (U+2026) → '...' (spread operator válido) ===== */
+
+/* ── Header compacto da Home ── */
+function renderHomeHero(){
+const el=document.getElementById('homeHero');if(!el)return;
+const lv=getLevel(S.xp);
+const av=S.avatar||lv.emoji;
+const streakVal=S.streak||0;
+el.innerHTML=`<div class="home-hdr-row">
+<div class="home-hdr-logo">🧠 MedMind</div>
+<span class="home-hdr-xp">${lv.emoji} ${S.xp} XP</span>
+${streakVal>0?`<span class="home-hdr-streak">🔥${streakVal}</span>`:''}
+<div class="home-hdr-avatar" onclick="goPage('profile')">${av}</div>
+</div>`;
+}
+
+/* ── Módulo mais fraco (menor bestScore com attempts>0) ── */
+function _getWeakestModule(){
+const played=MODULES.filter(m=>!m.locked&&S.modules[m.id]&&S.modules[m.id].attempts>0);
+if(!played.length)return MODULES.find(m=>!m.locked)||null;
+played.sort((a,b)=>(S.modules[a.id].bestScore||0)-(S.modules[b.id].bestScore||0));
+return played[0];
+}
+
+/* ── Sprint rápido: abre módulo aleatório ── */
+function _startSprintRapido(){
+const unlocked=MODULES.filter(m=>!m.locked&&m.quiz&&m.quiz.obj&&m.quiz.obj.length>0);
+if(!unlocked.length){alert('Nenhum módulo com questões disponível.');return;}
+const pick=unlocked[Math.floor(Math.random()*unlocked.length)];
+openModule(pick.id);
+}
+
 function renderHome(){
-const lv=getLevel(S.xp);const pct=lv.next?Math.min(100,Math.round(((S.xp-lv.xp)/(lv.next.xp-lv.xp))*100)):100;
-const ms=MODULES.filter(m=>!m.locked).map(m=>({...m,...(S.modules[m.id]||{stars:0,bestScore:0,attempts:0})}));
-const ts=ms.reduce((a,m)=>a+m.stars,0),ta=ms.reduce((a,m)=>a+m.attempts,0);
-let h=`<div class="xp-card"><div class="xp-top"><div class="xp-level"><div class="xp-badge lv${lv.idx+1}">${lv.idx+1}</div><div><div class="xp-lv-name">${lv.emoji} ${lv.name}</div><div class="xp-lv-sub">${S.xp} XP</div></div></div><div class="xp-streak">${S.streak>0?'🔥'+S.streak:''}${S.bestStreak>0?' <span style="color:var(--dim);font-size:10px">max:'+S.bestStreak+'</span>':''}</div></div><div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div><div class="xp-bar-label"><span>Nível ${lv.idx+1}</span><span>${lv.next?lv.next.xp+' XP → '+lv.next.emoji+' '+lv.next.name:'Máximo!'}</span></div></div>`;
-h+=`<div class="stats-row"><div class="stat-card"><div class="stat-num" style="color:var(--gold)">${ts}</div><div class="stat-label">⭐ Estrelas</div></div><div class="stat-card"><div class="stat-num" style="color:var(--green)">${ta}</div><div class="stat-label">📝 Quizzes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--accent2)">${S.bestStreak}</div><div class="stat-label">🔥 Streak</div></div></div>`;
+renderHomeHero();
+let h='';
 
-// ── Filtros da biblioteca ──
-const filters=[['curadoria','📚 Curadoria'],['meus','🎓 Meus'],['publico','🌐 Público'],['favoritos','⭐ Favoritos']];
-h+=`<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">`;
-filters.forEach(([f,label])=>{h+=`<button onclick="setHomeFilter('${f}')" style="flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid ${homeFilter===f?'transparent':'rgba(255,255,255,.08)'};background:${homeFilter===f?'var(--accent)':'transparent'};color:${homeFilter===f?'#fff':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});
-h+=`</div>`;
+/* === 1. SAUDAÇÃO === */
+const firstName=(S.name||'Estudante').split(' ')[0];
+const hr=new Date().getHours();
+const greeting=hr>=5&&hr<12?'Bom dia':hr>=12&&hr<18?'Boa tarde':'Boa noite';
+const infos=[];
+const pendingCards=(S.flashcardErrors||[]).length;
+if(pendingCards>0)infos.push(pendingCards+' cards pra revisar');
+if(S.rankPosition)infos.push(S.rankPosition+'º no ranking');
+if(!infos.length&&S.streak>0)infos.push('🔥 '+S.streak+' dias seguidos');
+const summary=infos.length?infos.join(' · '):'Bora estudar?';
+h+=`<div class="home-greeting"><div class="home-greeting-text">${greeting}, ${firstName}! 👋</div><div class="home-greeting-sub">${summary}</div></div>`;
 
-h+=`<div style="margin-bottom:14px"><input type="text" id="homeSearchInput" value="${homeSearch.replace(/"/g,'&quot;')}" oninput="homeSearch=this.value;renderHome()" placeholder="🔍 Buscar módulo por nome, matéria ou palavra-chave..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box" /></div>`;
+/* === BUSCA === */
+h+=`<div style="margin:12px 0 14px"><input type="text" id="homeSearchInput" value="${homeSearch.replace(/"/g,'&quot;')}" oninput="homeSearch=this.value;renderHome()" placeholder="🔍 Buscar módulo..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box" /></div>`;
 const sq=homeSearch.toLowerCase().trim();
 
-if(homeFilter==='curadoria'){
-  h+='<div class="mod-section-title">Módulos Selecionados</div>';
-  const filteredMods=sq?MODULES.filter(m=>m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)||(m.id&&m.id.toLowerCase().includes(sq))):MODULES;
-  filteredMods.forEach(m=>h+=renderStaticModCard(m));
-  if(sq&&!filteredMods.length)h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);font-size:13px">Nenhum módulo encontrado para "${homeSearch}"</div>`;
-}else if(homeFilter==='meus'){
-  const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
-  h+='<div class="mod-section-title">Meus Módulos Gerados</div>';
-  if(!mine.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum módulo ainda</div><div style="font-size:12px;line-height:1.5">Use a aba <strong style="color:var(--accent2)">Publicar</strong> para<br>gerar módulos automaticamente com IA</div></div>`;}
-  mine.forEach(m=>h+=renderGenModCard(m));
-}else if(homeFilter==='publico'){
-  const pubStatic=MODULES.filter(m=>!m.locked&&(!sq||m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
-  const pub=generatedModulesCache.filter(m=>m.visibility==='public'&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
-  h+='<div class="mod-section-title">Módulos da Comunidade</div>';
-  if(!pubStatic.length&&!pub.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div><div style="font-size:12px;margin-top:6px">Seja o primeiro a compartilhar!</div></div>`;}
-  pubStatic.forEach(m=>h+=renderStaticModCard(m));
-  pub.forEach(m=>h+=renderGenModCard(m));
-}else if(homeFilter==='favoritos'){
-  const favIds=S.favorites||[];
-  const favs=generatedModulesCache.filter(m=>favIds.includes(m.docId)&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)));
-  const favStatic=MODULES.filter(m=>favIds.includes(m.id)&&(!sq||m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
-  h+='<div class="mod-section-title">Favoritos</div>';
-  if(!favs.length&&!favStatic.length){h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">⭐</div><div style="font-size:14px;font-weight:600">Nenhum favorito ainda</div><div style="font-size:12px;margin-top:6px">Toque em ⭐ em qualquer módulo para salvar</div></div>`;}
-  favStatic.forEach(m=>h+=renderStaticModCard(m));
-  favs.forEach(m=>h+=renderGenModCard(m));
+/* Se tem busca ativa, mostrar resultados */
+if(sq){
+  h+=`<div class="home-section-title">Resultados</div>`;
+  const fS=MODULES.filter(m=>!m.locked&&(m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)));
+  const fG=generatedModulesCache.filter(m=>(m.module?.name||'').toLowerCase().includes(sq)||(m.module?.desc||'').toLowerCase().includes(sq)||(m.topic||'').toLowerCase().includes(sq)||(m.discipline||'').toLowerCase().includes(sq));
+  fS.forEach(m=>h+=renderStaticModCard(m));
+  fG.forEach(m=>h+=renderGenModCard(m));
+  if(!fS.length&&!fG.length)h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);font-size:13px">Nenhum módulo encontrado para "${homeSearch}"</div>`;
+  document.getElementById('homeContent').innerHTML=h;
+  const si=document.getElementById('homeSearchInput');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}
+  return;
+}
+
+/* === 2. CTA DE UPLOAD (destaque máximo) === */
+h+=`<div class="home-cta-upload" onclick="goPage('library')">
+<div style="font-size:42px;margin-bottom:8px">📄</div>
+<div style="font-size:18px;font-weight:800;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Nova aula</div>
+<div style="font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:14px">Suba o PDF e o MedMind gera<br><strong style="color:var(--text)">resumo + quiz + flashcards</strong> com IA</div>
+<div style="display:inline-flex;align-items:center;gap:6px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-size:13px;font-weight:700">📎 Enviar PDF da aula</div>
+</div>`;
+
+/* === 3. MÓDULOS RECENTES DO ESTUDANTE === */
+const myGen=generatedModulesCache.filter(m=>m.userId===currentUser?.uid).slice(0,10);
+const playedStatic=MODULES.filter(m=>!m.locked&&S.modules[m.id]&&S.modules[m.id].attempts>0);
+const recentItems=[...myGen.map(m=>({type:'gen',id:m.docId,name:m.module?.name||m.title,icon:m.module?.icon||'📄',tag:'🤖 Gerado',score:null,stars:null})),...playedStatic.map(m=>{const ms2=S.modules[m.id]||{};return{type:'static',id:m.id,name:m.name,icon:m.icon,tag:'📚 Curadoria',score:ms2.bestScore||0,stars:ms2.stars||0};})];
+
+if(recentItems.length>0){
+h+=`<div class="home-section-title">📚 Meus módulos</div>`;
+h+=`<div class="home-horiz-scroll">`;
+recentItems.slice(0,10).forEach(r=>{
+  const onclick=r.type==='gen'?`openGeneratedModule('${r.id}')`:`openModule('${r.id}')`;
+  const progress=r.score!==null?`<div style="font-size:9px;color:var(--green);margin-top:3px">${r.score}% · ${'★'.repeat(r.stars||0)}${'☆'.repeat(5-(r.stars||0))}</div>`:'';
+  h+=`<div class="home-recent-card" onclick="${onclick}">
+  <div style="font-size:22px;margin-bottom:6px">${r.icon}</div>
+  <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+  <div style="font-size:9px;color:var(--dim);margin-top:2px">${r.tag}</div>
+  ${progress}
+  </div>`;
+});
+h+=`</div>`;
+}else{
+h+=`<div style="text-align:center;padding:20px 16px;color:var(--dim);margin-bottom:16px;background:var(--bg2);border-radius:var(--r);border:1px solid rgba(255,255,255,.05)">
+<div style="font-size:28px;margin-bottom:6px">📂</div>
+<div style="font-size:13px;font-weight:600">Nenhum módulo ainda</div>
+<div style="font-size:11px;margin-top:4px;color:var(--dim)">Suba sua primeira aula ☝️</div>
+</div>`;
+}
+
+/* === 4. AÇÕES RÁPIDAS (só se tem quiz feito) === */
+const hasQuizDone=Object.keys(S.modules||{}).some(k=>(S.modules[k].attempts||0)>0);
+if(hasQuizDone){
+const weakMod=_getWeakestModule();
+h+=`<div class="home-section-title">⚡ Ações rápidas</div>`;
+h+=`<div class="home-actions">
+<div class="home-action-card" onclick="${weakMod?`openModule('${weakMod.id}')`:`goPage('library')`}" style="background:linear-gradient(135deg,rgba(108,92,231,.1),var(--bg2));border-color:rgba(108,92,231,.15)">
+  <div class="home-action-icon">🎯</div>
+  <div class="home-action-title">Sessão Diária</div>
+  <div class="home-action-sub">5 questões do módulo mais fraco</div>
+</div>
+<div class="home-action-card" onclick="_startSprintRapido()" style="background:linear-gradient(135deg,rgba(232,67,147,.1),var(--bg2));border-color:rgba(232,67,147,.15)">
+  <div class="home-action-icon">⚡</div>
+  <div class="home-action-title">Sprint Rápido</div>
+  <div class="home-action-sub">5 questões aleatórias · 2 min</div>
+</div>
+</div>`;
+}
+
+/* === 5. FAVORITOS (chips compactos) === */
+const favIds=S.favorites||[];
+if(favIds.length>0){
+const favStatic=MODULES.filter(m=>favIds.includes(m.id));
+const favGen=generatedModulesCache.filter(m=>favIds.includes(m.docId));
+if(favStatic.length||favGen.length){
+  h+=`<div class="home-section-title">⭐ Favoritos</div>`;
+  h+=`<div class="home-fav-chips">`;
+  favStatic.forEach(m=>{h+=`<div class="home-fav-chip" onclick="openModule('${m.id}')">${m.icon} ${m.name}</div>`;});
+  favGen.forEach(m=>{h+=`<div class="home-fav-chip" onclick="openGeneratedModule('${m.docId}')">${m.module?.icon||'📄'} ${m.module?.name||m.title}</div>`;});
+  h+=`</div>`;
+}}
+
+/* === 6. EXPLORAR (curadoria, grid 2x2) === */
+const exploreMods=MODULES.filter(m=>!m.locked).slice(0,4);
+if(exploreMods.length){
+h+=`<div class="home-section-title">🔎 Explorar</div>`;
+h+=`<div class="home-explore-grid">`;
+exploreMods.forEach(m=>{
+  const ms2=S.modules[m.id]||{stars:0,bestScore:0};
+  h+=`<div class="home-explore-card" onclick="openModule('${m.id}')">
+  <div style="font-size:22px;margin-bottom:4px">${m.icon}</div>
+  <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
+  <div style="font-size:10px;color:var(--dim);margin-top:2px">${ms2.bestScore>0?ms2.bestScore+'%':'Novo'}</div>
+  </div>`;
+});
+h+=`</div>`;
+h+=`<button onclick="_openExploreAll()" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--accent2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:16px">Ver todos →</button>`;
 }
 
 document.getElementById('homeContent').innerHTML=h;
-if(sq){const si=document.getElementById('homeSearchInput');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}}
-if(homeFilter!=='curadoria'&&!generatedModulesCache.length)loadGeneratedModules();}
+if(!generatedModulesCache.length&&currentUser)loadGeneratedModules();
+}
+
+/* ── "Ver todos" abre overlay com filtros ── */
+function _openExploreAll(){
+homeFilter='curadoria';homeSearch='';
+const overlay=document.createElement('div');
+overlay.id='exploreAllOverlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column';
+overlay.innerHTML=`<div class="pg-hdr" style="display:flex;align-items:center;gap:10px;padding-top:max(12px,env(safe-area-inset-top,0px))">
+<button onclick="document.getElementById('exploreAllOverlay')?.remove()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:4px 8px">←</button>
+<div style="font-size:16px;font-weight:700;flex:1">📚 Biblioteca</div></div>
+<div style="flex:1;overflow-y:auto;padding:16px 14px" id="exploreAllContent"></div>`;
+document.body.appendChild(overlay);
+_renderExploreAll();
+}
+function _renderExploreAll(){
+const el=document.getElementById('exploreAllContent');if(!el)return;
+let h='';
+const filters=[['curadoria','📚 Curadoria'],['meus','🎓 Meus'],['publico','🌐 Público'],['favoritos','⭐ Favoritos']];
+h+=`<div style="display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">`;
+filters.forEach(([f,label])=>{h+=`<button onclick="homeFilter='${f}';if(homeFilter!=='curadoria')loadGeneratedModules().then(()=>_renderExploreAll());else _renderExploreAll()" style="flex-shrink:0;padding:7px 14px;border-radius:100px;border:1px solid ${homeFilter===f?'transparent':'rgba(255,255,255,.08)'};background:${homeFilter===f?'var(--accent)':'transparent'};color:${homeFilter===f?'#fff':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});
+h+=`</div>`;
+h+=`<div style="margin-bottom:14px"><input type="text" id="exploreSearchInput" value="${homeSearch.replace(/"/g,'&quot;')}" oninput="homeSearch=this.value;_renderExploreAll()" placeholder="🔍 Buscar módulo..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box" /></div>`;
+const sq=homeSearch.toLowerCase().trim();
+if(homeFilter==='curadoria'){
+  h+='<div class="mod-section-title">Módulos Selecionados</div>';
+  const fm=sq?MODULES.filter(m=>m.name.toLowerCase().includes(sq)||m.desc.toLowerCase().includes(sq)):MODULES;
+  fm.forEach(m=>h+=renderStaticModCard(m));
+  if(sq&&!fm.length)h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);font-size:13px">Nenhum módulo encontrado</div>`;
+}else if(homeFilter==='meus'){
+  const mine=generatedModulesCache.filter(m=>m.userId===currentUser?.uid&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)));
+  h+='<div class="mod-section-title">Meus Módulos Gerados</div>';
+  if(!mine.length)h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">📂</div><div style="font-size:14px;font-weight:600">Nenhum módulo ainda</div></div>`;
+  mine.forEach(m=>h+=renderGenModCard(m));
+}else if(homeFilter==='publico'){
+  const pS=MODULES.filter(m=>!m.locked&&(!sq||m.name.toLowerCase().includes(sq)));
+  const pG=generatedModulesCache.filter(m=>m.visibility==='public'&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)));
+  h+='<div class="mod-section-title">Módulos da Comunidade</div>';
+  if(!pS.length&&!pG.length)h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">🌐</div><div style="font-size:14px;font-weight:600">Nenhum módulo público ainda</div></div>`;
+  pS.forEach(m=>h+=renderStaticModCard(m));
+  pG.forEach(m=>h+=renderGenModCard(m));
+}else if(homeFilter==='favoritos'){
+  const fIds=S.favorites||[];
+  const fG=generatedModulesCache.filter(m=>fIds.includes(m.docId)&&(!sq||(m.module?.name||'').toLowerCase().includes(sq)));
+  const fS=MODULES.filter(m=>fIds.includes(m.id)&&(!sq||m.name.toLowerCase().includes(sq)));
+  h+='<div class="mod-section-title">Favoritos</div>';
+  if(!fG.length&&!fS.length)h+=`<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:12px">⭐</div><div style="font-size:14px;font-weight:600">Nenhum favorito ainda</div></div>`;
+  fS.forEach(m=>h+=renderStaticModCard(m));
+  fG.forEach(m=>h+=renderGenModCard(m));
+}
+el.innerHTML=h;
+if(sq){const si=document.getElementById('exploreSearchInput');if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}}
+if(homeFilter!=='curadoria'&&!generatedModulesCache.length)loadGeneratedModules();
+}
 
 function renderStaticModCard(m){
 const ms2=S.modules[m.id]||{stars:0,bestScore:0};const st='★'.repeat(ms2.stars)+'☆'.repeat(5-ms2.stars);
@@ -1341,7 +1598,7 @@ try{
   renderHome();
 }catch(e){alert('Erro ao apagar: '+e.message);}}
 
-function setHomeFilter(f){homeFilter=f;if(f!=='curadoria')loadGeneratedModules().then(()=>renderHome());else renderHome();}
+function setHomeFilter(f){homeFilter=f;if(f!=='curadoria')loadGeneratedModules().then(()=>_renderExploreAll());else _renderExploreAll();}
 
 async function loadGeneratedModules(){
 if(!currentUser)return;
@@ -1366,7 +1623,10 @@ async function openGeneratedModule(docId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('pg-module').classList.add('on');
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
-  renderModule(m.module);}
+  renderModule(m.module);
+  navHistory.push('genmod:'+docId);
+  history.pushState({page:'genmod',id:docId},'','');
+}
 
 async function toggleFavorite(docId){
   if(!currentUser)return;

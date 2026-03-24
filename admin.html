@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedMind — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080e1a;--bg2:#0f1729;--bg3:#172035;--bg4:#1e2a42;
+  --text:#eef2f7;--dim:#7b8ba5;--dim2:#4a5568;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-bg:rgba(108,92,231,.12);--accent-border:rgba(108,92,231,.25);
+  --gold:#f9ca24;--gold-bg:rgba(249,202,36,.12);
+  --green:#00b894;--green-bg:rgba(0,184,148,.12);
+  --red:#ff6b6b;--red-bg:rgba(255,107,107,.12);
+  --blue:#0984e3;--blue-bg:rgba(9,132,227,.12);
+  --pink:#e84393;--pink-bg:rgba(232,67,147,.12);
+  --orange:#e17055;--orange-bg:rgba(225,112,85,.12);
+  --r:12px;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;min-height:100vh;font-size:14px}
+
+/* === AUTH SCREEN === */
+#auth-screen{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 50% 0%,rgba(108,92,231,.15) 0%,transparent 70%);
+}
+.auth-box{
+  background:var(--bg2);border:1px solid var(--accent-border);border-radius:20px;
+  padding:40px 36px;width:360px;text-align:center;
+}
+.auth-logo{font-size:48px;margin-bottom:12px}
+.auth-title{font-size:22px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.auth-sub{font-size:12px;color:var(--dim);margin-bottom:28px}
+.auth-field{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;margin-bottom:10px;outline:none;transition:border-color .2s}
+.auth-field:focus{border-color:var(--accent)}
+.auth-btn{width:100%;padding:13px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;
+  font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.auth-btn:hover{opacity:.9}
+.auth-err{color:var(--red);font-size:12px;margin-top:10px;min-height:18px}
+
+/* === MAIN LAYOUT === */
+#admin-app{display:none}
+.sidebar{
+  position:fixed;top:0;left:0;width:220px;height:100vh;
+  background:var(--bg2);border-right:1px solid rgba(255,255,255,.05);
+  display:flex;flex-direction:column;z-index:100;overflow-y:auto;
+}
+.sb-logo{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.05)}
+.sb-logo-title{font-size:16px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sb-logo-sub{font-size:10px;color:var(--dim);margin-top:2px}
+.sb-nav{padding:12px 0;flex:1}
+.sb-section{font-size:9px;font-weight:700;color:var(--dim2);text-transform:uppercase;letter-spacing:1.5px;padding:8px 18px 4px}
+.sb-item{
+  display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;
+  color:var(--dim);font-size:13px;font-weight:500;transition:all .2s;border-radius:0;
+  border-left:2px solid transparent;
+}
+.sb-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-item.active{color:var(--accent2);background:var(--accent-bg);border-left-color:var(--accent)}
+.sb-item-icon{font-size:15px;width:20px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:100px;
+  font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center}
+.sb-footer{padding:16px 18px;border-top:1px solid rgba(255,255,255,.05)}
+.sb-user{display:flex;align-items:center;gap:10px}
+.sb-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-bg);
+  display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--accent2);font-weight:700}
+.sb-user-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-user-role{font-size:10px;color:var(--dim)}
+.sb-logout{background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px;padding:4px;transition:color .2s}
+.sb-logout:hover{color:var(--red)}
+
+/* === MAIN CONTENT === */
+.main{margin-left:220px;min-height:100vh;padding:24px}
+
+/* === TOP BAR === */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.topbar-left h1{font-size:20px;font-weight:800}
+.topbar-left p{font-size:12px;color:var(--dim);margin-top:2px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.refresh-btn{background:var(--bg3);border:1px solid rgba(255,255,255,.08);color:var(--dim);
+  border-radius:8px;padding:7px 12px;font-family:'Sora',sans-serif;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:all .2s}
+.refresh-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.refresh-btn.spinning svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === SECTIONS (tabs) === */
+.section{display:none}
+.section.active{display:block}
+
+/* === STATS OVERVIEW === */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{
+  background:var(--bg2);border:1px solid rgba(255,255,255,.05);border-radius:var(--r);
+  padding:16px;position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--card-color,var(--accent));
+}
+.stat-icon{font-size:22px;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
+.stat-label{font-size:11px;color:var(--dim);margin-top:4px;font-weight:500}
+.stat-sub{font-size:10px;color:var(--dim2);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+/* === CARDS === */
+.card{background:var(--bg2);border:1px solid rgba(255,255,255,.05);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05);
+}
+.card-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card-actions{display:flex;gap:8px}
+.card-body{padding:16px}
+
+/* === GRID 2 COL === */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1200px){.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* === TABLE === */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{
+  font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;
+  padding:8px 12px;text-align:left;background:var(--bg3);border-bottom:1px solid rgba(255,255,255,.04)
+}
+.tbl td{padding:10px 12px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.02)}
+.tbl-empty{text-align:center;color:var(--dim);padding:24px;font-size:12px}
+
+/* === BADGES === */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-gold{background:var(--gold-bg);color:var(--gold)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-accent{background:var(--accent-bg);color:var(--accent2)}
+.badge-pink{background:var(--pink-bg);color:var(--pink)}
+.badge-orange{background:var(--orange-bg);color:var(--orange)}
+.badge-dim{background:rgba(123,139,165,.12);color:var(--dim)}
+
+/* === AVATAR === */
+.avatar{
+  width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;
+}
+
+/* === ACTIVITY BAR === */
+.activity-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:4px}
+.activity-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--pink))}
+
+/* === PROGRESS RING === */
+.ring-wrap{display:flex;align-items:center;gap:12px}
+.ring-label{font-size:12px;font-weight:600}
+.ring-sub{font-size:10px;color:var(--dim)}
+
+/* === ACTION BUTTONS === */
+.act-btn{
+  padding:4px 10px;border-radius:6px;border:none;font-family:'Sora',sans-serif;
+  font-size:10px;font-weight:700;cursor:pointer;transition:all .2s
+}
+.act-btn:active{transform:scale(.95)}
+.act-btn-blue{background:var(--blue-bg);color:var(--blue)}
+.act-btn-green{background:var(--green-bg);color:var(--green)}
+.act-btn-red{background:var(--red-bg);color:var(--red)}
+.act-btn-gold{background:var(--gold-bg);color:var(--gold)}
+.act-btn-dim{background:var(--bg3);color:var(--dim)}
+
+/* === USER CARD === */
+.u-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.u-row:last-child{border-bottom:none}
+.u-info{flex:1;min-width:0}
+.u-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-meta{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* === MINI CHART === */
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:40px}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;min-height:4px;background:var(--accent-bg);position:relative;cursor:pointer;transition:background .2s}
+.mini-bar:hover{background:var(--accent)}
+.mini-bar-tooltip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--bg4);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:4px 8px;
+  font-size:10px;white-space:nowrap;pointer-events:none;display:none}
+.mini-bar:hover .mini-bar-tooltip{display:block}
+
+/* === CHART CONTAINER === */
+.chart-wrap{position:relative;height:200px}
+
+/* === FILTER TABS === */
+.filter-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.filter-tab{padding:5px 12px;border-radius:100px;border:1px solid rgba(255,255,255,.08);
+  background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:11px;
+  font-weight:600;cursor:pointer;transition:all .2s}
+.filter-tab.on{background:var(--accent);color:#fff;border-color:transparent}
+
+/* === LOADING === */
+.loading{display:flex;align-items:center;justify-content:center;padding:32px;gap:10px;color:var(--dim);font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid rgba(108,92,231,.3);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite}
+
+/* === NOTIFICATION === */
+.notif{
+  position:fixed;bottom:20px;right:20px;z-index:999;
+  background:var(--bg3);border:1px solid rgba(255,255,255,.1);border-radius:10px;
+  padding:12px 16px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;max-width:300px;
+}
+.notif.show{transform:translateY(0);opacity:1}
+
+/* === REAL-TIME INDICATOR === */
+.rt-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 5px var(--green);display:inline-block;animation:pulse 2s infinite;margin-left:4px}
+
+/* === MODULE CARD === */
+.mod-row{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
+.mod-disc{font-size:10px;color:var(--dim);margin-top:2px}
+.mod-row-icon{width:40px;height:40px;border-radius:10px;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+
+/* === CHALLENGE CARD === */
+.ch-row{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px}
+.ch-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ch-row-name{font-size:13px;font-weight:700}
+.ch-row-meta{font-size:11px;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap}
+
+/* === SCROLLABLE TABLE === */
+.tbl-wrap{overflow-x:auto}
+
+/* === SEARCH BAR === */
+.search-bar{
+  width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:8px;
+  padding:8px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:12px;outline:none;
+  transition:border-color .2s;margin-bottom:12px;
+}
+.search-bar:focus{border-color:var(--accent)}
+.search-bar::placeholder{color:var(--dim2)}
+
+/* === SELECT === */
+.mini-select{
+  background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:8px;
+  padding:6px 10px;color:var(--text);font-family:'Sora',sans-serif;font-size:11px;cursor:pointer;outline:none;
+}
+
+/* === USER MODAL === */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal{
+  background:var(--bg2);border:1px solid rgba(255,255,255,.08);border-radius:16px;
+  width:100%;max-width:500px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;
+  background:var(--bg2);z-index:1;
+}
+.modal-title{font-size:15px;font-weight:800}
+.modal-close{background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:2px;transition:color .2s}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px}
+.modal-section{margin-bottom:20px}
+.modal-section-title{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.modal-field{margin-bottom:10px}
+.modal-label{font-size:11px;color:var(--dim);margin-bottom:4px;display:block}
+.modal-input{
+  width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:8px;
+  padding:9px 12px;color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;transition:border-color .2s
+}
+.modal-input:focus{border-color:var(--accent)}
+.modal-input[readonly]{opacity:.5;cursor:not-allowed}
+.modal-actions{display:flex;flex-direction:column;gap:8px}
+.modal-btn{
+  width:100%;padding:11px;border-radius:10px;border:none;font-family:'Sora',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px
+}
+.modal-btn:active{transform:scale(.98)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed}
+.modal-btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.modal-btn-warning{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(249,202,36,.2)}
+.modal-btn-danger{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,107,107,.2)}
+.modal-btn-block{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(225,112,85,.2)}
+.modal-btn-unblock{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,184,148,.2)}
+.modal-divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:16px 0}
+.modal-stat-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.modal-stat{flex:1;min-width:80px;background:var(--bg3);border-radius:8px;padding:10px;text-align:center}
+.modal-stat-val{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.modal-stat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim2)}
+
+/* === RESPONSIVE === */
+@media(max-width:768px){
+  .sidebar{width:60px}
+  .sb-logo,.sb-section,.sb-item span,.sb-footer .sb-user-name,.sb-footer .sb-user-role,.sb-badge{display:none}
+  .sb-item{justify-content:center;padding:12px}
+  .sb-item-icon{width:auto}
+  .main{margin-left:60px;padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== AUTH ===================== -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">🧠</div>
+    <div class="auth-title">MedMind Admin</div>
+    <div class="auth-sub">Acesso restrito — administradores</div>
+    <input id="auth-email" class="auth-field" type="email" placeholder="E-mail admin" autocomplete="email">
+    <input id="auth-pass" class="auth-field" type="password" placeholder="Senha" autocomplete="current-password">
+    <button class="auth-btn" onclick="doLogin()">Entrar</button>
+    <div id="auth-err" class="auth-err"></div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="admin-app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sb-logo">
+      <div style="font-size:24px">🧠</div>
+      <div class="sb-logo-title">MedMind</div>
+      <div class="sb-logo-sub">Admin Panel</div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-section">Principal</div>
+      <div class="sb-item active" onclick="goSection('dashboard')">
+        <span class="sb-item-icon">📊</span><span>Dashboard</span>
+      </div>
+      <div class="sb-item" onclick="goSection('users')">
+        <span class="sb-item-icon">👥</span><span>Usuários</span>
+        <span class="sb-badge" id="badge-users">—</span>
+      </div>
+      <div class="sb-item" onclick="goSection('activity')">
+        <span class="sb-item-icon">⚡</span><span>Atividade</span>
+      </div>
+      <div class="sb-section">Conteúdo</div>
+      <div class="sb-item" onclick="goSection('modules')">
+        <span class="sb-item-icon">📚</span><span>Módulos</span>
+        <span class="sb-badge" id="badge-modules">—</span>
+      </div>
+      <div class="sb-item" onclick="goSection('challenges')">
+        <span class="sb-item-icon">⚔️</span><span>Grupos / Duelos</span>
+      </div>
+      <div class="sb-item" onclick="goSection('suggestions')">
+        <span class="sb-item-icon">📩</span><span>Solicitações</span>
+        <span class="sb-badge" id="badge-sug">—</span>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-user-avatar" id="sb-avatar">A</div>
+        <div>
+          <div class="sb-user-name" id="sb-name">Admin</div>
+          <div class="sb-user-role">Administrador</div>
+        </div>
+        <button class="sb-logout" onclick="doLogout()" title="Sair">⏻</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="section-title">Dashboard</h1>
+        <p id="section-sub">Visão geral da plataforma <span class="rt-dot"></span></p>
+      </div>
+      <div class="topbar-right">
+        <span class="status-dot"></span>
+        <span class="clock" id="clock">—</span>
+        <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- ======== DASHBOARD ======== -->
+    <div class="section active" id="sec-dashboard">
+      <div class="stats-grid" id="overview-stats">
+        <div class="loading"><div class="spinner"></div> Carregando...</div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Registros (últimos 7 dias)</div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-registrations"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🟢 Usuários por Atividade</div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-activity"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔥 Top 10 por XP</div>
+          </div>
+          <div class="card-body" id="top-xp-list">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📚 Módulos por Disciplina</div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-disciplines"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🕐 Últimas Ações</div>
+        </div>
+        <div class="card-body" id="recent-actions">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== USERS ======== -->
+    <div class="section" id="sec-users">
+      <div class="filter-tabs" id="user-filters">
+        <button class="filter-tab on" onclick="filterUsers('all',this)">Todos</button>
+        <button class="filter-tab" onclick="filterUsers('active_today',this)">Ativos hoje</button>
+        <button class="filter-tab" onclick="filterUsers('active_week',this)">Esta semana</button>
+        <button class="filter-tab" onclick="filterUsers('new_week',this)">Novos esta semana</button>
+      </div>
+      <input class="search-bar" id="user-search" placeholder="🔍  Buscar por nome ou e-mail..." oninput="renderUsersTable()">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">👥 Usuários <span id="user-count-label" style="font-weight:400;color:var(--dim);font-size:12px"></span></div>
+          <div class="card-actions">
+            <select class="mini-select" id="user-sort" onchange="renderUsersTable()">
+              <option value="lastActive">Último acesso</option>
+              <option value="xp">Maior XP</option>
+              <option value="name">Nome A-Z</option>
+              <option value="streak">Maior streak</option>
+            </select>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>Usuário</th><th>E-mail</th><th>XP</th><th>Streak</th>
+              <th>Módulos</th><th>Amigos</th><th>Último acesso</th><th>Status</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="8" class="tbl-empty"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== ACTIVITY ======== -->
+    <div class="section" id="sec-activity">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚡ Ativos agora (30 min)</div></div>
+          <div class="card-body" id="active-now-list">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📅 Ativos hoje</div></div>
+          <div class="card-body" id="active-today-list">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📊 Atividade por hora (hoje)</div></div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-hourly"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🏆 Quizzes respondidos (ranking)</div></div>
+        <div class="card-body" id="quiz-activity">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== MODULES ======== -->
+    <div class="section" id="sec-modules">
+      <div class="filter-tabs" id="mod-filters">
+        <button class="filter-tab on" onclick="filterMods('all',this)">Todos</button>
+        <button class="filter-tab" onclick="filterMods('public',this)">Públicos</button>
+        <button class="filter-tab" onclick="filterMods('private',this)">Privados</button>
+      </div>
+      <input class="search-bar" id="mod-search" placeholder="🔍  Buscar por título, disciplina ou usuário..." oninput="renderModsTable()">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📚 Módulos Gerados <span id="mod-count-label" style="font-weight:400;color:var(--dim);font-size:12px"></span></div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>Título</th><th>Disciplina</th><th>Professor</th><th>Criado por</th><th>Visibilidade</th><th>Data</th><th>Ações</th>
+            </tr></thead>
+            <tbody id="mods-tbody">
+              <tr><td colspan="7" class="tbl-empty"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== CHALLENGES ======== -->
+    <div class="section" id="sec-challenges">
+      <div class="filter-tabs" id="ch-filters">
+        <button class="filter-tab on" onclick="filterChs('all',this)">Todos</button>
+        <button class="filter-tab" onclick="filterChs('active',this)">Ativos</button>
+        <button class="filter-tab" onclick="filterChs('ended',this)">Encerrados</button>
+        <button class="filter-tab" onclick="filterChs('group',this)">Grupos</button>
+        <button class="filter-tab" onclick="filterChs('duo',this)">Duelos</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⚔️ Grupos e Duelos <span id="ch-count-label" style="font-weight:400;color:var(--dim);font-size:12px"></span></div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>Nome</th><th>Tipo</th><th>Criador</th><th>Participantes</th><th>Módulos</th><th>Status</th><th>Criado</th><th>Encerra</th>
+            </tr></thead>
+            <tbody id="chs-tbody">
+              <tr><td colspan="8" class="tbl-empty"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== SUGGESTIONS ======== -->
+    <div class="section" id="sec-suggestions">
+      <div class="filter-tabs" id="sug-filters">
+        <button class="filter-tab on" onclick="filterSugs('all',this)">Todas</button>
+        <button class="filter-tab" onclick="filterSugs('pendente',this)">Pendentes</button>
+        <button class="filter-tab" onclick="filterSugs('em_andamento',this)">Em andamento</button>
+        <button class="filter-tab" onclick="filterSugs('concluido',this)">Concluídas</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📩 Solicitações de Módulos <span id="sug-count-label" style="font-weight:400;color:var(--dim);font-size:12px"></span></div>
+        </div>
+        <div class="card-body" id="sug-list">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- USER MANAGEMENT MODAL -->
+<div class="modal-overlay" id="user-modal" style="display:none" onclick="if(event.target===this)closeUserModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="um-title">Gerenciar Usuário</div>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Info cards -->
+      <div class="modal-stat-row" id="um-stats"></div>
+
+      <!-- Editar dados -->
+      <div class="modal-section">
+        <div class="modal-section-title">✏️ Editar Dados</div>
+        <div class="modal-field">
+          <label class="modal-label">Nome</label>
+          <input class="modal-input" id="um-name" type="text" placeholder="Nome do usuário">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Bio</label>
+          <input class="modal-input" id="um-bio" type="text" placeholder="Bio">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">XP</label>
+          <input class="modal-input" id="um-xp" type="number" min="0">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Streak</label>
+          <input class="modal-input" id="um-streak" type="number" min="0">
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">E-mail (só leitura)</label>
+          <input class="modal-input" id="um-email" type="email" readonly>
+        </div>
+        <button class="modal-btn modal-btn-primary" id="um-save-btn" onclick="saveUserEdits()">💾 Salvar Alterações</button>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- Ações de segurança -->
+      <div class="modal-section">
+        <div class="modal-section-title">🔐 Segurança</div>
+        <div class="modal-actions">
+          <button class="modal-btn modal-btn-warning" id="um-reset-btn" onclick="adminResetPassword()">
+            📧 Enviar Email de Redefinição de Senha
+          </button>
+          <button class="modal-btn modal-btn-block" id="um-block-btn" onclick="adminToggleBlock()">
+            🚫 Bloquear Usuário
+          </button>
+        </div>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- Zona de perigo -->
+      <div class="modal-section">
+        <div class="modal-section-title" style="color:var(--red)">⚠️ Zona de Perigo</div>
+        <button class="modal-btn modal-btn-danger" id="um-delete-btn" onclick="adminDeleteUser()">
+          🗑 Excluir Usuário e Todos os Dados
+        </button>
+        <div style="font-size:10px;color:var(--dim2);margin-top:6px;text-align:center">
+          Remove o usuário do banco de dados. A conta de autenticação permanece inativa.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG FIREBASE
+   ============================================================ */
+firebase.initializeApp({
+  apiKey: "AIzaSyCvoPA9OOC3o42ERViKs1IjRIOuwOon0UU",
+  authDomain: "medmind-pro.firebaseapp.com",
+  projectId: "medmind-pro",
+  storageBucket: "medmind-pro.firebasestorage.app",
+  messagingSenderId: "860950221382",
+  appId: "1:860950221382:web:4d31ac4cc0fb7d1a883047"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const ADMIN_EMAIL = 'ranna@grupolead.com.br';
+let currentSection = 'dashboard';
+let allUsers = [], allMods = [], allChallenges = [], allSugs = [];
+let userFilter = 'all', modFilter = 'all', chFilter = 'all', sugFilter = 'all';
+let chartReg = null, chartAct = null, chartDisc = null, chartHourly = null;
+let unsubUsers = null, unsubMods = null, unsubChallenges = null, unsubSugs = null;
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleString('pt-BR',{
+    day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'
+  });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+auth.onAuthStateChanged(user => {
+  if (user && user.email === ADMIN_EMAIL) {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    const initials = (user.displayName||user.email||'A').substring(0,1).toUpperCase();
+    document.getElementById('sb-avatar').textContent = initials;
+    document.getElementById('sb-name').textContent = user.displayName || user.email;
+    startListeners();
+  } else if (user) {
+    auth.signOut();
+    showErr('Acesso negado. Use a conta de administrador.');
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('admin-app').style.display = 'none';
+  }
+});
+
+async function doLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-pass').value;
+  showErr('');
+  if (!email || !pass) { showErr('Preencha e-mail e senha.'); return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    const msgs = {
+      'auth/user-not-found':'Usuário não encontrado.',
+      'auth/wrong-password':'Senha incorreta.',
+      'auth/invalid-credential':'Credenciais inválidas.',
+      'auth/too-many-requests':'Muitas tentativas. Aguarde.',
+    };
+    showErr(msgs[e.code] || e.message);
+  }
+}
+document.getElementById('auth-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogout() {
+  stopListeners();
+  await auth.signOut();
+}
+
+function showErr(msg) { document.getElementById('auth-err').textContent = msg; }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+const SECTION_META = {
+  dashboard:  { title:'Dashboard',     sub:'Visão geral da plataforma' },
+  users:      { title:'Usuários',      sub:'Todos os usuários cadastrados' },
+  activity:   { title:'Atividade',     sub:'Usuários ativos e sessões' },
+  modules:    { title:'Módulos',       sub:'Conteúdo gerado por IA' },
+  challenges: { title:'Grupos / Duelos', sub:'Desafios criados na plataforma' },
+  suggestions:{ title:'Solicitações',  sub:'Pedidos de criação de módulo' },
+};
+
+function goSection(name) {
+  currentSection = name;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const meta = SECTION_META[name] || {};
+  document.getElementById('section-title').textContent = meta.title || name;
+  document.getElementById('section-sub').innerHTML = (meta.sub || '') + ' <span class="rt-dot"></span>';
+}
+
+/* ============================================================
+   FIRESTORE LISTENERS
+   ============================================================ */
+function startListeners() {
+  // Users
+  unsubUsers = db.collection('users').onSnapshot(snap => {
+    allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    document.getElementById('badge-users').textContent = allUsers.length;
+    renderDashboard();
+    renderUsersTable();
+    renderActivitySection();
+  }, e => console.error('Users listener:', e));
+
+  // Generated Modules
+  unsubMods = db.collection('generatedModules').orderBy('createdAt','desc').limit(200).onSnapshot(snap => {
+    allMods = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    document.getElementById('badge-modules').textContent = allMods.length;
+    renderModsTable();
+    if(chartDisc) updateDiscChart();
+  }, e => {
+    db.collection('generatedModules').limit(200).onSnapshot(snap2 => {
+      allMods = snap2.docs.map(d => ({ docId: d.id, ...d.data() }));
+      document.getElementById('badge-modules').textContent = allMods.length;
+      renderModsTable();
+    });
+  });
+
+  // Challenges
+  unsubChallenges = db.collection('challenges').orderBy('createdAt','desc').limit(100).onSnapshot(snap => {
+    allChallenges = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderChallengesTable();
+  }, e => {
+    db.collection('challenges').limit(100).onSnapshot(snap2 => {
+      allChallenges = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderChallengesTable();
+    });
+  });
+
+  // Suggestions
+  unsubSugs = db.collection('suggestions').orderBy('createdAt','desc').limit(50).onSnapshot(snap => {
+    allSugs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const pending = allSugs.filter(s => s.status === 'pendente' || !s.status).length;
+    document.getElementById('badge-sug').textContent = pending || '—';
+    document.getElementById('sug-count-label').textContent = `(${allSugs.length})`;
+    renderSugList();
+  }, e => console.error('Sugs listener:', e));
+}
+
+function stopListeners() {
+  if(unsubUsers) unsubUsers();
+  if(unsubMods) unsubMods();
+  if(unsubChallenges) unsubChallenges();
+  if(unsubSugs) unsubSugs();
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  showNotif('Atualizando dados...');
+  // Listeners auto-update; force re-render
+  renderDashboard();
+  renderUsersTable();
+  renderActivitySection();
+  renderModsTable();
+  renderChallengesTable();
+  renderSugList();
+  setTimeout(() => { btn.classList.remove('spinning'); showNotif('Dados atualizados!', 'green'); }, 800);
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function fmtDate(ts, full=false) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts));
+  if(full) return d.toLocaleString('pt-BR');
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'Agora mesmo';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'min atrás';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h atrás';
+  if (diff < 604800000) return Math.floor(diff/86400000) + 'd atrás';
+  return d.toLocaleDateString('pt-BR');
+}
+
+function isActiveNow(user) {
+  if (!user.lastActive) return false;
+  const d = user.lastActive.toDate ? user.lastActive.toDate() : new Date(user.lastActive);
+  return (new Date() - d) < 30 * 60000;
+}
+function isActiveToday(user) {
+  if (!user.lastActive) return false;
+  const d = user.lastActive.toDate ? user.lastActive.toDate() : new Date(user.lastActive);
+  const now = new Date();
+  return d.toDateString() === now.toDateString();
+}
+function isActiveWeek(user) {
+  if (!user.lastActive) return false;
+  const d = user.lastActive.toDate ? user.lastActive.toDate() : new Date(user.lastActive);
+  return (new Date() - d) < 7 * 86400000;
+}
+
+function avatar(name, size=32) {
+  const colors = ['#6c5ce7','#e84393','#00b894','#0984e3','#f9ca24','#e17055','#a29bfe'];
+  const c = colors[(name||'?').charCodeAt(0) % colors.length];
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${c}22;color:${c};font-size:${Math.floor(size*0.4)}px">${(name||'?').substring(0,1).toUpperCase()}</div>`;
+}
+
+function xpBadge(xp) {
+  if (xp >= 2000) return `<span class="badge badge-pink">🧠 ${xp}</span>`;
+  if (xp >= 1000) return `<span class="badge badge-gold">⚕️ ${xp}</span>`;
+  if (xp >= 500)  return `<span class="badge badge-green">🩺 ${xp}</span>`;
+  if (xp >= 200)  return `<span class="badge badge-blue">🧪 ${xp}</span>`;
+  return `<span class="badge badge-dim">🔬 ${xp}</span>`;
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard() {
+  const now = new Date();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const weekStart = new Date(now - 7*86400000);
+
+  const activeNow   = allUsers.filter(isActiveNow).length;
+  const activeToday = allUsers.filter(isActiveToday).length;
+  const activeWeek  = allUsers.filter(isActiveWeek).length;
+  const totalMods   = allMods.length;
+  const pubMods     = allMods.filter(m => m.visibility === 'public').length;
+  const totalCh     = allChallenges.length;
+  const activeCh    = allChallenges.filter(c => c.status === 'active').length;
+  const pendSugs    = allSugs.filter(s => !s.status || s.status==='pendente').length;
+
+  const totalXP = allUsers.reduce((a,u) => a + (u.xp||0), 0);
+  const avgXP   = allUsers.length ? Math.round(totalXP / allUsers.length) : 0;
+
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat-card" style="--card-color:var(--accent)">
+      <div class="stat-icon">👥</div>
+      <div class="stat-value">${allUsers.length}</div>
+      <div class="stat-label">Total de Usuários</div>
+      <div class="stat-sub">${avgXP} XP médio</div>
+    </div>
+    <div class="stat-card" style="--card-color:var(--green)">
+      <div class="stat-icon">🟢</div>
+      <div class="stat-value">${activeNow}</div>
+      <div class="stat-label">Ativos agora</div>
+      <div class="stat-sub">Últimos 30 min</div>
+    </div>
+    <div class="stat-card" style="--card-color:#00cec9">
+      <div class="stat-icon">📅</div>
+      <div class="stat-value">${activeToday}</div>
+      <div class="stat-label">Ativos hoje</div>
+      <div class="stat-sub">${activeWeek} esta semana</div>
+    </div>
+    <div class="stat-card" style="--card-color:var(--blue)">
+      <div class="stat-icon">📚</div>
+      <div class="stat-value">${totalMods}</div>
+      <div class="stat-label">Módulos Gerados</div>
+      <div class="stat-sub">${pubMods} públicos</div>
+    </div>
+    <div class="stat-card" style="--card-color:var(--pink)">
+      <div class="stat-icon">⚔️</div>
+      <div class="stat-value">${totalCh}</div>
+      <div class="stat-label">Desafios</div>
+      <div class="stat-sub">${activeCh} ativos</div>
+    </div>
+    <div class="stat-card" style="--card-color:var(--gold)">
+      <div class="stat-icon">📩</div>
+      <div class="stat-value">${pendSugs}</div>
+      <div class="stat-label">Solicitações Pendentes</div>
+      <div class="stat-sub">${allSugs.length} total</div>
+    </div>
+  `;
+
+  renderRegistrationChart();
+  renderActivityChart(activeNow, activeToday, activeWeek);
+  renderTopXP();
+  renderDiscChart();
+  renderRecentActions();
+}
+
+/* Registration chart (users with lastActive per day) */
+function renderRegistrationChart() {
+  const days = [];
+  const counts = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0,0,0,0);
+    const next = new Date(d); next.setDate(d.getDate()+1);
+    days.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    counts.push(allUsers.filter(u => {
+      if (!u.lastActive) return false;
+      const la = u.lastActive.toDate ? u.lastActive.toDate() : new Date(u.lastActive);
+      return la >= d && la < next;
+    }).length);
+  }
+  const ctx = document.getElementById('chart-registrations').getContext('2d');
+  if (chartReg) chartReg.destroy();
+  chartReg = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:days,
+      datasets:[{
+        label:'Usuários ativos',data:counts,
+        backgroundColor:'rgba(108,92,231,.4)',
+        borderColor:'#6c5ce7',borderWidth:2,borderRadius:6,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw} usuários`}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b8ba5',font:{family:'Sora',size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b8ba5',font:{family:'JetBrains Mono',size:10}},beginAtZero:true,precision:0}
+      }
+    }
+  });
+}
+
+function renderActivityChart(now, today, week) {
+  const ctx = document.getElementById('chart-activity').getContext('2d');
+  if (chartAct) chartAct.destroy();
+  const inactive = Math.max(0, allUsers.length - week);
+  chartAct = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels:['Agora (30min)','Hoje','Esta semana','Inativos'],
+      datasets:[{
+        data:[now, today-now, week-today, inactive],
+        backgroundColor:['#00b894','#6c5ce7','#0984e3','rgba(74,85,104,.4)'],
+        borderColor:'#0f1729',borderWidth:3,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{
+        legend:{position:'bottom',labels:{color:'#7b8ba5',font:{family:'Sora',size:11},padding:12}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} usuários`}}
+      }
+    }
+  });
+}
+
+function renderTopXP() {
+  const top = [...allUsers].sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,10);
+  const maxXP = top[0]?.xp || 1;
+  let h = '';
+  top.forEach((u,i) => {
+    const pct = Math.round((u.xp||0)/maxXP*100);
+    h += `<div class="u-row">
+      <div style="font-size:12px;font-weight:700;color:var(--dim);width:20px;flex-shrink:0">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</div>
+      ${avatar(u.name||u.email)}
+      <div class="u-info">
+        <div class="u-name">${u.name||'Anônimo'}</div>
+        <div class="activity-bar"><div class="activity-fill" style="width:${pct}%"></div></div>
+      </div>
+      ${xpBadge(u.xp||0)}
+    </div>`;
+  });
+  document.getElementById('top-xp-list').innerHTML = h || '<p class="tbl-empty">Sem dados</p>';
+}
+
+function renderDiscChart() {
+  const counts = {};
+  allMods.forEach(m => {
+    const k = m.discipline || 'Sem disciplina';
+    counts[k] = (counts[k]||0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const colors = ['#6c5ce7','#e84393','#00b894','#0984e3','#f9ca24','#e17055','#a29bfe','#fd79a8'];
+  const ctx = document.getElementById('chart-disciplines').getContext('2d');
+  if (chartDisc) chartDisc.destroy();
+  if (!sorted.length) { ctx.canvas.parentElement.innerHTML='<p class="tbl-empty">Nenhum módulo criado ainda</p>'; return; }
+  chartDisc = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:sorted.map(([k])=>k.length>14?k.substring(0,14)+'…':k),
+      datasets:[{
+        label:'Módulos',data:sorted.map(([,v])=>v),
+        backgroundColor:colors,borderRadius:6,
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b8ba5',font:{family:'JetBrains Mono',size:10}},beginAtZero:true,precision:0},
+        y:{grid:{display:false},ticks:{color:'#7b8ba5',font:{family:'Sora',size:10}}}
+      }
+    }
+  });
+}
+
+function updateDiscChart() { renderDiscChart(); }
+
+function renderRecentActions() {
+  const events = [];
+  // Recent active users
+  [...allUsers].filter(u=>u.lastActive).sort((a,b)=>{
+    const ta = (a.lastActive.toDate?a.lastActive.toDate():new Date(a.lastActive));
+    const tb = (b.lastActive.toDate?b.lastActive.toDate():new Date(b.lastActive));
+    return tb-ta;
+  }).slice(0,5).forEach(u=>{
+    events.push({icon:'👤',text:`<strong>${u.name||'Anônimo'}</strong> ficou ativo`,time:u.lastActive,color:'var(--accent)'});
+  });
+  // Recent modules
+  allMods.slice(0,5).forEach(m=>{
+    events.push({icon:'📚',text:`<strong>${m.userName||'Usuário'}</strong> criou módulo <em>${m.title||m.discipline||'?'}</em>`,time:m.createdAt,color:'var(--blue)'});
+  });
+  // Recent challenges
+  allChallenges.slice(0,3).forEach(c=>{
+    events.push({icon:'⚔️',text:`<strong>${c.creatorName||'Usuário'}</strong> criou "${c.name||'Desafio'}"`,time:c.createdAt,color:'var(--pink)'});
+  });
+  // Sort all by time
+  events.sort((a,b)=>{
+    const ta = a.time?.toDate?a.time.toDate():new Date(a.time||0);
+    const tb = b.time?.toDate?b.time.toDate():new Date(b.time||0);
+    return tb-ta;
+  });
+  const top = events.slice(0,12);
+  if (!top.length) { document.getElementById('recent-actions').innerHTML='<p class="tbl-empty">Sem atividade recente</p>'; return; }
+  document.getElementById('recent-actions').innerHTML = top.map(e=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03)">
+      <div style="width:28px;height:28px;border-radius:8px;background:${e.color}22;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${e.icon}</div>
+      <div style="flex:1;font-size:12px;line-height:1.4">${e.text}</div>
+      <div style="font-size:10px;color:var(--dim);white-space:nowrap;font-family:'JetBrains Mono',monospace">${fmtDate(e.time)}</div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   USERS TABLE
+   ============================================================ */
+function filterUsers(f, el) {
+  userFilter = f;
+  document.querySelectorAll('#user-filters .filter-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderUsersTable();
+}
+
+function renderUsersTable() {
+  const search = (document.getElementById('user-search')?.value||'').toLowerCase();
+  const sort   = document.getElementById('user-sort')?.value || 'lastActive';
+  let list = [...allUsers];
+
+  if (userFilter === 'active_today') list = list.filter(isActiveToday);
+  else if (userFilter === 'active_week') list = list.filter(isActiveWeek);
+  else if (userFilter === 'new_week') {
+    list = list.filter(u => {
+      // Use lastActive or email domain as proxy for "new"
+      if (!u.lastActive) return false;
+      const d = u.lastActive.toDate?u.lastActive.toDate():new Date(u.lastActive);
+      return (new Date()-d) < 7*86400000;
+    });
+  }
+
+  if (search) {
+    list = list.filter(u =>
+      (u.name||'').toLowerCase().includes(search) ||
+      (u.email||'').toLowerCase().includes(search)
+    );
+  }
+
+  list.sort((a,b) => {
+    if (sort==='xp') return (b.xp||0)-(a.xp||0);
+    if (sort==='name') return (a.name||'').localeCompare(b.name||'');
+    if (sort==='streak') return (b.streak||0)-(a.streak||0);
+    // lastActive
+    const ta = a.lastActive?(a.lastActive.toDate?a.lastActive.toDate():new Date(a.lastActive)):new Date(0);
+    const tb = b.lastActive?(b.lastActive.toDate?b.lastActive.toDate():new Date(b.lastActive)):new Date(0);
+    return tb-ta;
+  });
+
+  document.getElementById('user-count-label').textContent = `(${list.length})`;
+
+  if (!list.length) {
+    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="8" class="tbl-empty">Nenhum usuário encontrado</td></tr>';
+    return;
+  }
+
+  document.getElementById('users-tbody').innerHTML = list.map(u => {
+    const modsCount = Object.keys(u.modules||{}).length;
+    const friendsCount = (u.friends||[]).length;
+    let statusBadge;
+    if (u.blocked) statusBadge = '<span class="badge badge-red">🚫 Bloqueado</span>';
+    else if (isActiveNow(u)) statusBadge = '<span class="badge badge-green">● Agora</span>';
+    else if (isActiveToday(u)) statusBadge = '<span class="badge badge-accent">Hoje</span>';
+    else if (isActiveWeek(u)) statusBadge = '<span class="badge badge-dim">Esta semana</span>';
+    else statusBadge = '<span class="badge badge-dim" style="color:var(--dim2)">Inativo</span>';
+    const safeUid = u.uid.replace(/'/g, "\\'");
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">${avatar(u.name||u.email)}<span style="font-weight:600">${u.name||'Anônimo'}</span></div></td>
+      <td style="color:var(--dim)">${u.email||'—'}</td>
+      <td>${xpBadge(u.xp||0)}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">${u.streak||0}🔥</span></td>
+      <td><span style="font-family:'JetBrains Mono',monospace">${modsCount}</span></td>
+      <td><span style="font-family:'JetBrains Mono',monospace">${friendsCount}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)">${fmtDate(u.lastActive)}</td>
+      <td>${statusBadge}</td>
+      <td><button class="act-btn act-btn-blue" onclick="openUserModal('${safeUid}')">⚙ Gerenciar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   ACTIVITY SECTION
+   ============================================================ */
+function renderActivitySection() {
+  // Active now
+  const nowUsers = allUsers.filter(isActiveNow).sort((a,b) => {
+    const ta = a.lastActive.toDate?a.lastActive.toDate():new Date(a.lastActive);
+    const tb = b.lastActive.toDate?b.lastActive.toDate():new Date(b.lastActive);
+    return tb-ta;
+  });
+  const todayUsers = allUsers.filter(u=>isActiveToday(u)&&!isActiveNow(u)).sort((a,b) => {
+    const ta = a.lastActive.toDate?a.lastActive.toDate():new Date(a.lastActive);
+    const tb = b.lastActive.toDate?b.lastActive.toDate():new Date(b.lastActive);
+    return tb-ta;
+  });
+
+  const renderUserList = (list, emptyMsg) => {
+    if (!list.length) return `<p class="tbl-empty">${emptyMsg}</p>`;
+    return list.map(u => `
+      <div class="u-row">
+        ${avatar(u.name||u.email)}
+        <div class="u-info">
+          <div class="u-name">${u.name||'Anônimo'}</div>
+          <div class="u-meta">${u.email||''}</div>
+        </div>
+        <div style="text-align:right">
+          ${xpBadge(u.xp||0)}
+          <div style="font-size:10px;color:var(--dim);margin-top:3px;font-family:'JetBrains Mono',monospace">${fmtDate(u.lastActive)}</div>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  document.getElementById('active-now-list').innerHTML = renderUserList(nowUsers, 'Nenhum usuário ativo agora') + `<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--dim)">${nowUsers.length} online</div>`;
+  document.getElementById('active-today-list').innerHTML = renderUserList(todayUsers.slice(0,10), 'Nenhum outro usuário ativo hoje') + (todayUsers.length>10?`<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--dim)">+${todayUsers.length-10} mais</div>`:'');
+
+  renderHourlyChart();
+  renderQuizActivity();
+}
+
+function renderHourlyChart() {
+  const buckets = Array(24).fill(0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  allUsers.forEach(u => {
+    if (!u.lastActive) return;
+    const d = u.lastActive.toDate?u.lastActive.toDate():new Date(u.lastActive);
+    if (d >= today) buckets[d.getHours()]++;
+  });
+  const labels = Array.from({length:24},(_,i)=>`${i.toString().padStart(2,'0')}h`);
+  const ctx = document.getElementById('chart-hourly').getContext('2d');
+  if (chartHourly) chartHourly.destroy();
+  chartHourly = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'Usuários',data:buckets,
+        fill:true,tension:0.4,
+        backgroundColor:'rgba(108,92,231,.15)',
+        borderColor:'#6c5ce7',borderWidth:2,
+        pointBackgroundColor:'#6c5ce7',pointRadius:3,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b8ba5',font:{family:'JetBrains Mono',size:10},maxTicksLimit:12}},
+        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b8ba5',font:{family:'JetBrains Mono',size:10}},beginAtZero:true,precision:0}
+      }
+    }
+  });
+}
+
+function renderQuizActivity() {
+  const usersWithQuiz = allUsers.filter(u=>(u.quizHistory||[]).length>0)
+    .sort((a,b)=>(b.quizHistory||[]).length-(a.quizHistory||[]).length).slice(0,10);
+  const maxQ = usersWithQuiz[0]?.quizHistory?.length || 1;
+  let h = '';
+  usersWithQuiz.forEach((u,i) => {
+    const cnt = (u.quizHistory||[]).length;
+    const pct = Math.round(cnt/maxQ*100);
+    h += `<div class="u-row">
+      <div style="font-size:11px;font-weight:700;color:var(--dim);width:18px;flex-shrink:0">${i+1}</div>
+      ${avatar(u.name||u.email)}
+      <div class="u-info">
+        <div class="u-name">${u.name||'Anônimo'}</div>
+        <div class="activity-bar"><div class="activity-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2);flex-shrink:0">${cnt} quizzes</span>
+    </div>`;
+  });
+  document.getElementById('quiz-activity').innerHTML = h || '<p class="tbl-empty">Nenhuma atividade de quiz</p>';
+}
+
+/* ============================================================
+   MODULES TABLE
+   ============================================================ */
+function filterMods(f, el) {
+  modFilter = f;
+  document.querySelectorAll('#mod-filters .filter-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderModsTable();
+}
+
+function renderModsTable() {
+  const search = (document.getElementById('mod-search')?.value||'').toLowerCase();
+  let list = [...allMods];
+
+  if (modFilter === 'public') list = list.filter(m => m.visibility==='public');
+  else if (modFilter === 'private') list = list.filter(m => m.visibility!=='public');
+
+  if (search) {
+    list = list.filter(m =>
+      (m.title||'').toLowerCase().includes(search) ||
+      (m.discipline||'').toLowerCase().includes(search) ||
+      (m.userName||'').toLowerCase().includes(search)
+    );
+  }
+
+  document.getElementById('mod-count-label').textContent = `(${list.length})`;
+
+  if (!list.length) {
+    document.getElementById('mods-tbody').innerHTML = '<tr><td colspan="7" class="tbl-empty">Nenhum módulo encontrado</td></tr>';
+    return;
+  }
+
+  document.getElementById('mods-tbody').innerHTML = list.map(m => {
+    const visBadge = m.visibility==='public'
+      ? '<span class="badge badge-green">🌐 Público</span>'
+      : '<span class="badge badge-dim">🔒 Privado</span>';
+    const statusBadge = m.status==='ready'
+      ? '<span class="badge badge-blue">✓ Pronto</span>'
+      : `<span class="badge badge-gold">${m.status||'?'}</span>`;
+    return `<tr>
+      <td><div style="font-weight:600;font-size:12px">${m.title||m.discipline||'Sem título'}</div><div style="font-size:10px;color:var(--dim);margin-top:2px">${m.docId}</div></td>
+      <td>${m.discipline||'—'}</td>
+      <td style="color:var(--dim);font-size:11px">${m.professor||'—'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${avatar(m.userName||m.userEmail,24)}
+          <div>
+            <div style="font-size:12px;font-weight:500">${m.userName||'Anônimo'}</div>
+            <div style="font-size:10px;color:var(--dim)">${m.userEmail||''}</div>
+          </div>
+        </div>
+      </td>
+      <td>${visBadge}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)">${fmtDate(m.createdAt)}</td>
+      <td>
+        <button class="act-btn act-btn-red" onclick="deleteModule('${m.docId}')">🗑 Apagar</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteModule(docId) {
+  if (!confirm('Apagar módulo permanentemente?')) return;
+  try {
+    await db.collection('generatedModules').doc(docId).delete();
+    showNotif('Módulo apagado!', 'red');
+  } catch(e) { showNotif('Erro: '+e.message, 'red'); }
+}
+
+/* ============================================================
+   CHALLENGES TABLE
+   ============================================================ */
+function filterChs(f, el) {
+  chFilter = f;
+  document.querySelectorAll('#ch-filters .filter-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderChallengesTable();
+}
+
+function renderChallengesTable() {
+  let list = [...allChallenges];
+  if (chFilter === 'active') list = list.filter(c=>c.status==='active');
+  else if (chFilter === 'ended') list = list.filter(c=>c.status==='ended');
+  else if (chFilter === 'group') list = list.filter(c=>c.type==='group');
+  else if (chFilter === 'duo') list = list.filter(c=>c.type==='duo');
+
+  document.getElementById('ch-count-label').textContent = `(${list.length})`;
+
+  if (!list.length) {
+    document.getElementById('chs-tbody').innerHTML = '<tr><td colspan="8" class="tbl-empty">Nenhum desafio encontrado</td></tr>';
+    return;
+  }
+
+  document.getElementById('chs-tbody').innerHTML = list.map(c => {
+    const typeBadge = c.type==='duo'
+      ? '<span class="badge badge-pink">⚔️ Duelo</span>'
+      : '<span class="badge badge-blue">👥 Grupo</span>';
+    const statusBadge = c.status==='active'
+      ? '<span class="badge badge-green">● Ativo</span>'
+      : '<span class="badge badge-dim">Encerrado</span>';
+    const parts = Object.keys(c.participants||{}).length;
+    const mods = (c.moduleNames||[]).slice(0,2).join(', ') + ((c.moduleNames||[]).length>2?`... +${(c.moduleNames||[]).length-2}`:'');
+    return `<tr>
+      <td><div style="font-weight:600;font-size:12px">${c.name||'Sem nome'}</div></td>
+      <td>${typeBadge}</td>
+      <td style="font-size:12px">${c.creatorName||'—'}</td>
+      <td><span style="font-family:'JetBrains Mono',monospace">${parts}</span></td>
+      <td style="font-size:11px;color:var(--dim);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${mods||'—'}</td>
+      <td>${statusBadge}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)">${fmtDate(c.createdAt)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)">${fmtDate(c.endDate)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   SUGGESTIONS
+   ============================================================ */
+function filterSugs(f, el) {
+  sugFilter = f;
+  document.querySelectorAll('#sug-filters .filter-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderSugList();
+}
+
+function renderSugList() {
+  let list = [...allSugs];
+  if (sugFilter === 'pendente') list = list.filter(s=>!s.status||s.status==='pendente');
+  else if (sugFilter === 'em_andamento') list = list.filter(s=>s.status==='em_andamento');
+  else if (sugFilter === 'concluido') list = list.filter(s=>s.status==='concluido');
+
+  if (!list.length) {
+    document.getElementById('sug-list').innerHTML = '<p class="tbl-empty">Nenhuma solicitação encontrada</p>';
+    return;
+  }
+
+  document.getElementById('sug-list').innerHTML = list.map(s => {
+    const statusMap = {
+      pendente:     ['badge-gold',  '⏳ Pendente'],
+      em_andamento: ['badge-blue',  '🔄 Em andamento'],
+      concluido:    ['badge-green', '✓ Concluído'],
+    };
+    const [bClass, bLabel] = statusMap[s.status||'pendente'] || statusMap.pendente;
+    return `<div style="background:var(--bg3);border-radius:12px;padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${s.title||'Sem título'}</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:2px">📚 ${s.discipline||'—'}${s.professor?' · 👨‍🏫 '+s.professor:''}</div>
+        </div>
+        <span class="badge ${bClass}">${bLabel}</span>
+      </div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:8px">
+        👤 <strong style="color:var(--text)">${s.userName||'—'}</strong>
+        · 📅 ${fmtDate(s.createdAt,true)}
+        ${s.observations?'<br>💬 '+s.observations:''}
+      </div>
+      ${s.pdfURL?`<a href="${s.pdfURL}" target="_blank" style="display:inline-block;padding:4px 12px;border-radius:6px;background:var(--accent-bg);color:var(--accent2);font-size:11px;font-weight:600;text-decoration:none;margin-bottom:8px">📄 Ver PDF</a>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${(!s.status||s.status==='pendente')?`<button class="act-btn act-btn-blue" onclick="updateSug('${s.id}','em_andamento')">Em andamento</button><button class="act-btn act-btn-green" onclick="updateSug('${s.id}','concluido')">Concluído</button>`:''}
+        ${s.status==='em_andamento'?`<button class="act-btn act-btn-green" onclick="updateSug('${s.id}','concluido')">Concluído</button>`:''}
+        <button class="act-btn act-btn-dim" onclick="deleteSug('${s.id}')">🗑 Apagar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateSug(id, status) {
+  try {
+    await db.collection('suggestions').doc(id).update({ status });
+    showNotif('Status atualizado!', 'green');
+  } catch(e) { showNotif('Erro: '+e.message, 'red'); }
+}
+
+async function deleteSug(id) {
+  if (!confirm('Apagar solicitação?')) return;
+  try {
+    await db.collection('suggestions').doc(id).delete();
+    showNotif('Solicitação apagada!', 'red');
+  } catch(e) { showNotif('Erro: '+e.message, 'red'); }
+}
+
+/* ============================================================
+   USER MANAGEMENT MODAL
+   ============================================================ */
+let currentModalUser = null;
+
+function openUserModal(uid) {
+  const u = allUsers.find(x => x.uid === uid);
+  if (!u) return;
+  currentModalUser = u;
+
+  document.getElementById('um-title').textContent = u.name || 'Usuário';
+  document.getElementById('um-name').value   = u.name   || '';
+  document.getElementById('um-bio').value    = u.bio    || '';
+  document.getElementById('um-xp').value     = u.xp     || 0;
+  document.getElementById('um-streak').value = u.streak || 0;
+  document.getElementById('um-email').value  = u.email  || '';
+
+  // Stats cards
+  const modsCount    = Object.keys(u.modules||{}).length;
+  const friendsCount = (u.friends||[]).length;
+  const quizCount    = (u.quizHistory||[]).length;
+  document.getElementById('um-stats').innerHTML = `
+    <div class="modal-stat"><div class="modal-stat-val" style="color:var(--accent2)">${u.xp||0}</div><div class="modal-stat-lbl">XP</div></div>
+    <div class="modal-stat"><div class="modal-stat-val" style="color:var(--gold)">${u.streak||0}🔥</div><div class="modal-stat-lbl">Streak</div></div>
+    <div class="modal-stat"><div class="modal-stat-val" style="color:var(--blue)">${modsCount}</div><div class="modal-stat-lbl">Módulos</div></div>
+    <div class="modal-stat"><div class="modal-stat-val" style="color:var(--green)">${quizCount}</div><div class="modal-stat-lbl">Quizzes</div></div>
+    <div class="modal-stat"><div class="modal-stat-val" style="color:var(--pink)">${friendsCount}</div><div class="modal-stat-lbl">Amigos</div></div>
+  `;
+
+  // Block button state
+  const blockBtn = document.getElementById('um-block-btn');
+  if (u.blocked) {
+    blockBtn.className = 'modal-btn modal-btn-unblock';
+    blockBtn.innerHTML = '✅ Desbloquear Usuário';
+  } else {
+    blockBtn.className = 'modal-btn modal-btn-block';
+    blockBtn.innerHTML = '🚫 Bloquear Usuário';
+  }
+
+  document.getElementById('user-modal').style.display = 'flex';
+}
+
+function closeUserModal() {
+  document.getElementById('user-modal').style.display = 'none';
+  currentModalUser = null;
+}
+
+async function adminApiCall(endpoint, body) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Não autenticado');
+  const idToken = await user.getIdToken();
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, idToken })
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) throw new Error(json.error || 'Erro no servidor');
+  return json;
+}
+
+async function saveUserEdits() {
+  if (!currentModalUser) return;
+  const btn = document.getElementById('um-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    const updates = {
+      name:   document.getElementById('um-name').value.trim(),
+      bio:    document.getElementById('um-bio').value.trim(),
+      xp:     parseInt(document.getElementById('um-xp').value) || 0,
+      streak: parseInt(document.getElementById('um-streak').value) || 0,
+    };
+    await adminApiCall('/admin/update-user', { uid: currentModalUser.uid, updates });
+    showNotif('Usuário atualizado!', 'green');
+    closeUserModal();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Salvar Alterações';
+  }
+}
+
+async function adminResetPassword() {
+  if (!currentModalUser?.email) return;
+  const btn = document.getElementById('um-reset-btn');
+  if (!confirm(`Enviar email de redefinição de senha para:\n${currentModalUser.email}`)) return;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    await adminApiCall('/admin/reset-password', { email: currentModalUser.email });
+    showNotif(`Email enviado para ${currentModalUser.email}!`, 'green');
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📧 Enviar Email de Redefinição de Senha';
+  }
+}
+
+async function adminToggleBlock() {
+  if (!currentModalUser) return;
+  const isBlocked = !!currentModalUser.blocked;
+  const action = isBlocked ? 'desbloquear' : 'bloquear';
+  if (!confirm(`Deseja ${action} o usuário "${currentModalUser.name || currentModalUser.email}"?`)) return;
+  const btn = document.getElementById('um-block-btn');
+  btn.disabled = true;
+  btn.textContent = 'Aguarde...';
+  try {
+    await adminApiCall('/admin/toggle-block', { uid: currentModalUser.uid, blocked: !isBlocked });
+    showNotif(`Usuário ${isBlocked ? 'desbloqueado' : 'bloqueado'}!`, isBlocked ? 'green' : 'red');
+    closeUserModal();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'red');
+    btn.disabled = false;
+    btn.innerHTML = isBlocked ? '✅ Desbloquear Usuário' : '🚫 Bloquear Usuário';
+  }
+}
+
+async function adminDeleteUser() {
+  if (!currentModalUser) return;
+  const name = currentModalUser.name || currentModalUser.email || 'este usuário';
+  if (!confirm(`⚠️ ATENÇÃO!\n\nIsso irá excluir permanentemente todos os dados de "${name}" do banco de dados.\n\nDigite OK para confirmar:`)) return;
+  const btn = document.getElementById('um-delete-btn');
+  btn.disabled = true;
+  btn.textContent = 'Excluindo...';
+  try {
+    await adminApiCall('/admin/delete-user', { uid: currentModalUser.uid });
+    showNotif(`Usuário "${name}" excluído!`, 'red');
+    closeUserModal();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'red');
+    btn.disabled = false;
+    btn.innerHTML = '🗑 Excluir Usuário e Todos os Dados';
+  }
+}
+
+/* ============================================================
+   NOTIFICATION
+   ============================================================ */
+let notifTimer;
+function showNotif(msg, type='') {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.style.borderColor = type==='green'?'rgba(0,184,148,.3)':type==='red'?'rgba(255,107,107,.3)':'rgba(255,255,255,.1)';
+  el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

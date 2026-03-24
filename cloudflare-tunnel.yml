@@ -1,0 +1,9 @@
+tunnel: 5a37cc8a-63b8-4213-bdce-5e5f1f93f8c1
+credentials-file: /Users/ranna/.cloudflared/5a37cc8a-63b8-4213-bdce-5e5f1f93f8c1.json
+
+ingress:
+  - hostname: medmind.win7med.com.br
+    service: http://127.0.0.1:3737
+  - hostname: rh.win7med.com.br
+    service: http://127.0.0.1:3001
+  - service: http_status:404
