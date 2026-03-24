@@ -3202,9 +3202,10 @@ return`<div class="mod-card" style="position:relative" onclick="openGeneratedMod
     ${created?'<span style="color:var(--dim2)">· '+created+'</span>':''}
   </div>
 </div>
-<div style="display:flex;align-items:center;gap:2px">
-  <button onclick="event.stopPropagation();toggleFavorite('${m.docId}',this)" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px;transition:transform .2s;color:${isFav?'var(--gold)':'rgba(255,255,255,.2)'}">${isFav?'★':'☆'}</button>
-  <button onclick="event.stopPropagation();showModuleMenu('${m.docId}')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:4px 2px;color:rgba(255,255,255,.3);letter-spacing:-2px">⋮</button>
+<div style="display:flex;align-items:center;gap:4px">
+  <button onclick="event.stopPropagation();toggleFavorite('${m.docId}',this)" style="background:none;border:none;cursor:pointer;font-size:16px;padding:4px;transition:transform .2s;color:${isFav?'var(--gold)':'rgba(255,255,255,.25)'}">${isFav?'★':'☆'}</button>
+  ${isOwn?`<button onclick="event.stopPropagation();deleteGenModule('${m.docId}','${m.visibility||'private'}')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px;color:var(--dim);transition:color .2s" title="Apagar">🗑</button>`:''}
+  <button onclick="event.stopPropagation();showModuleMenu('${m.docId}')" style="background:none;border:none;cursor:pointer;font-size:18px;padding:4px 2px;color:var(--dim)">⋮</button>
 </div>
 </div>`;}
 
@@ -3274,6 +3275,8 @@ function getActiveModules(){return generatedModulesCache.filter(m=>!m.deletedAt)
 function getTrashedModules(){return generatedModulesCache.filter(m=>m.deletedAt&&m.userId===currentUser?.uid);}
 
 async function openGeneratedModule(docId){
+  /* Remove overlay da biblioteca se estiver aberto */
+  document.getElementById('exploreAllOverlay')?.remove();
   let m=generatedModulesCache.find(x=>x.docId===docId);
   if(!m){
     try{const doc=await db.collection('generatedModules').doc(docId).get();
