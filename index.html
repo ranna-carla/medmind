@@ -287,40 +287,40 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .gate-shake{animation:gshake .4s ease}
 @keyframes gshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 /* === FLASHCARD SESSION === */
-.fcs-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
-.fcs-scroll{flex:1;overflow-y:auto;padding:0 16px 20px}
-.fcs-back{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:100px;background:var(--bg2);color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;border:none;cursor:pointer;margin:max(12px,var(--safe-top)) 0 12px}
-.fcs-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
-.fcs-subtitle{font-size:11px;color:var(--dim);line-height:1.5;margin-bottom:16px}
-.fcs-stats{display:flex;gap:8px;margin-bottom:16px}
-.fcs-stat{flex:1;background:var(--bg2);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.05)}
-.fcs-stat-num{font-size:22px;font-weight:800;line-height:1.2}
-.fcs-stat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
-.fcs-progress-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.fcs-progress-count{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:28px}
-.fcs-progress-bar{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex}
+.fcs-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column}
+.fcs-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.fcs-inner{max-width:540px;margin:0 auto;padding:0 16px 24px;padding-top:max(12px,var(--safe-top))}
+.fcs-back{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:100px;background:var(--bg2);color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;border:none;cursor:pointer;margin-bottom:12px}
+.fcs-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcs-subtitle{font-size:11px;color:var(--dim);line-height:1.4;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcs-stats{display:flex;gap:8px;margin-bottom:12px}
+.fcs-stat{flex:1;background:var(--bg2);border-radius:10px;padding:10px 6px;text-align:center;border:1px solid rgba(255,255,255,.05)}
+.fcs-stat-num{font-size:20px;font-weight:800;line-height:1.2}
+.fcs-stat-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+.fcs-progress-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fcs-progress-count{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.fcs-progress-bar{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
 .fcs-progress-done{height:100%;background:var(--pink);border-radius:3px;transition:width .4s ease}
-.fcs-progress-pct{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:32px;text-align:right}
-.fcs-card-label{text-align:center;font-size:11px;color:var(--dim2);margin:10px 0 12px}
-.fcs-card-wrap{perspective:800px;width:100%;max-width:420px;margin:0 auto}
-.fcs-card{width:100%;min-height:200px;position:relative;transform-style:preserve-3d;transition:transform .5s ease;cursor:pointer}
-.fcs-card.flipped{transform:rotateY(180deg)}
-.fcs-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid rgba(255,255,255,.1);background:var(--bg2)}
-.fcs-face-back{background:var(--bg3);transform:rotateY(180deg)}
-.fcs-q{font-size:15px;font-weight:600;line-height:1.6;color:var(--text);max-width:360px}
+.fcs-progress-pct{font-size:11px;font-weight:700;color:var(--dim);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.fcs-card-label{text-align:center;font-size:11px;color:var(--dim2);margin:8px 0 10px}
+/* Card SEM flip 3D — mostra frente ou verso, nunca transborda */
+.fcs-card{background:var(--bg2);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;min-height:180px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:opacity .2s ease;-webkit-overflow-scrolling:touch}
+.fcs-card-back{background:var(--bg3);text-align:left;align-items:flex-start}
+.fcs-q{font-size:14px;font-weight:600;line-height:1.6;color:var(--text);word-break:break-word}
+@media(min-width:400px){.fcs-q{font-size:15px}}
 .fcs-a-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.fcs-a{font-size:14px;line-height:1.7;color:var(--text);max-width:360px;text-align:left}
-.fcs-hint{font-size:11px;color:var(--dim2);margin-top:16px}
-.fcs-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;max-width:420px;width:100%;margin-left:auto;margin-right:auto}
-.fcs-btn{padding:14px 8px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.fcs-a{font-size:14px;line-height:1.7;color:var(--text);word-break:break-word}
+.fcs-hint{font-size:11px;color:var(--dim2);margin-top:14px}
+.fcs-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.fcs-btn{padding:12px 6px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
 .fcs-btn:active{transform:scale(.95)}
 .fcs-btn-wrong{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,107,107,.3)}
 .fcs-btn-mid{background:var(--bg2);color:var(--text);border:1px solid rgba(255,255,255,.1)}
 .fcs-btn-right{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,184,148,.3)}
-.fcs-btn-emoji{font-size:18px}
-.fcs-streak{text-align:center;padding:6px;font-size:11px;color:var(--gold);font-weight:700}
-@keyframes fcsSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-.fcs-slide{animation:fcsSlide .25s ease}
+.fcs-btn-emoji{font-size:16px}
+.fcs-streak{text-align:center;padding:4px;font-size:11px;color:var(--gold);font-weight:700}
+@keyframes fcsSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.fcs-slide{animation:fcsSlide .2s ease}
 /* === QUIZ REVISÃO === */
 .quiz-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
 .quiz-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
@@ -2643,18 +2643,16 @@ let existing=document.getElementById('fc-overlay');if(existing)existing.remove()
 const div=document.createElement('div');div.id='fc-overlay';div.className='fcs-overlay';
 const total=fc.cards.length;
 const answered=fc.results.right+fc.results.mid+fc.results.wrong;
-const pending=total-answered;
 const dominated=fc.results.right;
+const remaining=total-fc.idx;
 const pct=total?Math.round((answered/total)*100):0;
 const c=fc.cards[fc.idx];
 const backText=c.back||c.ans||c.answer||'Sem resposta';
 const modNames=(fc.modules||[]).map(m=>m.name).join(' · ');
-const cardNum=fc.idx+1;
-const remaining=total-fc.idx;
 
-div.innerHTML=`<div class="fcs-scroll">
+div.innerHTML=`<div class="fcs-scroll"><div class="fcs-inner">
+
 <button class="fcs-back" onclick="closeFlashcards()">← Voltar</button>
-
 <div class="fcs-title">${fc.title}</div>
 ${modNames?`<div class="fcs-subtitle">${modNames}</div>`:''}
 
@@ -2671,29 +2669,26 @@ ${modNames?`<div class="fcs-subtitle">${modNames}</div>`:''}
 </div>
 
 ${fc.streak>=3?`<div class="fcs-streak">🔥 ${fc.streak} seguidas!</div>`:''}
+<div class="fcs-card-label">Card ${fc.idx+1} / ${total}</div>
 
-<div class="fcs-card-label">Card ${cardNum} / ${total}</div>
-
-<div class="fcs-card-wrap fcs-slide">
-<div class="fcs-card${fc.flipped?' flipped':''}" onclick="flipCard()">
-<div class="fcs-face">
-<div class="fcs-q">${c.front||c.q||c.question||'Sem pergunta'}</div>
-${!fc.firstFlipDone?'<div class="fcs-hint">Toque para virar</div>':''}
-</div>
-<div class="fcs-face fcs-face-back">
+${fc.flipped?`
+<div class="fcs-card fcs-card-back fcs-slide" onclick="void(0)">
 <div class="fcs-a-label">✓ Resposta</div>
 <div class="fcs-a">${backText}</div>
 </div>
-</div>
-</div>
-
-${fc.flipped?`<div class="fcs-btns">
+<div class="fcs-btns">
 <button class="fcs-btn fcs-btn-wrong" onclick="fcAnswer('wrong')"><span class="fcs-btn-emoji">❌</span>Errei</button>
 <button class="fcs-btn fcs-btn-mid" onclick="fcAnswer('mid')"><span class="fcs-btn-emoji">🤔</span>Quase</button>
 <button class="fcs-btn fcs-btn-right" onclick="fcAnswer('right')"><span class="fcs-btn-emoji">✅</span>Acertei</button>
-</div>`:''}
+</div>
+`:`
+<div class="fcs-card fcs-slide" onclick="flipCard()">
+<div class="fcs-q">${c.front||c.q||c.question||'Sem pergunta'}</div>
+${!fc.firstFlipDone?'<div class="fcs-hint">Toque para virar</div>':''}
+</div>
+`}
 
-</div>`;
+</div></div>`;
 document.body.appendChild(div);
 }
 
@@ -2736,12 +2731,11 @@ const emoji=pctRight>=80?'🏆':pctRight>=60?'🎉':pctRight>=40?'💪':'📖';
 S.xp+=xp;saveState(S);
 let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
 const div=document.createElement('div');div.id='fc-overlay';div.className='fcs-overlay';
-div.innerHTML=`<div class="fcs-scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%">
-<div style="text-align:center;width:100%;max-width:360px">
+div.innerHTML=`<div class="fcs-scroll"><div class="fcs-inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center">
 <div style="font-size:56px;margin-bottom:8px">${emoji}</div>
 <div style="font-size:22px;font-weight:800;margin-bottom:2px">${pctRight}% dominado</div>
 <div style="font-size:13px;color:var(--dim);margin-bottom:20px">${min}min ${sec}s · +${xp} XP</div>
-<div class="fcs-stats" style="margin-bottom:24px">
+<div class="fcs-stats" style="margin-bottom:24px;width:100%">
 <div class="fcs-stat" style="border-color:rgba(0,184,148,.2)"><div class="fcs-stat-num" style="color:var(--green)">${fc.results.right}</div><div class="fcs-stat-label" style="color:var(--green)">✅ Acertei</div></div>
 <div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--text)">${fc.results.mid}</div><div class="fcs-stat-label" style="color:var(--dim)">🤔 Quase</div></div>
 <div class="fcs-stat" style="border-color:rgba(255,107,107,.2)"><div class="fcs-stat-num" style="color:var(--red)">${fc.results.wrong}</div><div class="fcs-stat-label" style="color:var(--red)">❌ Errei</div></div>
@@ -2752,8 +2746,7 @@ ${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:14px;
 <button onclick="_regenerateFlashcards()" style="padding:14px;border-radius:12px;border:1px solid rgba(108,92,231,.3);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">✨ Gerar novos cards</button>
 <button onclick="closeFlashcards()" style="padding:12px;border-radius:12px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">🧹 Limpar e voltar</button>
 </div>
-</div>
-</div>`;
+</div></div>`;
 document.body.appendChild(div);
 }
 
