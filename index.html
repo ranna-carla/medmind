@@ -703,7 +703,7 @@ lastActive:firebase.firestore.FieldValue.serverTimestamp()
 };await db.collection('users').doc(currentUser.uid).set(data,{merge:true});
 await db.collection('ranking').doc(currentUser.uid).set({name:S.name,xp:S.xp,avatar:S.avatar||'',photoURL:S.photoURL||'',lastActive:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error('Erro ao salvar:',e);}}
 
-const LEVELS=[{name:'Calouro',emoji:'🔬',xp:0},{name:'Acadêmico',emoji:'🧪',xp:200},{name:'Residente',emoji:'🩺',xp:500},{name:'Especialista',emoji:'⚕️',xp:1000},{name:'Mestre',emoji:'🧠',xp:2000}];
+const LEVELS=[{name:'Calouro',emoji:'🔬',xp:0},{name:'Acadêmico',emoji:'🧪',xp:200},{name:'Monitor',emoji:'📚',xp:500},{name:'Interno',emoji:'🏥',xp:1000},{name:'Residente',emoji:'🩺',xp:2000},{name:'Especialista',emoji:'⚕️',xp:4000},{name:'Preceptor',emoji:'🎓',xp:7000},{name:'Mestre',emoji:'🧠',xp:12000},{name:'Doutor',emoji:'🏆',xp:20000},{name:'Catedrático',emoji:'👑',xp:35000}];
 const XP_CORRECT=15,XP_WRONG=2,XP_STREAK=5,XP_PERFECT=50;
 function getLevel(xp){let lv={...LEVELS[0],idx:0};for(let i=LEVELS.length-1;i>=0;i--)if(xp>=LEVELS[i].xp){lv={...LEVELS[i],idx:i};break;}lv.next=LEVELS[lv.idx+1]||null;return lv;}
 
@@ -2306,21 +2306,30 @@ const streakVal=S.streak||0;
 const firstName=(S.name||'Estudante').split(' ')[0];
 const hr=new Date().getHours();
 const greeting=hr>=5&&hr<12?'Bom dia':hr>=12&&hr<18?'Boa tarde':'Boa noite';
-/* Subtexto contextual */
-const pendingCards=Object.keys(S.flashcardErrors||{}).reduce((a,k)=>(a+(S.flashcardErrors[k]||[]).length),0);
-const infos=[];
-if(pendingCards>0)infos.push(pendingCards+' cards pra revisar');
-if(!infos.length&&S.streak>0)infos.push(S.streak+' dias seguidos');
-if(!infos.length)infos.push(lv.emoji+' '+lv.name+' · '+S.xp+' XP');
+/* Progresso para próximo nível */
+const xpCurrent=S.xp-lv.xp;
+const xpNeeded=lv.next?(lv.next.xp-lv.xp):1;
+const pct=lv.next?Math.min(100,Math.round(xpCurrent/xpNeeded*100)):100;
+const faltam=lv.next?(lv.next.xp-S.xp):0;
 el.innerHTML=`<div class="home-hdr-row">
-<div onclick="goPage('profile')" style="cursor:pointer">${getUserAvatar({size:44})}</div>
+<div onclick="goPage('profile')" style="cursor:pointer;position:relative">
+${getUserAvatar({size:48})}
+<div style="position:absolute;bottom:-2px;right:-2px;background:var(--bg);border-radius:6px;padding:1px 5px;font-size:9px;font-weight:700;color:var(--gold);border:1px solid rgba(249,202,36,.3)">${lv.emoji}</div>
+</div>
 <div style="flex:1;min-width:0">
 <div style="font-size:16px;font-weight:700">${greeting}, ${firstName}! 👋</div>
-<div style="font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${infos.join(' · ')}</div>
+<div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+<div style="font-size:11px;font-weight:700;color:var(--accent2)">${lv.name}</div>
+<div style="font-size:10px;color:var(--dim)">·</div>
+<div style="font-size:11px;font-weight:700;color:var(--gold);font-family:'JetBrains Mono',monospace">${S.xp} XP</div>
 </div>
-${streakVal>0?`<div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--gold)">🔥${streakVal}</div></div>`:''}
+<div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+<div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),${lv.next?'var(--pink)':'var(--gold)'});border-radius:3px;transition:width .5s"></div></div>
+<div style="font-size:9px;color:var(--dim);white-space:nowrap;font-family:'JetBrains Mono',monospace">${lv.next?faltam+' p/ '+lv.next.emoji+' '+lv.next.name:'MAX 👑'}</div>
 </div>
-<div style="text-align:center;margin-top:4px;font-size:11px;color:var(--dim2)">🧠 MedMind</div>`;
+</div>
+${streakVal>0?`<div style="text-align:center;padding:4px 8px;background:rgba(249,202,36,.1);border-radius:10px;border:1px solid rgba(249,202,36,.2)"><div style="font-size:18px;font-weight:800;color:var(--gold)">🔥${streakVal}</div><div style="font-size:8px;color:var(--dim)">dias</div></div>`:''}
+</div>`;
 }
 
 /* ── Módulo mais fraco (menor bestScore com attempts>0) ── */
@@ -2414,17 +2423,15 @@ const input=document.createElement('input');
 input.type='file';input.accept='.pdf';
 input.onchange=async function(){
 if(!input.files[0])return;
+const file=input.files[0];
 goPage('library');
-/* Preencher o form automaticamente */
-setTimeout(()=>{
-const pdfInput=document.getElementById('sugPdfInput');
-if(pdfInput){
-/* Simular arquivo carregado */
-sugPdfFile=input.files[0];
-const label=document.getElementById('sugPdfLabel');
-if(label)label.textContent='📄 '+input.files[0].name;
-}
-},300);
+/* Esperar a aba Library renderizar e então aplicar o PDF */
+const tryApply=()=>{
+const zone=document.getElementById('pdfUploadZone');
+if(zone){applyPdfFile(file);}
+else{setTimeout(tryApply,100);}
+};
+setTimeout(tryApply,150);
 };
 input.click();
 }
