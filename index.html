@@ -546,7 +546,7 @@ if(user.uid===currentUser.uid){res.innerHTML='<p style="color:var(--dim);font-si
 const isFriend=S.friends&&S.friends.includes(user.uid);
 const lv=getLevel(user.xp||0);
 res.innerHTML=`<div class="friend-result">
-<div class="friend-avatar">${lv.emoji}</div>
+${getUserAvatar({size:36,photoURL:user.photoURL||'',avatar:user.avatar||'',xp:user.xp||0})}
 <div class="friend-result-info"><div class="friend-result-name">${user.name||'Anônimo'}</div><div class="friend-result-xp">${user.xp||0} XP · ${lv.emoji} ${lv.name}</div></div>
 ${isFriend?'<span class="friend-result-status">✅ Amigos</span>':
 `<button class="friend-result-btn" onclick="sendFriendRequest('${user.uid}','${(user.name||'Anônimo').replace(/'/g,"\\'")}')">Adicionar</button>`}
@@ -554,9 +554,48 @@ ${isFriend?'<span class="friend-result-status">✅ Amigos</span>':
 
 async function shareFriendCode(){
 const code=S.friendCode;if(!code)return;
-const text='Estude comigo no MedMind! Meu código: '+code+'\nhttps://medmind.win7med.com.br';
-if(navigator.share){try{await navigator.share({title:'MedMind',text:text});return;}catch(e){}}
-try{await navigator.clipboard.writeText(code);alert('📋 Código copiado: '+code);}catch(e){prompt('Seu código de amigo:',code);}}
+const link='https://medmind.win7med.com.br?add='+encodeURIComponent(code);
+const text='Estude comigo no MedMind! Me adicione: '+link;
+if(navigator.share){try{await navigator.share({title:'MedMind — Convite',text:text,url:link});return;}catch(e){}}
+try{await navigator.clipboard.writeText(text);alert('📋 Link de convite copiado!');}catch(e){prompt('Link de convite:',link);}}
+
+/* === Auto-add amigo por URL (?add=MED-XXXX) === */
+async function autoAddFriend(code){
+if(!code||!currentUser)return;
+code=code.toUpperCase();if(!code.startsWith('MED-'))code='MED-'+code;
+if(code===S.friendCode)return; /* próprio código */
+const user=await searchFriendByCode(code);
+if(!user)return;
+if(user.uid===currentUser.uid)return;
+if(S.friends&&S.friends.includes(user.uid))return; /* já amigo */
+/* Modal de aceite */
+const lv=getLevel(user.xp||0);
+const modal=document.createElement('div');modal.id='auto-add-modal';
+modal.style.cssText='position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px';
+modal.onclick=function(e){if(e.target===modal){modal.remove();history.replaceState(null,'',location.pathname);}};
+modal.innerHTML=`<div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center">
+<div style="margin-bottom:12px">${getUserAvatar({size:64,photoURL:user.photoURL||'',avatar:user.avatar||'',xp:user.xp||0})}</div>
+<div style="font-size:16px;font-weight:700;margin-bottom:4px">${user.name||'Anônimo'}</div>
+<div style="font-size:12px;color:var(--dim);margin-bottom:16px">${user.xp||0} XP · ${lv.emoji} ${lv.name}</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:16px">quer estudar com você!</div>
+<button onclick="doAutoAdd('${user.uid}','${(user.name||'').replace(/'/g,"\\'")}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Aceitar ⚡</button>
+<button onclick="document.getElementById('auto-add-modal').remove();history.replaceState(null,'',location.pathname)" style="width:100%;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer;margin-top:6px">Agora não</button>
+</div>`;
+document.body.appendChild(modal);
+history.replaceState(null,'',location.pathname);
+}
+
+async function doAutoAdd(uid,name){
+document.getElementById('auto-add-modal')?.remove();
+try{
+/* Adicionar nos dois lados direto */
+if(!S.friends)S.friends=[];
+if(!S.friends.includes(uid)){S.friends.push(uid);saveState(S);await saveToCloud();}
+await db.collection('users').doc(uid).update({friends:firebase.firestore.FieldValue.arrayUnion(currentUser.uid)});
+await loadFriendsData();
+alert('✅ '+name+' adicionado como amigo!');
+}catch(e){console.error('Erro auto-add:',e);alert('Erro ao adicionar amigo.');}
+}
 
 /* === Firebase Auth === */
 let authIsLogin=true;
@@ -600,6 +639,14 @@ document.getElementById('mainApp').style.display='flex';
 navHistory=['home'];
 history.replaceState({page:'home'},'','');
 renderHome();
+/* Check URL params: ?add=, ?duel=, ?arena= */
+const urlParams=new URLSearchParams(location.search);
+const addCode=urlParams.get('add');
+if(addCode)setTimeout(()=>autoAddFriend(addCode),500);
+const duelCode=urlParams.get('duel');
+if(duelCode)setTimeout(()=>acceptDuelFromURL&&acceptDuelFromURL(duelCode),500);
+const arenaCode=urlParams.get('arena');
+if(arenaCode)setTimeout(()=>acceptArenaFromURL&&acceptArenaFromURL(arenaCode),500);
 }else{
 currentUser=null;
 document.getElementById('loginGate').classList.remove('hidden');
@@ -1855,8 +1902,14 @@ function renderProfile(){const lv=getLevel(S.xp);
 const userEmail=currentUser?currentUser.email:'';
 let h=`<div class="profile-card"><div onclick="openAvatarModal()" style="cursor:pointer">${getUserAvatar({size:80})}</div><div style="font-size:10px;color:var(--dim);margin-top:4px;cursor:pointer" onclick="openAvatarModal()">trocar avatar</div><input class="profile-name-input" value="${S.name}" onchange="updName(this.value);renderProfile();" placeholder="Seu nome"><div class="profile-sub">${lv.emoji} ${lv.name} · ${S.xp} XP · 🔥 ${S.streak}</div>${userEmail?'<div style="font-size:10px;color:var(--dim2);margin-top:6px">☁️ '+userEmail+' · Dados salvos na nuvem</div>':''}</div>`;
 
-/* === Código de Amigo === */
-h+=`<div class="friend-code-box"><div class="friend-code-label">Seu código de amigo</div><div class="friend-code">${S.friendCode||'...'}</div><div class="friend-code-actions"><button class="friend-code-btn primary" onclick="shareFriendCode()">📤 Compartilhar</button><button class="friend-code-btn secondary" onclick="openFriendModal()">➕ Adicionar Amigo</button></div></div>`;
+/* === Convite de Amigo === */
+h+=`<button onclick="shareFriendCode()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📤 Convidar amigo</button>`;
+h+=`<div style="display:flex;gap:8px;margin-bottom:16px">
+<button onclick="openFriendModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer">🔑 Digitar código</button>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:10px;border-radius:10px;background:var(--bg2);border:1px solid rgba(255,255,255,.06)">
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--accent2)">${S.friendCode||'...'}</span>
+</div>
+</div>`;
 
 /* === Solicitações Pendentes === */
 if(pendingRequests.length>0){
