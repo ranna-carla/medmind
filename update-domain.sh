@@ -8,7 +8,7 @@ OLD_DOMAINS=(
     "medmindpro.netlify.app"
 )
 NEW_DOMAIN="medmind.win7med.com.br"
-FILE="/Users/Shared/projects/medmindplus/index.html"
+FILE="/Users/macmini-win7/projects/projects/medmindplus/index.html"
 
 echo "Atualizando domínio para $NEW_DOMAIN..."
 

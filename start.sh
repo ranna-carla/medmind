@@ -2,7 +2,7 @@
 # MedMind — Iniciar servidor + tunnel
 # Execute: bash start.sh
 
-PROJ="/Users/Shared/projects/medmindplus"
+PROJ="/Users/macmini-win7/projects/projects/medmindplus"
 LOGS="$PROJ/logs"
 PORT=3737
 mkdir -p "$LOGS"

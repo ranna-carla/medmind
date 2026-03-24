@@ -3,7 +3,7 @@
 # Execute com: bash setup-ssl.sh
 
 DOMAIN="medmind.win7med.com.br"
-WEBROOT="/Users/Shared/projects/medmindplus"
+WEBROOT="/Users/macmini-win7/projects/projects/medmindplus"
 NGINX_CONF="/opt/homebrew/etc/nginx/servers/medmind.conf"
 
 echo "Configurando HTTPS para $DOMAIN..."

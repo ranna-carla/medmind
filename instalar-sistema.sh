@@ -1,10 +1,10 @@
 #!/bin/bash
 # MedMind — Instalação definitiva no Mac Mini
-# Cole no Terminal e execute: bash /Users/Shared/projects/medmindplus/instalar-sistema.sh
+# Cole no Terminal e execute: bash /Users/macmini-win7/projects/projects/medmindplus/instalar-sistema.sh
 
 set -e
 SENHA="Win7?admin"
-PROJ="/Users/Shared/projects/medmindplus"
+PROJ="/Users/macmini-win7/projects/projects/medmindplus"
 NODE="/opt/homebrew/bin/node"
 
 echo "======================================"
