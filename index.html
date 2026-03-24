@@ -2987,19 +2987,23 @@ h+=`<div class="home-cta-upload" onclick="quickStudyFromPDF()">
 </div>`;
 
 /* === CONTINUAR ESTUDANDO === */
-const lastAcc=(S.lastAccessed||[]).slice(0,3);
-if(lastAcc.length>0){
+const lastAcc=(S.lastAccessed||[]).slice(0,5);
+const validLastAcc=lastAcc.filter(la=>{
+  if(la.type==='static')return !!MODULES.find(x=>x.id===la.id);
+  return !!generatedModulesCache.find(x=>x.docId===la.id&&x.module&&!x.deletedAt);
+}).slice(0,3);
+if(validLastAcc.length>0){
 h+=`<div class="home-section-title">▶️ Continuar estudando</div>`;
-lastAcc.forEach(la=>{
+validLastAcc.forEach(la=>{
 if(la.type==='static'){
-const m=MODULES.find(x=>x.id===la.id);if(!m)return;
+const m=MODULES.find(x=>x.id===la.id);
 const ms2=S.modules[m.id]||{};
 h+=`<div class="mod-card" onclick="openModule('${m.id}')">
 <div class="mod-icon" style="background:${m.color}22;color:${m.color}">${m.icon}</div>
 <div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${ms2.bestScore||0}% · ${'★'.repeat(ms2.stars||0)}${'☆'.repeat(5-(ms2.stars||0))}</div></div>
 </div>`;
 }else{
-const m=generatedModulesCache.find(x=>x.docId===la.id);if(!m||!m.module)return;
+const m=generatedModulesCache.find(x=>x.docId===la.id);
 h+=`<div class="mod-card" onclick="openGeneratedModule('${la.id}')">
 <div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.module.icon||'📄'}</div>
 <div class="mod-info"><div class="mod-name">${m.module.name||m.title}</div><div class="mod-desc">🤖 Gerado</div></div>
@@ -3011,10 +3015,12 @@ h+=`<div class="mod-card" onclick="openGeneratedModule('${la.id}')">
 /* === 3. MÓDULOS RECENTES DO ESTUDANTE === */
 const myGen=getActiveModules().filter(m=>m.userId===currentUser?.uid).slice(0,10);
 const playedStatic=MODULES.filter(m=>!m.locked&&S.modules[m.id]&&S.modules[m.id].attempts>0);
-const recentItems=[...myGen.map(m=>({type:'gen',id:m.docId,name:m.module?.name||m.title,icon:m.module?.icon||'📄',tag:'🤖 Gerado',score:null,stars:null})),...playedStatic.map(m=>{const ms2=S.modules[m.id]||{};return{type:'static',id:m.id,name:m.name,icon:m.icon,tag:'📚 Curadoria',score:ms2.bestScore||0,stars:ms2.stars||0};})];
+const laMap={};(S.lastAccessed||[]).forEach((la,i)=>{laMap[la.id]=la.timestamp||Date.now()-i;});
+const recentItems=[...myGen.map(m=>({type:'gen',id:m.docId,name:m.module?.name||m.title,icon:m.module?.icon||'📄',tag:'🤖 Gerado',score:null,stars:null,ts:laMap[m.docId]||new Date(m.createdAt||0).getTime()})),...playedStatic.map(m=>{const ms2=S.modules[m.id]||{};return{type:'static',id:m.id,name:m.name,icon:m.icon,tag:'📚 Curadoria',score:ms2.bestScore||0,stars:ms2.stars||0,ts:laMap[m.id]||0};})];
+recentItems.sort((a,b)=>(b.ts||0)-(a.ts||0));
 
 if(recentItems.length>0){
-h+=`<div class="home-section-title">📚 Meus módulos</div>`;
+h+=`<div style="display:flex;align-items:center;justify-content:space-between"><div class="home-section-title">📚 Meus modulos</div><button onclick="homeFilter='meus';_openExploreAll();_renderExploreAll()" style="background:none;border:none;color:var(--accent2);font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;padding:4px 0">Ver todos →</button></div>`;
 h+=`<div class="home-horiz-scroll">`;
 recentItems.slice(0,10).forEach(r=>{
   const onclick=r.type==='gen'?`openGeneratedModule('${r.id}')`:`openModule('${r.id}')`;
@@ -3251,8 +3257,14 @@ function getTrashedModules(){return generatedModulesCache.filter(m=>m.deletedAt&
 
 async function openGeneratedModule(docId){
   let m=generatedModulesCache.find(x=>x.docId===docId);
-  if(!m){const doc=await db.collection('generatedModules').doc(docId).get();if(!doc.exists)return;m={docId,...doc.data()};}
-  if(!m.module)return;
+  if(!m){
+    try{const doc=await db.collection('generatedModules').doc(docId).get();
+    if(!doc.exists){_showToast('Modulo nao encontrado');return;}
+    m={docId,...doc.data()};
+    generatedModulesCache.push(m); /* adiciona ao cache */
+    }catch(e){_showToast('Erro ao carregar modulo');return;}
+  }
+  if(!m.module){_showToast('Modulo sem conteudo');return;}
   curMod=m.module;
   _currentModDocId=docId;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -3321,7 +3333,7 @@ function showBottomSheet(title,options){
 
 /* Menu de ações do módulo (3 pontos) */
 function showModuleMenu(docId){
-  const m=generatedModulesCache.find(x=>x.docId===docId);if(!m)return;
+  const m=generatedModulesCache.find(x=>x.docId===docId);if(!m){_showToast('Modulo nao encontrado');return;}
   const isOwn=m.userId===currentUser?.uid;
   const isFav=(S.favorites||[]).includes(docId);
   const isPub=m.visibility==='public';
@@ -3802,6 +3814,14 @@ setStatus('Pronto!',100);
 _gerarJobId=null;sugPdfFile=null;
 try{localStorage.removeItem('_pendingJob');}catch(e){}
 await loadGeneratedModules();
+/* Adicionar ao lastAccessed para aparecer primeiro na Home */
+if(saveData.docId){
+  if(!S.lastAccessed)S.lastAccessed=[];
+  S.lastAccessed=S.lastAccessed.filter(x=>x.id!==saveData.docId);
+  S.lastAccessed.unshift({id:saveData.docId,type:'gen',timestamp:Date.now()});
+  if(S.lastAccessed.length>10)S.lastAccessed.length=10;
+  saveState(S);
+}
 overlay.innerHTML=`
 <div style="text-align:center;padding:20px;max-width:360px">
 <div style="font-size:64px;margin-bottom:12px">🎉</div>
@@ -3815,8 +3835,9 @@ overlay.innerHTML=`
 <div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:10px;color:var(--dim)">seções</div></div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-<button onclick="document.getElementById('gerar-overlay')?.remove();homeFilter='meus';loadGeneratedModules().then(()=>{goPage('home');})" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
-<button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Gerar outro módulo</button>
+<button onclick="document.getElementById('gerar-overlay')?.remove();openGeneratedModule('${saveData.docId}')" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
+<button onclick="document.getElementById('gerar-overlay')?.remove();goPage('home')" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">← Voltar pra Home</button>
+<button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--dim2);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Gerar outro modulo</button>
 </div>
 </div>`;
 }catch(e){
