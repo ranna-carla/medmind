@@ -3842,11 +3842,11 @@ overlay.innerHTML=`
 <div style="font-size:20px;font-weight:700;margin-bottom:6px">Módulo gerado!</div>
 <div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px"><strong style="color:var(--text)">${moduleData.name||titulo}</strong></div>
 <div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:8px">${disc} · ${sugVisibility==='public'?'🌐 Público':'🔒 Privado'}</div>
-<div style="background:var(--bg2);border-radius:12px;padding:12px;margin:12px 0 20px;display:flex;justify-content:space-around;border:1px solid rgba(255,255,255,.05)">
-<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--green)">${(moduleData.quiz?.obj||[]).length}</div><div style="font-size:10px;color:var(--dim)">objetivas</div></div>
-<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--accent2)">${(moduleData.quiz?.esc||[]).length}</div><div style="font-size:10px;color:var(--dim)">dissertativas</div></div>
-<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--gold)">${(moduleData.quiz?.pra||[]).length}</div><div style="font-size:10px;color:var(--dim)">casos clínicos</div></div>
-<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:10px;color:var(--dim)">seções</div></div>
+<div style="background:var(--bg2);border-radius:12px;padding:14px 10px;margin:12px 0 20px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;border:1px solid rgba(255,255,255,.05)">
+<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--green)">${(moduleData.quiz?.obj||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">objetivas</div></div>
+<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--accent2)">${(moduleData.quiz?.esc||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">dissertativas</div></div>
+<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gold)">${(moduleData.quiz?.pra||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">casos clínicos</div></div>
+<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">seções</div></div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
 <button onclick="document.getElementById('gerar-overlay')?.remove();openGeneratedModule('${saveData.docId}')" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
