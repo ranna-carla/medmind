@@ -269,6 +269,31 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 .gate-footer a{color:var(--accent2);text-decoration:none}
 .gate-shake{animation:gshake .4s ease}
 @keyframes gshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+/* === FLASHCARD 3D === */
+.fc-overlay{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease}
+.fc-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;padding-top:max(12px,var(--safe-top));background:rgba(8,14,26,.95);border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.fc-hdr-title{font-size:14px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-hdr-counter{font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.fc-progress{height:3px;background:var(--bg3);flex-shrink:0}
+.fc-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--pink));transition:width .3s ease}
+.fc-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;overflow:hidden}
+.fc-card-wrap{perspective:800px;width:100%;max-width:400px}
+.fc-card{width:100%;min-height:260px;position:relative;transform-style:preserve-3d;transition:transform .5s ease;cursor:pointer}
+.fc-card.flipped{transform:rotateY(180deg)}
+.fc-card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid rgba(255,255,255,.08)}
+.fc-front{background:var(--bg2)}
+.fc-back{background:var(--bg3);transform:rotateY(180deg)}
+.fc-tag{font-size:10px;font-weight:600;color:var(--accent2);background:var(--accent-bg);padding:3px 10px;border-radius:100px;margin-bottom:12px}
+.fc-question{font-size:15px;font-weight:600;line-height:1.5}
+.fc-answer{font-size:14px;line-height:1.6;color:var(--dim)}
+.fc-answer strong{color:var(--text)}
+.fc-hint{font-size:11px;color:var(--dim2);margin-top:16px}
+.fc-btns{display:flex;gap:10px;width:100%;max-width:400px;margin-top:20px}
+.fc-btn{flex:1;padding:12px;border-radius:12px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s}
+.fc-btn:active{transform:scale(.95)}
+.fc-btn-wrong{background:var(--red-bg);color:var(--red);border:1px solid var(--red)}
+.fc-btn-mid{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
+.fc-btn-right{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
 /* === CRIAR MÓDULO + BIBLIOTECA + RATING === */
 .create-fab{position:fixed;bottom:calc(70px + max(8px,var(--safe-bot)));right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;border:none;font-size:28px;font-weight:300;cursor:pointer;z-index:40;box-shadow:0 4px 20px rgba(108,92,231,.4);display:flex;align-items:center;justify-content:center;transition:transform .15s}
 .create-fab:active{transform:scale(.9)}
@@ -1480,10 +1505,295 @@ const el=document.getElementById('challengesContent');
 if(!el)return;
 el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)"><div style="font-size:48px;margin-bottom:12px">⚡</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Desafios</div><div style="font-size:13px;line-height:1.6">Em breve: Desafio Diário, Duelos 1v1 e Arenas em grupo!</div></div>';
 }
+/* ═══════ BLOCO F: REVISÃO E FLASHCARDS ═══════ */
+let reviewTab='flashcards';
+let fcState=null; /* estado da sessão de flashcard ativa */
+
 function renderReview(){
-const el=document.getElementById('reviewContent');
-if(!el)return;
-el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)"><div style="font-size:48px;margin-bottom:12px">📝</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Revisão</div><div style="font-size:13px;line-height:1.6">Em breve: Flashcards, Revisões Salvas e Geração com IA!</div></div>';
+const el=document.getElementById('reviewContent');if(!el)return;
+let h='<div style="display:flex;gap:6px;margin-bottom:16px">';
+['flashcards','saved','ai'].forEach(t=>{
+const labels={flashcards:'🃏 Flashcards',saved:'📚 Revisões',ai:'🤖 Gerar com IA'};
+h+=`<button onclick="reviewTab='${t}';renderReview()" style="flex:1;padding:8px 4px;border-radius:100px;border:1px solid ${reviewTab===t?'var(--accent)':'rgba(255,255,255,.08)'};background:${reviewTab===t?'var(--accent-bg)':'transparent'};color:${reviewTab===t?'var(--accent2)':'var(--dim)'};font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer">${labels[t]}</button>`;
+});
+h+='</div>';
+if(reviewTab==='flashcards')h+=_renderFlashcardsList();
+else if(reviewTab==='saved')h+=_renderSavedReviews();
+else h+=_renderAIReviewGen();
+el.innerHTML=h;
+}
+
+/* ── F1: Lista de módulos para flashcards ── */
+function _renderFlashcardsList(){
+let h='';
+/* Seus módulos gerados */
+const myGen=generatedModulesCache.filter(m=>m.userId===currentUser?.uid);
+if(myGen.length){
+h+='<div class="mod-section-title">📚 Seus Módulos</div>';
+myGen.forEach(m=>{
+const mod=m.module;if(!mod)return;
+const qCount=_countQuizCards(mod);
+h+=`<div class="mod-card" onclick="startFlashcards('gen','${m.docId}')">
+<div class="mod-icon" style="background:${mod.color||'var(--accent)'}22;color:${mod.color||'var(--accent)'}">${mod.icon||'📄'}</div>
+<div class="mod-info"><div class="mod-name">${mod.name||m.title||'Módulo'}</div><div class="mod-desc">${qCount} cards</div></div>
+<div style="color:var(--accent2);font-size:18px">▶</div>
+</div>`;
+});
+}
+/* Módulos públicos */
+const pubGen=generatedModulesCache.filter(m=>m.userId!==currentUser?.uid&&m.visibility==='public');
+if(pubGen.length){
+h+='<div class="mod-section-title">🌐 Módulos Públicos</div>';
+pubGen.slice(0,10).forEach(m=>{
+const mod=m.module;if(!mod)return;
+const qCount=_countQuizCards(mod);
+h+=`<div class="mod-card" onclick="startFlashcards('gen','${m.docId}')">
+<div class="mod-icon" style="background:rgba(108,92,231,.12);color:var(--accent)">${mod.icon||'📄'}</div>
+<div class="mod-info"><div class="mod-name">${mod.name||m.title||'Módulo'}</div><div class="mod-desc">${qCount} cards · ${m.userName||''}</div></div>
+<div style="color:var(--accent2);font-size:18px">▶</div>
+</div>`;
+});
+}
+/* Curadoria */
+h+='<div class="mod-section-title">📖 Curadoria</div>';
+MODULES.filter(m=>!m.locked).forEach(m=>{
+const qCount=_countQuizCards(m);
+h+=`<div class="mod-card" onclick="startFlashcards('static','${m.id}')">
+<div class="mod-icon" style="background:${m.color}22;color:${m.color}">${m.icon}</div>
+<div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${qCount} cards</div></div>
+<div style="color:var(--accent2);font-size:18px">▶</div>
+</div>`;
+});
+if(!myGen.length&&!pubGen.length&&!MODULES.filter(m=>!m.locked).length){
+h+='<div style="text-align:center;padding:40px;color:var(--dim)">Nenhum módulo disponível</div>';
+}
+return h;
+}
+
+function _countQuizCards(mod){
+if(!mod||!mod.quiz)return 0;
+return (mod.quiz.obj||[]).length+(mod.quiz.esc||[]).length+(mod.quiz.pra||[]).length;
+}
+
+/* ── F2: Revisões salvas ── */
+function _renderSavedReviews(){
+let reviews=JSON.parse(localStorage.getItem('mm_reviews')||'[]');
+/* Auto-apagar expiradas (5 dias) */
+const now=Date.now();
+reviews=reviews.filter(r=>(now-r.createdAt)<5*86400000);
+localStorage.setItem('mm_reviews',JSON.stringify(reviews));
+if(!reviews.length)return'<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:10px">📚</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Nenhuma revisão salva</div><div style="font-size:12px">Gere flashcards com IA ou estude um módulo</div></div>';
+let h='';
+reviews.forEach((r,i)=>{
+const daysLeft=Math.max(0,Math.ceil((5*86400000-(now-r.createdAt))/86400000));
+const expColor=daysLeft>2?'var(--green)':daysLeft>0?'var(--gold)':'var(--red)';
+h+=`<div class="mod-card" onclick="openSavedReview(${i})">
+<div class="mod-icon" style="background:var(--accent-bg);color:var(--accent2)">🃏</div>
+<div class="mod-info"><div class="mod-name">${r.title||'Revisão'}</div><div class="mod-desc">${(r.cards||[]).length} cards · <span style="color:${expColor}">${daysLeft}d restantes</span></div></div>
+<button onclick="event.stopPropagation();deleteSavedReview(${i})" style="background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:4px">✕</button>
+</div>`;
+});
+return h;
+}
+
+function deleteSavedReview(i){
+let reviews=JSON.parse(localStorage.getItem('mm_reviews')||'[]');
+reviews.splice(i,1);localStorage.setItem('mm_reviews',JSON.stringify(reviews));
+renderReview();
+}
+
+function openSavedReview(i){
+const reviews=JSON.parse(localStorage.getItem('mm_reviews')||'[]');
+const r=reviews[i];if(!r||!r.cards)return;
+_launchFlashcards(r.title||'Revisão',r.cards);
+}
+
+/* ── F3: Gerar flashcards com IA ── */
+function _renderAIReviewGen(){
+return`<div style="text-align:center;padding:16px 0 12px">
+<div style="font-size:36px;margin-bottom:6px">🤖</div>
+<div style="font-size:16px;font-weight:700">Gerar Flashcards com IA</div>
+<div style="font-size:12px;color:var(--dim);margin-top:4px">Insira temas e a IA gera 20 cards</div>
+</div>
+<div style="background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(255,255,255,.05)">
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Título</label>
+<input id="aiRevTitle" type="text" placeholder="Ex: Revisão Fisiologia P2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:12px">
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Temas (separados por vírgula, até 5)</label>
+<input id="aiRevTopics" type="text" placeholder="Ex: Potencial de ação, Sinapse, Contração muscular" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px">
+<button id="aiRevBtn" onclick="generateAIFlashcards()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">🤖 Gerar 20 Flashcards</button>
+<div id="aiRevStatus" style="margin-top:10px;font-size:12px;color:var(--dim);text-align:center"></div>
+</div>`;
+}
+
+async function generateAIFlashcards(){
+const title=(document.getElementById('aiRevTitle')?.value||'').trim()||'Revisão';
+const topics=(document.getElementById('aiRevTopics')?.value||'').trim();
+if(!topics){alert('Digite pelo menos um tema');return;}
+const btn=document.getElementById('aiRevBtn');const status=document.getElementById('aiRevStatus');
+btn.disabled=true;btn.style.opacity='.5';status.textContent='Gerando flashcards...';
+try{
+const keyRes=await fetch('/generate-module');const keyData=await keyRes.json();const apiKey=keyData.key;
+const resp=await fetch('https://api.anthropic.com/v1/messages',{
+method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,
+messages:[{role:'user',content:`Gere exatamente 20 flashcards educativos sobre: ${topics}. Retorne APENAS JSON válido, sem markdown, no formato: [{"front":"pergunta","back":"resposta","tag":"tema"}]. Perguntas curtas e diretas, respostas concisas mas completas.`}]})
+});
+const data=await resp.json();
+const text=data.content?.[0]?.text||'[]';
+const match=text.match(/\[[\s\S]*\]/);
+const cards=JSON.parse(match?match[0]:'[]');
+if(!cards.length)throw new Error('Nenhum card gerado');
+/* Salvar como revisão */
+const reviews=JSON.parse(localStorage.getItem('mm_reviews')||'[]');
+reviews.unshift({title:title,cards:cards,createdAt:Date.now()});
+if(reviews.length>20)reviews.length=20;
+localStorage.setItem('mm_reviews',JSON.stringify(reviews));
+/* Abrir flashcards */
+_launchFlashcards(title,cards);
+}catch(e){
+console.error('Erro AI flashcards:',e);
+status.textContent='❌ Erro: '+e.message;btn.disabled=false;btn.style.opacity='1';
+}}
+
+/* ── Motor de Flashcards ── */
+function startFlashcards(type,id){
+let cards=[];let title='';
+if(type==='static'){
+const m=MODULES.find(x=>x.id===id);if(!m)return;title=m.name;
+cards=_extractCards(m);
+}else{
+const m=generatedModulesCache.find(x=>x.docId===id);if(!m||!m.module)return;title=m.module.name||m.title;
+cards=_extractCards(m.module);
+}
+if(!cards.length){alert('Nenhum card disponível neste módulo');return;}
+_launchFlashcards(title,cards);
+}
+
+function _extractCards(mod){
+const cards=[];
+if(mod.quiz?.obj)mod.quiz.obj.forEach(q=>{
+cards.push({front:q.q,back:q.opts?q.opts[q.ans]:'',tag:q.tag||''});
+});
+if(mod.quiz?.esc)mod.quiz.esc.forEach(q=>{
+cards.push({front:q.q,back:q.ans||'',tag:q.tag||''});
+});
+if(mod.quiz?.pra)mod.quiz.pra.forEach(q=>{
+cards.push({front:q.q||q.case||'',back:q.ans||'',tag:q.tag||'Caso Clínico'});
+});
+return cards;
+}
+
+/* Fisher-Yates shuffle */
+function _shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+
+function _launchFlashcards(title,cards){
+_shuffle(cards);
+fcState={title:title,cards:cards,idx:0,flipped:false,results:{right:0,mid:0,wrong:0},wrongCards:[],startTime:Date.now(),firstFlipDone:false};
+_renderFlashcardOverlay();
+}
+
+function _renderFlashcardOverlay(){
+const fc=fcState;if(!fc)return;
+let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
+const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
+const total=fc.cards.length;const pct=Math.round((fc.idx/total)*100);
+const c=fc.cards[fc.idx];
+div.innerHTML=`
+<div class="fc-hdr">
+<button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+<div class="fc-hdr-title">${fc.title}</div>
+<div class="fc-hdr-counter">Card ${fc.idx+1}/${total}</div>
+</div>
+<div class="fc-progress"><div class="fc-progress-fill" style="width:${pct}%"></div></div>
+<div class="fc-body">
+<div class="fc-card-wrap">
+<div class="fc-card${fc.flipped?' flipped':''}" onclick="flipCard()">
+<div class="fc-card-face fc-front">
+${c.tag?`<div class="fc-tag">${c.tag}</div>`:''}
+<div class="fc-question">${c.front}</div>
+${!fc.firstFlipDone?'<div class="fc-hint">Toque para virar</div>':''}
+</div>
+<div class="fc-card-face fc-back">
+${c.tag?`<div class="fc-tag">${c.tag}</div>`:''}
+<div class="fc-answer">${c.back}</div>
+</div>
+</div>
+</div>
+${fc.flipped?`<div class="fc-btns">
+<button class="fc-btn fc-btn-wrong" onclick="fcAnswer('wrong')">😬 Errei</button>
+<button class="fc-btn fc-btn-mid" onclick="fcAnswer('mid')">😅 Quase</button>
+<button class="fc-btn fc-btn-right" onclick="fcAnswer('right')">💪 Acertei</button>
+</div>`:''}
+</div>`;
+document.body.appendChild(div);
+}
+
+function flipCard(){
+if(!fcState||fcState.flipped)return;
+fcState.flipped=true;fcState.firstFlipDone=true;
+_renderFlashcardOverlay();
+}
+
+function fcAnswer(result){
+if(!fcState)return;
+fcState.results[result]++;
+if(result==='wrong')fcState.wrongCards.push(fcState.cards[fcState.idx]);
+fcState.idx++;fcState.flipped=false;
+if(fcState.idx>=fcState.cards.length){
+_renderFlashcardComplete();
+}else{
+_renderFlashcardOverlay();
+}
+}
+
+function _renderFlashcardComplete(){
+const fc=fcState;if(!fc)return;
+const total=fc.cards.length;
+const elapsed=Math.round((Date.now()-fc.startTime)/1000);
+const min=Math.floor(elapsed/60);const sec=elapsed%60;
+const xp=fc.results.right*5+fc.results.mid*2;
+S.xp+=xp;saveState(S);
+let existing=document.getElementById('fc-overlay');if(existing)existing.remove();
+const div=document.createElement('div');div.id='fc-overlay';div.className='fc-overlay';
+div.innerHTML=`<div class="fc-hdr">
+<button onclick="closeFlashcards()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+<div class="fc-hdr-title">${fc.title}</div>
+</div>
+<div class="fc-body" style="justify-content:flex-start;padding-top:40px">
+<div style="font-size:48px;margin-bottom:12px">🎉</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:4px">Sessão concluída!</div>
+<div style="font-size:14px;color:var(--dim);margin-bottom:20px">${min}min ${sec}s · +${xp} XP</div>
+<div style="display:flex;gap:12px;margin-bottom:24px">
+<div style="text-align:center;padding:12px 20px;background:var(--green-bg);border-radius:12px;border:1px solid var(--green)"><div style="font-size:20px;font-weight:800;color:var(--green)">${fc.results.right}</div><div style="font-size:10px;color:var(--green)">Acertei</div></div>
+<div style="text-align:center;padding:12px 20px;background:var(--gold-bg);border-radius:12px;border:1px solid var(--gold)"><div style="font-size:20px;font-weight:800;color:var(--gold)">${fc.results.mid}</div><div style="font-size:10px;color:var(--gold)">Quase</div></div>
+<div style="text-align:center;padding:12px 20px;background:var(--red-bg);border-radius:12px;border:1px solid var(--red)"><div style="font-size:20px;font-weight:800;color:var(--red)">${fc.results.wrong}</div><div style="font-size:10px;color:var(--red)">Errei</div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px">
+${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
+<button onclick="restartFlashcards()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">📝 Refazer tudo</button>
+<button onclick="closeFlashcards()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">← Voltar</button>
+</div>
+</div>`;
+document.body.appendChild(div);
+}
+
+function retryWrongCards(){
+if(!fcState||!fcState.wrongCards.length)return;
+const title=fcState.title+' (errados)';
+const cards=[...fcState.wrongCards];
+_launchFlashcards(title,cards);
+}
+
+function restartFlashcards(){
+if(!fcState)return;
+fcState.idx=0;fcState.flipped=false;fcState.results={right:0,mid:0,wrong:0};fcState.wrongCards=[];fcState.startTime=Date.now();
+_shuffle(fcState.cards);
+_renderFlashcardOverlay();
+}
+
+function closeFlashcards(){
+const el=document.getElementById('fc-overlay');if(el)el.remove();
+fcState=null;
 }
 
 /* ===== BUG #1 CORRIGIDO: '…' (U+2026) → '...' (spread operator válido) ===== */
