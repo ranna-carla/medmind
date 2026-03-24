@@ -1499,11 +1499,447 @@ goPage('home');
 }
 });
 
-/* Placeholder renders para novas páginas (serão implementados nos blocos F e G) */
+/* ═══════ BLOCO G: DESAFIOS COMPLETOS ═══════ */
+let dailyChallengeData=null;
+let userDuels=[];
+let userArenas=[];
+let unsubDuels=null,unsubArenas=null;
+
 function renderChallenges(){
-const el=document.getElementById('challengesContent');
-if(!el)return;
-el.innerHTML='<div style="text-align:center;padding:60px 16px;color:var(--dim)"><div style="font-size:48px;margin-bottom:12px">⚡</div><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Desafios</div><div style="font-size:13px;line-height:1.6">Em breve: Desafio Diário, Duelos 1v1 e Arenas em grupo!</div></div>';
+const el=document.getElementById('challengesContent');if(!el)return;
+let h='';
+
+/* === G2: DESAFIO DIÁRIO === */
+const today=new Date().toISOString().slice(0,10);
+const didDaily=S.lastDailyDate===today;
+const dailyStreak=S.dailyStreak||0;
+const multiplier=dailyStreak>=30?3:dailyStreak>=7?2:dailyStreak>=3?1.5:1;
+const mLabel=multiplier>1?` · <span style="color:var(--gold)">${multiplier}x XP</span>`:'';
+h+=`<div style="background:linear-gradient(135deg,rgba(249,202,36,.15),rgba(249,202,36,.05));border:1.5px solid rgba(249,202,36,.3);border-radius:var(--r);padding:16px;margin-bottom:16px;cursor:${didDaily?'default':'pointer'}" ${didDaily?'':`onclick="startDailyChallenge()"`}>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+<div style="font-size:28px">📅</div>
+<div style="flex:1">
+<div style="font-size:15px;font-weight:700;color:var(--gold)">Desafio do Dia</div>
+<div style="font-size:11px;color:var(--dim)">5 perguntas aleatórias${mLabel}</div>
+</div>
+${didDaily?'<div style="font-size:11px;color:var(--green);font-weight:600">✅ Feito</div>':`<div style="font-size:11px;color:var(--gold);font-weight:600">Jogar ▶</div>`}
+</div>
+${dailyStreak>0?`<div style="font-size:11px;color:var(--dim)">🔥 ${dailyStreak} dias consecutivos</div>`:''}
+</div>`;
+
+/* === Botões criar === */
+h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
+<button onclick="createDuel()" style="flex:1;padding:14px 10px;border-radius:12px;border:none;background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);text-align:center">
+<div style="font-size:22px;margin-bottom:4px">⚔️</div>Duelo 1v1</button>
+<button onclick="createArena()" style="flex:1;padding:14px 10px;border-radius:12px;border:none;background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);text-align:center">
+<div style="font-size:22px;margin-bottom:4px">🏆</div>Arena</button>
+</div>`;
+
+/* === Convites pendentes === */
+const invitedDuels=userDuels.filter(d=>d.opponentId===currentUser?.uid&&d.status==='pending');
+const invitedArenas=userArenas.filter(a=>a.invited&&a.invited.includes(currentUser?.uid)&&!(a.participantIds||[]).includes(currentUser?.uid));
+if(invitedDuels.length||invitedArenas.length){
+h+=`<div class="mod-section-title">📬 Convites</div>`;
+invitedDuels.forEach(d=>{
+h+=`<div class="mod-card" onclick="acceptDuel('${d.id}')">
+<div class="mod-icon" style="background:var(--pink-bg);color:var(--pink)">⚔️</div>
+<div class="mod-info"><div class="mod-name">Duelo de ${d.creatorName||'Alguém'}</div><div class="mod-desc">${d.moduleName||''} · 10 questões</div></div>
+<div style="color:var(--green);font-size:12px;font-weight:600">Aceitar ▶</div>
+</div>`;
+});
+invitedArenas.forEach(a=>{
+h+=`<div class="mod-card" onclick="joinArena('${a.id}')">
+<div class="mod-icon" style="background:var(--gold-bg);color:var(--gold)">🏆</div>
+<div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${(a.participantIds||[]).length} participantes</div></div>
+<div style="color:var(--green);font-size:12px;font-weight:600">Entrar ▶</div>
+</div>`;
+});
+}
+
+/* === Seus Duelos === */
+const myDuels=userDuels.filter(d=>(d.creatorId===currentUser?.uid||d.opponentId===currentUser?.uid)&&d.status!=='pending'||d.creatorId===currentUser?.uid);
+if(myDuels.length){
+h+=`<div class="mod-section-title">⚔️ Seus Duelos</div>`;
+myDuels.slice(0,10).forEach(d=>{
+const statusLabel=d.status==='pending'?'⏳ Aguardando':d.status==='active'?'🟢 Ativo':d.status==='done'?'✅ Finalizado':'';
+h+=`<div class="mod-card" onclick="openDuelDetail('${d.id}')">
+<div class="mod-icon" style="background:var(--pink-bg);color:var(--pink)">⚔️</div>
+<div class="mod-info"><div class="mod-name">${d.moduleName||'Duelo'}</div><div class="mod-desc">vs ${d.creatorId===currentUser?.uid?(d.opponentName||'Oponente'):(d.creatorName||'Desafiante')} · ${statusLabel}</div></div>
+</div>`;
+});
+}
+
+/* === Arenas ativas === */
+const myArenas=userArenas.filter(a=>(a.participantIds||[]).includes(currentUser?.uid)||a.creatorId===currentUser?.uid);
+if(myArenas.length){
+h+=`<div class="mod-section-title">🏆 Arenas</div>`;
+myArenas.forEach(a=>{
+const parts=(a.participantIds||[]).length;
+const isExpiring=a.endDate&&(a.endDate.toDate?a.endDate.toDate():new Date(a.endDate))-Date.now()<86400000;
+h+=`<div class="mod-card" onclick="openArenaDetail('${a.id}')" ${isExpiring?'style="border-color:var(--red);animation:pulse 1.5s infinite"':''}>
+<div class="mod-icon" style="background:var(--gold-bg);color:var(--gold)">🏆</div>
+<div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${parts} participantes${isExpiring?' · <span style="color:var(--red)">Encerra em breve!</span>':''}</div></div>
+</div>`;
+});
+}
+
+if(!myDuels.length&&!myArenas.length&&!invitedDuels.length&&!invitedArenas.length){
+h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);margin-top:10px"><div style="font-size:13px;line-height:1.6">Crie um duelo ou arena para<br>desafiar seus amigos!</div></div>`;
+}
+
+el.innerHTML=h;
+/* Listen realtime updates */
+_listenChallenges();
+}
+
+function _listenChallenges(){
+if(!currentUser)return;
+if(unsubDuels)unsubDuels();
+unsubDuels=db.collection('duels').where('participantIds','array-contains',currentUser.uid).orderBy('createdAt','desc').limit(20).onSnapshot(snap=>{
+userDuels=snap.docs.map(d=>({id:d.id,...d.data()}));
+/* Update badge */
+const invCount=userDuels.filter(d=>d.opponentId===currentUser.uid&&d.status==='pending').length;
+_updateChallengeBadge(invCount);
+},e=>{console.warn('Duels listen error:',e);});
+if(unsubArenas)unsubArenas();
+unsubArenas=db.collection('challenges').where('participantIds','array-contains',currentUser.uid).orderBy('createdAt','desc').limit(20).onSnapshot(snap=>{
+userArenas=snap.docs.map(d=>({id:d.id,...d.data()}));
+},e=>{
+/* Fallback: also try invited */
+unsubArenas=db.collection('challenges').orderBy('createdAt','desc').limit(30).onSnapshot(snap2=>{
+userArenas=snap2.docs.map(d=>({id:d.id,...d.data()})).filter(a=>(a.participantIds||[]).includes(currentUser.uid)||(a.invited||[]).includes(currentUser.uid)||a.creatorId===currentUser.uid);
+},e2=>{console.warn('Arenas listen error:',e2);});
+});
+}
+
+function _updateChallengeBadge(count){
+const btn=document.querySelector('.bnav-btn[data-pg="challenges"]');if(!btn)return;
+let badge=btn.querySelector('.challenge-badge');
+if(count>0){
+if(!badge){badge=document.createElement('span');badge.className='challenge-badge';btn.style.position='relative';btn.appendChild(badge);}
+badge.textContent=count;badge.style.display='flex';
+}else if(badge){badge.style.display='none';}
+}
+
+/* === G2: Desafio Diário === */
+function _getDailyQuestions(){
+const today=new Date().toISOString().slice(0,10);
+const seed=today.split('-').reduce((a,b)=>a+parseInt(b),0);
+const allQ=[];
+MODULES.filter(m=>!m.locked&&m.quiz?.obj).forEach(m=>{m.quiz.obj.forEach(q=>{allQ.push({...q,modName:m.name});});});
+if(!allQ.length)return[];
+/* Deterministic shuffle with seed */
+const shuffled=[...allQ];
+let s=seed;
+for(let i=shuffled.length-1;i>0;i--){s=(s*9301+49297)%233280;const j=Math.floor((s/233280)*i);[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+return shuffled.slice(0,5);
+}
+
+function startDailyChallenge(){
+const today=new Date().toISOString().slice(0,10);
+if(S.lastDailyDate===today){alert('Você já fez o desafio de hoje!');return;}
+const questions=_getDailyQuestions();
+if(!questions.length){alert('Nenhuma questão disponível');return;}
+_launchDailyQuiz(questions);
+}
+
+function _launchDailyQuiz(questions){
+const overlay=document.createElement('div');overlay.id='daily-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let qIdx=0,score=0,startTime=Date.now();
+
+function render(){
+if(qIdx>=questions.length){
+/* Resultado */
+const elapsed=Math.round((Date.now()-startTime)/1000);
+const today=new Date().toISOString().slice(0,10);
+const multiplier=(S.dailyStreak||0)>=30?3:(S.dailyStreak||0)>=7?2:(S.dailyStreak||0)>=3?1.5:1;
+const xp=Math.round(score*XP_CORRECT*multiplier);
+/* Atualizar streak */
+const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+if(S.lastDailyDate===yesterday)S.dailyStreak=(S.dailyStreak||0)+1;
+else if(S.lastDailyDate!==today)S.dailyStreak=1;
+S.lastDailyDate=today;S.xp+=xp;saveState(S);
+/* Salvar no Firestore ranking diário */
+if(currentUser)db.collection('dailyChallenge').doc(today).collection('results').doc(currentUser.uid).set({name:S.name,score:score,total:questions.length,time:elapsed,xp:S.xp,timestamp:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(()=>{});
+overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px 16px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="font-size:48px;margin-bottom:12px">📅</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:4px">Desafio Diário</div>
+<div style="font-size:14px;color:var(--dim);margin-bottom:20px">${score}/${questions.length} · ${elapsed}s · +${xp} XP${multiplier>1?' ('+multiplier+'x)':''}</div>
+<div style="font-size:14px;color:var(--gold);font-weight:600;margin-bottom:20px">🔥 ${S.dailyStreak} dias consecutivos</div>
+<button onclick="document.getElementById('daily-overlay').remove();renderChallenges()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+</div>`;
+return;
+}
+const q=questions[qIdx];
+let qh=`<div style="padding:max(16px,var(--safe-top)) 16px 16px;flex:1;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('daily-overlay').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:14px;font-weight:700;flex:1">📅 Desafio Diário</div>
+<div style="font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace">${qIdx+1}/${questions.length}</div>
+</div>
+<div style="height:3px;background:var(--bg3);border-radius:2px;margin-bottom:20px"><div style="height:100%;width:${Math.round(qIdx/questions.length*100)}%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:2px;transition:width .3s"></div></div>
+${q.tag?`<div style="font-size:10px;font-weight:600;color:var(--accent2);background:var(--accent-bg);padding:3px 10px;border-radius:100px;display:inline-block;margin-bottom:10px;align-self:flex-start">${q.tag}</div>`:''}
+<div style="font-size:15px;font-weight:600;line-height:1.5;margin-bottom:20px">${q.q}</div>
+<div style="display:flex;flex-direction:column;gap:8px">`;
+q.opts.forEach((o,i)=>{
+qh+=`<button class="daily-opt" onclick="dailyAnswer(${i},${q.ans})" style="text-align:left;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;line-height:1.4">${o}</button>`;
+});
+qh+=`</div></div>`;
+overlay.innerHTML=qh;
+}
+window.dailyAnswer=function(chosen,correct){
+if(chosen===correct)score++;
+qIdx++;render();
+};
+render();
+document.body.appendChild(overlay);
+}
+
+/* === G3: Duelo 1v1 === */
+function createDuel(){
+/* Escolher módulo */
+const allMods=[...MODULES.filter(m=>!m.locked),...generatedModulesCache.filter(m=>m.module).map(m=>({id:m.docId,name:m.module.name,icon:m.module.icon||'📄',quiz:m.module.quiz}))];
+if(!allMods.length){alert('Nenhum módulo disponível');return;}
+const overlay=document.createElement('div');overlay.id='duel-create-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let mh=`<div style="padding:max(16px,var(--safe-top)) 16px 16px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('duel-create-overlay').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:16px;font-weight:700;flex:1">⚔️ Criar Duelo</div>
+</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:16px">Escolha o módulo para o duelo:</div>`;
+allMods.forEach(m=>{
+mh+=`<div class="mod-card" onclick="finalizeDuel('${m.id}','${(m.name||'').replace(/'/g,"\\'")}')">
+<div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.icon||'📄'}</div>
+<div class="mod-info"><div class="mod-name">${m.name}</div></div>
+</div>`;
+});
+mh+=`</div>`;
+overlay.innerHTML=mh;
+document.body.appendChild(overlay);
+}
+
+async function finalizeDuel(modId,modName){
+document.getElementById('duel-create-overlay')?.remove();
+/* Gerar código e questões */
+const code=Math.random().toString(36).substring(2,8).toUpperCase();
+const mod=MODULES.find(m=>m.id===modId)||generatedModulesCache.find(m=>m.docId===modId)?.module;
+if(!mod||!mod.quiz?.obj){alert('Módulo sem questões');return;}
+const allQ=[...mod.quiz.obj];_shuffle(allQ);const questions=allQ.slice(0,10);
+try{
+await db.collection('duels').add({
+code:code,creatorId:currentUser.uid,creatorName:S.name,opponentId:'',opponentName:'',
+moduleId:modId,moduleName:modName,questions:questions,
+scores:{[currentUser.uid]:null},status:'pending',
+participantIds:[currentUser.uid],
+createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+expiresAt:new Date(Date.now()+86400000)
+});
+/* Compartilhar link */
+const link='https://medmind.win7med.com.br?duel='+code;
+const text='Te desafio no MedMind! ⚔️ '+link;
+if(navigator.share){try{await navigator.share({title:'Duelo MedMind',text:text,url:link});}catch(e){}}
+else{try{await navigator.clipboard.writeText(text);alert('📋 Link do duelo copiado!');}catch(e){prompt('Link do duelo:',link);}}
+renderChallenges();
+}catch(e){console.error('Erro criar duelo:',e);alert('Erro ao criar duelo');}
+}
+
+async function acceptDuel(duelId){
+const d=userDuels.find(x=>x.id===duelId);if(!d)return;
+try{
+await db.collection('duels').doc(duelId).update({
+opponentId:currentUser.uid,opponentName:S.name,status:'active',
+participantIds:firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+});
+/* Abrir quiz do duelo */
+_playDuelQuiz(duelId,d.questions||[],d.moduleName);
+}catch(e){console.error('Erro aceitar duelo:',e);alert('Erro ao aceitar duelo');}
+}
+
+function _playDuelQuiz(duelId,questions,title){
+if(!questions.length)return;
+const overlay=document.createElement('div');overlay.id='duel-play-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let qIdx=0,score=0;
+function render(){
+if(qIdx>=questions.length){
+/* Salvar resultado */
+const xp=score*XP_CORRECT+(score===questions.length?30:0);
+S.xp+=xp;saveState(S);
+db.collection('duels').doc(duelId).update({['scores.'+currentUser.uid]:score}).catch(()=>{});
+/* Checar se ambos terminaram */
+db.collection('duels').doc(duelId).get().then(doc=>{
+const data=doc.data();const scores=data.scores||{};
+const allDone=Object.keys(scores).every(k=>scores[k]!==null);
+if(allDone)db.collection('duels').doc(duelId).update({status:'done'}).catch(()=>{});
+}).catch(()=>{});
+overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="font-size:48px;margin-bottom:12px">⚔️</div>
+<div style="font-size:20px;font-weight:700;margin-bottom:4px">${title||'Duelo'}</div>
+<div style="font-size:16px;color:var(--accent2);font-weight:700;margin-bottom:8px">${score}/${questions.length}</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:20px">+${xp} XP${score===questions.length?' · 🏆 Perfeito!':''}</div>
+<button onclick="document.getElementById('duel-play-overlay').remove();renderChallenges()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+</div>`;
+return;
+}
+const q=questions[qIdx];
+let qh=`<div style="padding:max(16px,var(--safe-top)) 16px;flex:1;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('duel-play-overlay').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:14px;font-weight:700;flex:1">⚔️ ${title||'Duelo'}</div>
+<div style="font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace">${qIdx+1}/${questions.length}</div>
+</div>
+<div style="height:3px;background:var(--bg3);border-radius:2px;margin-bottom:20px"><div style="height:100%;width:${Math.round(qIdx/questions.length*100)}%;background:linear-gradient(90deg,var(--pink),var(--red));border-radius:2px;transition:width .3s"></div></div>
+<div style="font-size:15px;font-weight:600;line-height:1.5;margin-bottom:20px">${q.q}</div>
+<div style="display:flex;flex-direction:column;gap:8px">`;
+(q.opts||[]).forEach((o,i)=>{qh+=`<button onclick="duelAnswer(${i},${q.ans})" style="text-align:left;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;line-height:1.4">${o}</button>`;});
+qh+=`</div></div>`;
+overlay.innerHTML=qh;
+}
+window.duelAnswer=function(c,a){if(c===a)score++;qIdx++;render();};
+render();document.body.appendChild(overlay);
+}
+
+function openDuelDetail(duelId){
+const d=userDuels.find(x=>x.id===duelId);if(!d)return;
+if(d.status==='pending'&&d.creatorId===currentUser?.uid){
+alert('Aguardando oponente aceitar o duelo. Compartilhe o link!');return;
+}
+if(d.status==='active'){
+const myScore=d.scores?.[currentUser.uid];
+if(myScore===null||myScore===undefined){_playDuelQuiz(duelId,d.questions||[],d.moduleName);return;}
+alert('Aguardando oponente terminar...');return;
+}
+/* done — mostrar resultado */
+const scores=d.scores||{};
+const myScore=scores[currentUser.uid]||0;
+const oppId=d.creatorId===currentUser.uid?d.opponentId:d.creatorId;
+const oppScore=scores[oppId]||0;
+const oppName=d.creatorId===currentUser.uid?d.opponentName:d.creatorName;
+alert(`Resultado:\nVocê: ${myScore}/${(d.questions||[]).length}\n${oppName}: ${oppScore}/${(d.questions||[]).length}\n\n${myScore>oppScore?'🏆 Você venceu!':myScore<oppScore?'😔 Você perdeu':'🤝 Empate!'}`);
+}
+
+/* === G3: Aceitar duelo por URL === */
+async function acceptDuelFromURL(code){
+if(!currentUser||!code)return;
+try{
+const snap=await db.collection('duels').where('code','==',code.toUpperCase()).limit(1).get();
+if(snap.empty){alert('Duelo não encontrado');return;}
+const doc=snap.docs[0];const d=doc.data();
+if(d.creatorId===currentUser.uid){alert('Você criou este duelo!');return;}
+if(d.status!=='pending'){alert('Este duelo já foi aceito');return;}
+await acceptDuel(doc.id);
+history.replaceState(null,'',location.pathname);
+}catch(e){console.error('Erro aceitar duelo URL:',e);}
+}
+
+/* === G4: Arena (Grupos) === */
+function createArena(){
+const overlay=document.createElement('div');overlay.id='arena-create';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('arena-create').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:16px;font-weight:700;flex:1">🏆 Criar Arena</div>
+</div>
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Nome da Arena</label>
+<input id="arenaName" placeholder="Ex: Grupo Embriologia P2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px">
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Duração</label>
+<select id="arenaDuration" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:14px">
+<option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="14">14 dias</option>
+</select>
+<button onclick="finalizeArena()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Criar e Convidar</button>
+</div>`;
+document.body.appendChild(overlay);
+}
+
+async function finalizeArena(){
+const name=(document.getElementById('arenaName')?.value||'').trim()||'Arena';
+const days=parseInt(document.getElementById('arenaDuration')?.value||'7');
+document.getElementById('arena-create')?.remove();
+const code=Math.random().toString(36).substring(2,8).toUpperCase();
+try{
+await db.collection('challenges').add({
+name:name,code:code,type:'group',status:'active',
+creatorId:currentUser.uid,creatorName:S.name,
+participantIds:[currentUser.uid],invited:[],
+moduleNames:[],scores:{[currentUser.uid]:0},
+createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+endDate:new Date(Date.now()+days*86400000)
+});
+const link='https://medmind.win7med.com.br?arena='+code;
+const text='Entre na minha arena no MedMind! 🏆 '+link;
+if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
+else{try{await navigator.clipboard.writeText(text);alert('📋 Link da arena copiado!');}catch(e){prompt('Link:',link);}}
+renderChallenges();
+}catch(e){console.error('Erro criar arena:',e);alert('Erro ao criar arena');}
+}
+
+async function joinArena(arenaId){
+try{
+await db.collection('challenges').doc(arenaId).update({
+participantIds:firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+['scores.'+currentUser.uid]:0
+});
+renderChallenges();
+}catch(e){console.error('Erro entrar arena:',e);alert('Erro');}
+}
+
+function openArenaDetail(arenaId){
+const a=userArenas.find(x=>x.id===arenaId);if(!a)return;
+const participants=a.participantIds||[];
+const scores=a.scores||{};
+const sorted=participants.map(uid=>({uid,score:scores[uid]||0})).sort((a,b)=>b.score-a.score);
+const overlay=document.createElement('div');overlay.id='arena-detail';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let h=`<div style="padding:max(16px,var(--safe-top)) 16px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('arena-detail').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">←</button>
+<div style="font-size:16px;font-weight:700;flex:1">${a.name||'Arena'}</div>
+</div>`;
+/* Pódio top 3 */
+if(sorted.length>=3){
+h+=`<div style="display:flex;align-items:flex-end;justify-content:center;gap:12px;margin-bottom:20px">
+<div style="text-align:center;order:1"><div style="font-size:28px">🥈</div><div style="font-size:12px;font-weight:600">${sorted[1].score} XP</div></div>
+<div style="text-align:center;order:0"><div style="font-size:36px">🥇</div><div style="font-size:14px;font-weight:700">${sorted[0].score} XP</div></div>
+<div style="text-align:center;order:2"><div style="font-size:24px">🥉</div><div style="font-size:12px;font-weight:600">${sorted[2].score} XP</div></div>
+</div>`;
+}
+/* Lista */
+sorted.forEach((p,i)=>{
+const isYou=p.uid===currentUser?.uid;
+h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isYou?'var(--accent-bg)':'var(--bg2)'};border-radius:10px;margin-bottom:6px;border:1px solid ${isYou?'var(--accent-border)':'rgba(255,255,255,.05)'}">
+<div style="font-size:14px;font-weight:700;width:24px;text-align:center;color:var(--dim)">${i+1}</div>
+<div style="flex:1;font-size:13px;font-weight:600">${isYou?S.name+' (você)':p.uid}</div>
+<div style="font-size:12px;font-weight:600;color:var(--accent2);font-family:'JetBrains Mono',monospace">${p.score} XP</div>
+</div>`;
+});
+/* Share */
+h+=`<button onclick="shareArena('${a.code||''}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bg2);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;border:1px solid var(--accent-border)">📤 Convidar mais pessoas</button>`;
+h+=`</div>`;
+overlay.innerHTML=h;
+document.body.appendChild(overlay);
+}
+
+async function shareArena(code){
+if(!code)return;
+const link='https://medmind.win7med.com.br?arena='+code;
+const text='Entre na arena MedMind! 🏆 '+link;
+if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
+else{try{await navigator.clipboard.writeText(text);alert('📋 Copiado!');}catch(e){}}
+}
+
+async function acceptArenaFromURL(code){
+if(!currentUser||!code)return;
+try{
+const snap=await db.collection('challenges').where('code','==',code.toUpperCase()).limit(1).get();
+if(snap.empty){alert('Arena não encontrada');return;}
+const doc=snap.docs[0];
+await joinArena(doc.id);
+history.replaceState(null,'',location.pathname);
+goPage('challenges');
+}catch(e){console.error('Erro aceitar arena:',e);}
 }
 /* ═══════ BLOCO F: REVISÃO E FLASHCARDS ═══════ */
 let reviewTab='flashcards';
