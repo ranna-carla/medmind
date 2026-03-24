@@ -415,27 +415,49 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 }
 
 // Processa geração de revisão — um tópico por vez para mostrar progresso
+function _truncStr(s, max) { return s && s.length > max ? s.slice(0, max) + '...' : s || ''; }
+
 async function processRevisionJob(jobId, topics) {
   try {
-    const allObj = [], allEsc = [], allPra = [];
-    for (let i = 0; i < topics.length; i++) {
-      const topic = topics[i];
-      jobs[jobId].progress = `Gerando tópico ${i + 1} de ${topics.length}: ${topic}...`;
-      jobs[jobId].topicsDone = i;
-      jobs[jobId].topicsTotal = topics.length;
-      const result = await callAnthropic({
-        model: 'claude-sonnet-4-6', max_tokens: 6000, system: PROMPT_REVISION,
+    jobs[jobId].progress = `Gerando ${topics.length} tópico(s) em paralelo...`;
+    jobs[jobId].topicsDone = 0;
+    jobs[jobId].topicsTotal = topics.length;
+
+    // Dispara TODAS as chamadas em paralelo (não sequencial)
+    const promises = topics.map((topic, i) =>
+      callAnthropic({
+        model: 'claude-sonnet-4-6', max_tokens: 6000, temperature: 0, system: PROMPT_REVISION,
         messages: [{ role: 'user', content: `Gere o quiz de revisão para o tema: ${topic}` }]
-      });
-      const data = parseAnthropicJSON(result, 'revisão ' + topic);
-      // Normaliza objetivas (5 opções A-E)
-      (data.obj || []).forEach(q => {
-        const ans = q.ans !== undefined ? q.ans : q.a;
-        allObj.push({ q: q.q, opts: (q.opts || []).map(o => String(o).replace(/^[A-Ea-e][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: q.exp || '', topic: q.topic || topic });
-      });
-      (data.esc || []).forEach(q => allEsc.push({ ...q, topic: q.topic || topic }));
-      (data.pra || []).forEach(q => allPra.push({ ...q, topic: q.topic || topic }));
+      }).then(result => {
+        jobs[jobId].topicsDone = (jobs[jobId].topicsDone || 0) + 1;
+        jobs[jobId].progress = `Tópico pronto: ${topic} (${jobs[jobId].topicsDone}/${topics.length})`;
+        return { topic, result };
+      }).catch(err => {
+        console.error('[revision topic ' + topic + ']', err.message);
+        return { topic, error: err.message };
+      })
+    );
+
+    const results = await Promise.all(promises);
+
+    const allObj = [], allEsc = [], allPra = [];
+    let successCount = 0;
+    for (const { topic, result, error } of results) {
+      if (error || !result) continue;
+      try {
+        const data = parseAnthropicJSON(result, 'revisão ' + topic);
+        (data.obj || []).forEach(q => {
+          const ans = q.ans !== undefined ? q.ans : q.a;
+          allObj.push({ q: _truncStr(q.q, 300), opts: (q.opts || []).map(o => String(o).replace(/^[A-Ea-e][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: _truncStr(q.exp, 200), topic: q.topic || topic });
+        });
+        (data.esc || []).forEach(q => allEsc.push({ q: _truncStr(q.q, 300), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
+        (data.pra || []).forEach(q => allPra.push({ q: _truncStr(q.q, 500), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
+        successCount++;
+      } catch (e) { console.error('[revision parse ' + topic + ']', e.message); }
     }
+
+    if (successCount === 0) throw new Error('Nenhum tópico gerado com sucesso. Tente novamente.');
+
     jobs[jobId].status = 'ready';
     jobs[jobId].progress = 'Pronto!';
     jobs[jobId].topicsDone = topics.length;
@@ -511,7 +533,7 @@ function saveFirestore(projectId, collection, doc, idToken) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Firestore timeout')); });
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Firestore timeout')); });
     req.write(body);
     req.end();
   });
