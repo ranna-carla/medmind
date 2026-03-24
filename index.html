@@ -1477,6 +1477,12 @@ document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
 renderModule(m);
 navHistory.push('module:'+id);
 history.pushState({page:'module',id:id},'','');
+/* Track last accessed */
+if(!S.lastAccessed)S.lastAccessed=[];
+S.lastAccessed=S.lastAccessed.filter(x=>x.id!==id);
+S.lastAccessed.unshift({id:id,type:'static',timestamp:Date.now()});
+if(S.lastAccessed.length>10)S.lastAccessed.length=10;
+saveState(S);
 }
 
 /* History API — botão voltar do navegador / swipe back iPhone */
@@ -2173,7 +2179,16 @@ _renderFlashcardOverlay();
 function fcAnswer(result){
 if(!fcState)return;
 fcState.results[result]++;
-if(result==='wrong')fcState.wrongCards.push(fcState.cards[fcState.idx]);
+if(result==='wrong'){
+fcState.wrongCards.push(fcState.cards[fcState.idx]);
+/* Salvar erro para Sessão Diária */
+if(!S.flashcardErrors)S.flashcardErrors={};
+const key=fcState.title||'default';
+if(!S.flashcardErrors[key])S.flashcardErrors[key]=[];
+S.flashcardErrors[key].push(fcState.cards[fcState.idx]);
+if(S.flashcardErrors[key].length>30)S.flashcardErrors[key]=S.flashcardErrors[key].slice(-30);
+saveState(S);
+}
 fcState.idx++;fcState.flipped=false;
 if(fcState.idx>=fcState.cards.length){
 _renderFlashcardComplete();
@@ -2425,6 +2440,28 @@ h+=`<div class="home-cta-upload" onclick="quickStudyFromPDF()">
 <div style="font-size:11px;color:var(--dim)">📎 Enviar PDF da aula</div>
 </div>`;
 
+/* === CONTINUAR ESTUDANDO === */
+const lastAcc=(S.lastAccessed||[]).slice(0,3);
+if(lastAcc.length>0){
+h+=`<div class="home-section-title">▶️ Continuar estudando</div>`;
+lastAcc.forEach(la=>{
+if(la.type==='static'){
+const m=MODULES.find(x=>x.id===la.id);if(!m)return;
+const ms2=S.modules[m.id]||{};
+h+=`<div class="mod-card" onclick="openModule('${m.id}')">
+<div class="mod-icon" style="background:${m.color}22;color:${m.color}">${m.icon}</div>
+<div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${ms2.bestScore||0}% · ${'★'.repeat(ms2.stars||0)}${'☆'.repeat(5-(ms2.stars||0))}</div></div>
+</div>`;
+}else{
+const m=generatedModulesCache.find(x=>x.docId===la.id);if(!m||!m.module)return;
+h+=`<div class="mod-card" onclick="openGeneratedModule('${la.id}')">
+<div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.module.icon||'📄'}</div>
+<div class="mod-info"><div class="mod-name">${m.module.name||m.title}</div><div class="mod-desc">🤖 Gerado</div></div>
+</div>`;
+}
+});
+}
+
 /* === 3. MÓDULOS RECENTES DO ESTUDANTE === */
 const myGen=generatedModulesCache.filter(m=>m.userId===currentUser?.uid).slice(0,10);
 const playedStatic=MODULES.filter(m=>!m.locked&&S.modules[m.id]&&S.modules[m.id].attempts>0);
@@ -2602,6 +2639,12 @@ async function openGeneratedModule(docId){
   renderModule(m.module);
   navHistory.push('genmod:'+docId);
   history.pushState({page:'genmod',id:docId},'','');
+  /* Track last accessed */
+  if(!S.lastAccessed)S.lastAccessed=[];
+  S.lastAccessed=S.lastAccessed.filter(x=>x.id!==docId);
+  S.lastAccessed.unshift({id:docId,type:'gen',timestamp:Date.now()});
+  if(S.lastAccessed.length>10)S.lastAccessed.length=10;
+  saveState(S);
 }
 
 async function toggleFavorite(docId){
@@ -2786,13 +2829,17 @@ h+=`<div class="mod-section-title" style="margin-top:20px">📈 Sua Evolução</
 h+=`<div class="mod-section-title">📋 Últimos Quizzes</div>`;
 if(!S.quizHistory.length)h+='<p style="color:var(--dim);font-size:12px;text-align:center;padding:20px;background:var(--bg2);border-radius:10px">Nenhum quiz realizado ainda. Vá ao módulo e comece a jogar!</p>';
 else S.quizHistory.slice(0,8).forEach(q=>{const c=q.pct>=75?'good':q.pct>=50?'ok':'bad';const by=q.by||S.name;h+=`<div class="history-item"><div class="history-left"><strong>${q.mod}</strong><br>👤 ${by} · ${q.date}<br>${q.score}/${q.total}</div><div class="history-right ${c}">${q.pct}%<br>+${q.xp}XP</div></div>`;});
-h+=`<button class="reset-btn" onclick="if(confirm('Tem certeza? Isso apagará TUDO.'))resetAll()">🗑️ Resetar Tudo</button>`;
-h+=`<button onclick="doLogout()" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid var(--dim2);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px">🚪 Sair do MedMind</button>`;
+h+=`<button onclick="doLogout()" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px">Sair do MedMind</button>`;
+h+=`<div style="text-align:center;margin-top:20px"><button onclick="confirmReset()" style="background:none;border:none;color:var(--dim2);font-family:'Sora',sans-serif;font-size:11px;cursor:pointer">Resetar todos os dados</button></div>`;
 document.getElementById('profileContent').innerHTML=h;updateFriendBadge();
 loadAdminSuggestions().then(ah=>{if(ah)document.getElementById('profileContent').innerHTML+=ah;});}
 
 function updName(n){S.name=n||'Estudante';saveState(S);saveToCloud();}
-function resetAll(){const conf=confirm('⚠️ ATENÇÃO!\n\nVai APAGAR:\n✓ Seu nome\n✓ Todos os XP\n✓ Todos os jogadores\n✓ Todo histórico\n\nTem certeza?');if(conf){localStorage.clear();location.reload();}}
+function confirmReset(){
+const p=prompt('⚠️ ATENÇÃO: Isso apagará TODOS os seus dados.\n\nDigite APAGAR para confirmar:');
+if(p&&p.trim().toUpperCase()==='APAGAR'){localStorage.clear();location.reload();}
+}
+function resetAll(){confirmReset();}
 function addParticipant(){const inp=document.getElementById('newParticipantName');const name=inp.value.trim();if(!name){alert('❌ Digite um nome!');return;}if(!S.participants)S.participants=[];if(S.participants.some(p=>(p.name||p).toLowerCase()===name.toLowerCase())){alert('❌ Esse jogador já existe!');return;}S.participants.push({name:name,xp:0,streak:0,bestStreak:0});inp.value='';saveState(S);alert('✅ '+name+' adicionado com sucesso!');renderProfile();}
 function removeParticipant(idx){const pName=(S.participants[idx]||{}).name||S.participants[idx];const conf=confirm('🗑️ Remover jogador?\n\n'+pName+'\n\nSeus dados serão DELETADOS!\nTem certeza?');if(conf){S.participants.splice(idx,1);saveState(S);alert('✅ '+pName+' removido!');renderProfile();}}
 function recordQuizResult(participantName,score,total,xp,pct){if(!S.quizHistory)S.quizHistory=[];S.quizHistory.unshift({mod:curMod.name,score:score,total:total,pct:pct,xp:xp,by:participantName||S.name,date:new Date().toLocaleDateString('pt-BR')});if(S.quizHistory.length>50)S.quizHistory=S.quizHistory.slice(0,50);saveState(S);}
