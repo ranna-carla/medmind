@@ -1541,6 +1541,8 @@ let _skipPush=false;
 function goPage(pg){
 document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
 document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+/* FAB só aparece na Home */
+const fab=document.querySelector('.create-fab');if(fab)fab.style.display=pg==='home'?'flex':'none';
 const el=document.getElementById('pg-'+pg);
 if(el)el.classList.add('on');
 const btn=document.querySelector('.bnav-btn[data-pg="'+pg+'"]');
@@ -2987,18 +2989,11 @@ h+=`<div style="text-align:center;padding:24px 16px;background:linear-gradient(1
 </div>`;
 }
 
-/* === 2. AÇÕES RÁPIDAS === */
-h+=`<div class="home-actions">
-<div class="home-action-card" onclick="_startSessaoDiaria()" style="background:linear-gradient(135deg,rgba(108,92,231,.1),var(--bg2));border-color:rgba(108,92,231,.15)">
-  <div class="home-action-icon">📝</div>
-  <div class="home-action-title">Sessão Diária</div>
-  <div class="home-action-sub">Cards que mais errou · ~5 min</div>
-</div>
-<div class="home-action-card" onclick="_startSprintRapido()" style="background:linear-gradient(135deg,rgba(249,202,36,.1),var(--bg2));border-color:rgba(249,202,36,.15)">
-  <div class="home-action-icon">⚡</div>
-  <div class="home-action-title">Sprint</div>
-  <div class="home-action-sub">10 questões · Timer 15s</div>
-</div>
+/* === 2. AÇÃO RÁPIDA === */
+h+=`<div onclick="_startSessaoDiaria()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(108,92,231,.1),var(--bg2));border:1px solid rgba(108,92,231,.15);border-radius:var(--r);cursor:pointer;margin-bottom:12px">
+<div style="font-size:28px">📝</div>
+<div style="flex:1"><div style="font-size:14px;font-weight:700">Sessao Diaria</div><div style="font-size:11px;color:var(--dim);margin-top:2px">Revise os cards que mais errou · ~5 min</div></div>
+<div style="color:var(--accent2);font-size:16px">▶</div>
 </div>`;
 
 /* === 3. CTA DE UPLOAD === */
