@@ -627,7 +627,7 @@ http.createServer(async (req, res) => {
         modules:   body.modules || [],
         questions: body.questions,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
       const result = await saveFirestore('medmind-pro', 'revisions', doc, body.idToken);
       const docId = result.name ? result.name.split('/').pop() : null;
@@ -636,6 +636,38 @@ http.createServer(async (req, res) => {
       res.end(JSON.stringify({ success: true, docId }));
     } catch (err) {
       console.error('[save-revision]', err.message);
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /save-flashdeck — salva deck de flashcards no Firestore
+  if (req.method === 'POST' && req.url === '/save-flashdeck') {
+    try {
+      const body = await readBody(req);
+      if (!body.idToken || !body.userId || !body.cards) {
+        res.writeHead(400, CORS);
+        res.end(JSON.stringify({ error: 'idToken, userId e cards são obrigatórios' }));
+        return;
+      }
+      const doc = {
+        userId:     body.userId,
+        title:      body.title || 'Flashcards',
+        cards:      body.cards,
+        modules:    body.modules || [],
+        results:    body.results || { right: 0, mid: 0, wrong: 0 },
+        totalCards: (body.cards || []).length,
+        createdAt:  new Date().toISOString(),
+        expiresAt:  new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      const result = await saveFirestore('medmind-pro', 'flashdecks', doc, body.idToken);
+      const docId = result.name ? result.name.split('/').pop() : null;
+      console.log('[save-flashdeck] OK docId=' + docId);
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({ success: true, docId }));
+    } catch (err) {
+      console.error('[save-flashdeck]', err.message);
       res.writeHead(500, CORS);
       res.end(JSON.stringify({ error: err.message }));
     }

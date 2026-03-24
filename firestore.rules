@@ -77,6 +77,14 @@ service cloud.firestore {
       allow delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
+    // Decks de flashcards salvos
+    match /flashdecks/{docId} {
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
     // Sugestões
     match /suggestions/{docId} {
       allow read, create, update: if request.auth != null;

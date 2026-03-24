@@ -2117,6 +2117,7 @@ if(reviewTab==='revisions'){
 }
 el.innerHTML=h;
 if(reviewTab==='revisions'&&revScreen==='list')_loadRevisions();
+if(reviewTab==='flashcards')_loadFlashDecks();
 if(reviewTab==='flashcards'&&!generatedModulesCache.length&&currentUser)loadGeneratedModules().then(()=>{const el2=document.getElementById('reviewContent');if(el2&&reviewTab==='flashcards'){let h2='<div style="display:flex;gap:6px;margin-bottom:16px">';[['revisions','📝 Revisoes'],['flashcards','🃏 Flashcards']].forEach(([t,label])=>{h2+=`<button onclick="reviewTab=\'${t}\';revScreen=\'list\';renderReview()" style="flex:1;padding:10px 16px;border-radius:100px;border:1px solid ${reviewTab===t?'var(--accent)':'rgba(255,255,255,.08)'};background:${reviewTab===t?'var(--accent-bg)':'transparent'};color:${reviewTab===t?'var(--accent2)':'var(--dim)'};font-family:\'Sora\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});h2+='</div>';h2+=_renderFlashcardsList();el2.innerHTML=h2;}});
 }
 
@@ -2157,6 +2158,7 @@ revCachedList.forEach(r=>{
     <div class="mod-desc" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
       ${modTags}
       <span>📝 ${qCount} questoes</span>
+      ${r.lastResult?`<span style="color:var(--green)">${r.lastResult.objPct||0}%</span>`:''}
       <span style="color:${expColor}">${daysLeft}d</span>
     </div>
   </div>
@@ -2319,7 +2321,7 @@ try{
   const resp=await fetch('/save-revision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,userId:currentUser.uid,title,modules:topics,questions})});
   const data=await resp.json();
   if(!data.success)throw new Error(data.error||'Erro ao salvar');
-  const revision={docId:data.docId,userId:currentUser.uid,title,modules:topics,questions,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+5*86400000).toISOString()};
+  const revision={docId:data.docId,userId:currentUser.uid,title,modules:topics,questions,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+7*86400000).toISOString()};
   revCachedList.unshift(revision);
   /* Backup localStorage */
   try{localStorage.setItem('mm_rev_backup_'+data.docId,JSON.stringify(revision));}catch(e){}
@@ -2482,6 +2484,10 @@ const writQs=quizState.questions.filter(q=>q.type==='writ');
 const caseQs=quizState.questions.filter(q=>q.type==='case');
 const writAvg=writQs.length?Math.round(writQs.reduce((s,q)=>(s+(quizState.feedbacks[q.id]?.score||0)),0)/writQs.length*10)/10:0;
 const caseAvg=caseQs.length?Math.round(caseQs.reduce((s,q)=>(s+(quizState.feedbacks[q.id]?.score||0)),0)/caseQs.length*10)/10:0;
+/* Salvar progresso da revisão no Firestore */
+if(quizState.revId&&currentUser){
+  db.collection('revisions').doc(quizState.revId).update({lastResult:{objCorrect:quizState.objCorrect,objTotal:quizState.objTotal,objPct,writAvg,caseAvg,completedAt:new Date().toISOString()}}).catch(e=>console.error('save result:',e));
+}
 ov.innerHTML=`<div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center">
 <div style="font-size:64px;margin-bottom:12px">${emoji}</div>
 <div style="font-size:48px;font-weight:800;margin-bottom:4px">${objPct}%</div>
@@ -2504,8 +2510,82 @@ quizState.objCorrect=0;quizState.objTotal=0;quizState.startTime=Date.now();
 _renderQuizOverlay();
 }
 
-/* ── F1: Seleção multi-módulo para flashcards ── */
+/* ── F1: Decks salvos + Seleção multi-módulo ── */
 let _fcSelectedModules=[]; /* [{type:'gen'|'static', id, name, icon, color}] */
+let _fcDecksCache=[]; /* decks salvos do Firestore */
+
+async function _loadFlashDecks(){
+if(!currentUser)return;
+try{
+  const snap=await db.collection('flashdecks').where('userId','==',currentUser.uid).orderBy('createdAt','desc').limit(20).get();
+  _fcDecksCache=snap.docs.map(d=>({docId:d.id,...d.data()}));
+  const now=Date.now();
+  _fcDecksCache.forEach(d=>{
+    const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;
+    if(exp&&now>exp)db.collection('flashdecks').doc(d.docId).delete().catch(()=>{});
+  });
+  _fcDecksCache=_fcDecksCache.filter(d=>{const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;return !exp||now<=exp;});
+  _rerenderFlashDecks();
+}catch(e){console.error('loadFlashDecks:',e);}
+}
+
+function _rerenderFlashDecks(){
+const el=document.getElementById('fcDecksArea');if(!el)return;
+if(!_fcDecksCache.length){el.innerHTML='';return;}
+const now=Date.now();
+let h='<div class="mod-section-title" style="margin-bottom:10px">📚 Seus Decks</div>';
+_fcDecksCache.forEach(d=>{
+  const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;
+  const daysLeft=exp?Math.max(0,Math.ceil((exp-now)/86400000)):99;
+  const expColor=daysLeft>3?'var(--green)':daysLeft>1?'var(--gold)':'var(--red)';
+  const r=d.results||{};const total=d.totalCards||0;
+  const pct=total?Math.round((r.right||0)/total*100):0;
+  h+=`<div class="mod-card" onclick="_openSavedDeck('${d.docId}')">
+  <div class="mod-icon" style="background:var(--accent-bg);color:var(--accent2)">🃏</div>
+  <div class="mod-info">
+    <div class="mod-name">${d.title||'Deck'}</div>
+    <div class="mod-desc" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span>${total} cards</span>
+      ${pct>0?`<span style="color:var(--green)">${pct}% dominado</span>`:''}
+      <span style="color:${expColor}">${daysLeft}d</span>
+    </div>
+  </div>
+  <button onclick="event.stopPropagation();_deleteFlashDeck('${d.docId}')" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:4px">🗑</button>
+  </div>`;
+});
+el.innerHTML=h;
+}
+
+async function _openSavedDeck(docId){
+const d=_fcDecksCache.find(x=>x.docId===docId);if(!d||!d.cards)return;
+fcState={title:d.title,cards:d.cards,idx:0,flipped:false,results:{right:0,mid:0,wrong:0},wrongCards:[],startTime:Date.now(),firstFlipDone:false,streak:0,modules:d.modules||[],deckId:docId};
+_shuffle(fcState.cards);
+_renderFlashcardOverlay();
+}
+
+async function _deleteFlashDeck(docId){
+if(!confirm('Apagar este deck?'))return;
+try{await db.collection('flashdecks').doc(docId).delete();_fcDecksCache=_fcDecksCache.filter(d=>d.docId!==docId);_rerenderFlashDecks();_showToast('Deck apagado');}catch(e){alert('Erro: '+e.message);}
+}
+
+async function _saveFlashDeck(customTitle){
+if(!fcState||!currentUser)return;
+const title=customTitle||fcState.title||'Flashcards';
+try{
+  const idToken=await currentUser.getIdToken();
+  const resp=await fetch('/save-flashdeck',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,userId:currentUser.uid,title,cards:fcState.cards,modules:fcState.modules||[],results:fcState.results})});
+  const data=await resp.json();
+  if(!data.success)throw new Error(data.error||'Erro');
+  fcState.deckId=data.docId;
+  _showToast('Deck salvo!');
+  return data.docId;
+}catch(e){_showToast('Erro ao salvar: '+e.message);return null;}
+}
+
+async function _updateFlashDeckResults(){
+if(!fcState?.deckId||!currentUser)return;
+try{await db.collection('flashdecks').doc(fcState.deckId).update({results:fcState.results});}catch(e){console.error('updateDeck:',e);}
+}
 
 function _toggleFcModule(type,id,name,icon,color){
   const idx=_fcSelectedModules.findIndex(m=>m.id===id);
@@ -2517,12 +2597,16 @@ function _toggleFcModule(type,id,name,icon,color){
 
 function _renderFlashcardsList(){
 let h='';
+
+/* Decks salvos */
+h+=`<div id="fcDecksArea"></div>`;
+
 const selIds=_fcSelectedModules.map(m=>m.id);
 const totalCards=_fcSelectedModules.length===0?0:15;
 
-/* Header */
+/* Header seleção */
 h+=`<div style="text-align:center;margin-bottom:14px">
-<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Selecione ate 3 modulos · sempre 15 cards</div>
+<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Criar novo deck · ate 3 modulos · 15 cards</div>
 <div style="font-size:10px;color:var(--dim2);margin-top:3px">${_fcSelectedModules.length===1?'15 cards do modulo':_fcSelectedModules.length===2?'8 + 7 cards':'5 cards de cada'}</div>
 </div>`;
 
@@ -2753,14 +2837,32 @@ div.innerHTML=`<div class="fcs-scroll"><div class="fcs-inner" style="display:fle
 <div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--text)">${fc.results.mid}</div><div class="fcs-stat-label" style="color:var(--dim)">🤔 Quase</div></div>
 <div class="fcs-stat" style="border-color:rgba(255,107,107,.2)"><div class="fcs-stat-num" style="color:var(--red)">${fc.results.wrong}</div><div class="fcs-stat-label" style="color:var(--red)">❌ Errei</div></div>
 </div>
+<div id="fcSaveDeckArea" style="margin-bottom:12px;width:100%">
+${!fc.deckId?`<div style="display:flex;gap:8px"><input id="fcDeckNameInput" type="text" value="${(fc.title||'').replace(/"/g,'&quot;')}" placeholder="Nome do deck..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box"><button onclick="_doSaveDeck()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--green);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">💾 Salvar</button></div>`:`<div style="font-size:12px;color:var(--green);font-weight:600;text-align:center">✓ Deck salvo</div>`}
+</div>
 <div style="display:flex;flex-direction:column;gap:10px;width:100%">
 ${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
 <button onclick="restartFlashcards()" style="padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🔁 Refazer</button>
 <button onclick="_regenerateFlashcards()" style="padding:14px;border-radius:12px;border:1px solid rgba(108,92,231,.3);background:var(--accent-bg);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">✨ Gerar novos cards</button>
-<button onclick="closeFlashcards()" style="padding:12px;border-radius:12px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">🧹 Limpar e voltar</button>
+<button onclick="_saveAndClose()" style="padding:12px;border-radius:12px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">← Voltar</button>
 </div>
 </div></div>`;
 document.body.appendChild(div);
+}
+
+async function _doSaveDeck(){
+const name=(document.getElementById('fcDeckNameInput')?.value||'').trim()||fcState?.title||'Flashcards';
+const docId=await _saveFlashDeck(name);
+if(docId){fcState.deckId=docId;_renderFlashcardComplete();}
+}
+async function _saveAndClose(){
+if(fcState&&!fcState.deckId){
+  const name=fcState.title||'Flashcards';
+  await _saveFlashDeck(name);
+}else if(fcState?.deckId){
+  await _updateFlashDeckResults();
+}
+closeFlashcards();
 }
 
 function retryWrongCards(){
