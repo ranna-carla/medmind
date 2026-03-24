@@ -1804,8 +1804,18 @@ rh+=`<div class="rank-card ${isYou?'rank-you':''}"><div class="rank-pos ${pc}">$
 if(!rh)rh='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Nenhum jogador ainda. Seja o primeiro!</div>';
 rl.innerHTML=rh;
 }
+let rankTab='global';
 function renderRanking(){
-let h='<div style="margin-bottom:16px"><div class="mod-section-title">🏆 Ranking Global — Tempo Real</div><div style="font-size:11px;color:var(--dim);margin-top:-6px;margin-bottom:12px">Todos os usuários do MedMind</div></div>';
+let h='<div style="display:flex;gap:8px;margin-bottom:16px">';
+h+=`<button onclick="rankTab='global';renderRanking()" style="flex:1;padding:8px;border-radius:100px;border:1px solid ${rankTab==='global'?'var(--accent)':'rgba(255,255,255,.08)'};background:${rankTab==='global'?'var(--accent-bg)':'transparent'};color:${rankTab==='global'?'var(--accent2)':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer">🌐 Global</button>`;
+h+=`<button onclick="rankTab='friends';renderRanking()" style="flex:1;padding:8px;border-radius:100px;border:1px solid ${rankTab==='friends'?'var(--accent)':'rgba(255,255,255,.08)'};background:${rankTab==='friends'?'var(--accent-bg)':'transparent'};color:${rankTab==='friends'?'var(--accent2)':'var(--dim)'};font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer">👥 Amigos</button>`;
+h+='</div>';
+if(rankTab==='friends'){
+h+='<div id="rankList"></div>';
+document.getElementById('rankContent').innerHTML=h;
+renderFriendsRanking();
+}else{
+h+='<div style="font-size:11px;color:var(--dim);margin-bottom:12px">Todos os usuários do MedMind — tempo real</div>';
 h+='<div id="rankList"><div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Carregando ranking...</div></div>';
 document.getElementById('rankContent').innerHTML=h;
 if(unsubRanking){unsubRanking();unsubRanking=null;}
@@ -1816,8 +1826,29 @@ console.warn('Ranking users error, trying ranking collection:',e);
 if(unsubRanking){unsubRanking();unsubRanking=null;}
 unsubRanking=db.collection('ranking').orderBy('xp','desc').limit(50).onSnapshot(snap=>{
 renderRankingList(snap);
-},e2=>{console.error('Ranking fallback error:',e2);const rl=document.getElementById('rankList');if(rl)rl.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Erro ao carregar ranking. Tente novamente.</div>';});
+},e2=>{console.error('Ranking fallback error:',e2);const rl=document.getElementById('rankList');if(rl)rl.innerHTML='<div style="text-align:center;color:var(--dim);padding:40px;font-size:13px">Erro ao carregar ranking.</div>';});
 });
+}
+}
+
+function renderFriendsRanking(){
+const rl=document.getElementById('rankList');if(!rl)return;
+let list=[...friendsData.map(f=>({name:f.name||'Anônimo',xp:f.xp||0,uid:f.uid,photoURL:f.photoURL||'',avatar:f.avatar||''}))];
+list.push({name:S.name,xp:S.xp,uid:currentUser?.uid,photoURL:S.photoURL||'',avatar:S.avatar||''});
+list.sort((a,b)=>b.xp-a.xp);
+if(list.length<=1&&!friendsData.length){
+rl.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--dim)"><div style="font-size:40px;margin-bottom:10px">👥</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Adicione amigos para competir!</div><div style="font-size:12px;line-height:1.6">Compartilhe seu código <strong style="color:var(--accent2)">${S.friendCode||''}</strong><br>no perfil para convidar amigos</div></div>';
+return;
+}
+let rh='';
+list.forEach((p,i)=>{
+const pos=i+1;const isYou=currentUser&&p.uid===currentUser.uid;
+const pc=pos===1?'p1':pos===2?'p2':pos===3?'p3':'pn';
+const md=pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
+const lv=getLevel(p.xp||0);
+rh+=`<div class="rank-card ${isYou?'rank-you':''}"><div class="rank-pos ${pc}">${md||pos}</div>${getUserAvatar({size:36,photoURL:p.photoURL,avatar:p.avatar,xp:p.xp})}<div class="rank-info"><div class="rank-name">${p.name}${isYou?' (você)':''}</div><div class="rank-xp">${p.xp} XP · ${lv.emoji} ${lv.name}</div></div></div>`;
+});
+rl.innerHTML=rh;
 }
 
 function renderProfile(){const lv=getLevel(S.xp);
