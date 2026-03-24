@@ -10,7 +10,7 @@ const ROOT = __dirname;
 // Lê API key — tenta imagex-ris primeiro, depois medmind
 function getAnthropicKey() {
   try {
-    const env = fs.readFileSync('/Users/Shared/projects/imagex-ris/.env', 'utf8');
+    const env = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
     const m = env.match(/ANTHROPIC_API_KEY=(.+)/);
     if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
   } catch {}
@@ -107,6 +107,8 @@ Dado o conteúdo de um PDF, gere o CONTEÚDO do módulo em JSON.
 Retorne APENAS o JSON puro, sem markdown, sem blocos de código, sem explicações.
 NÃO inclua o campo "quiz" — ele será gerado separadamente.
 
+REGRA CRÍTICA: Todas as aspas dentro de valores string devem ser escapadas como \\". Nunca use aspas duplas não-escapadas dentro de strings JSON.
+
 Schema exato:
 {
   "id": "slug-unico-kebab-case",
@@ -119,21 +121,21 @@ Schema exato:
     {"id":"resumo","label":"📖 Resumo"},
     {"id":"SECID","label":"EMOJI Nome da Seção"}
   ],
-  "resumoHTML": "HTML rico com <h2>, <h3>, <p>, <strong>, <em>, <table>, <ul>, <li>. Mínimo 400 palavras.",
+  "resumoHTML": "<h2>Titulo</h2><p>Texto com <strong>destaques</strong></p><ul><li>item</li></ul>. Use apenas tags simples: h2,h3,p,strong,em,ul,li,table,tr,td,th. Mínimo 300 palavras. NÃO use aspas duplas no HTML — use aspas simples para atributos.",
   "sections": {
     "SECID": {
       "theme": "esp",
       "title": "Título da Seção",
       "flow": ["Etapa 1","Etapa 2","Etapa 3"],
       "cards": [
-        {"t":"Título do card","b":"<p>Conteúdo detalhado com <strong>destaques</strong>.</p>"}
+        {"t":"Título do card","b":"<p>Conteúdo com <strong>destaques</strong>. Use aspas simples em atributos HTML.</p>"}
       ]
     }
   }
 }
 
 Themes disponíveis: esp, ovo, fec, s1, s2, temp, perda, termo, febr, gast
-Use temas variados. Mínimo 3 sections. resumoHTML completo com tabelas e listas.`;
+Use temas variados. Mínimo 3 sections. Seja direto e objetivo no conteúdo.`;
 
 // Prompt 2: gera apenas o quiz
 const PROMPT_QUIZ = `Você é um especialista em questões médicas para o app MedMind.
@@ -156,13 +158,13 @@ Retorne APENAS o JSON puro, sem markdown, sem blocos de código.
 
 Schema exato:
 {
-  "obj": [10 objetos: {"q":"Pergunta?","opts":["opção A","opção B","opção C","opção D"],"a":INDEX_CORRETO_0a3,"exp":"Explicação breve","topic":"NOME_DO_TEMA"}],
-  "esc": [3 objetos: {"q":"Pergunta dissertativa?","ans":"Resposta modelo completa","topic":"NOME_DO_TEMA"}],
-  "pra": [2 objetos: {"q":"Caso clínico detalhado com anamnese, exames e achados...","ans":"Conduta completa e raciocínio clínico","topic":"NOME_DO_TEMA"}]
+  "obj": [7 objetos: {"q":"Pergunta?","opts":["opção A","opção B","opção C","opção D","opção E"],"a":INDEX_CORRETO_0a4,"exp":"Explicação breve","topic":"NOME_DO_TEMA"}],
+  "esc": [5 objetos: {"q":"Pergunta dissertativa?","ans":"Resposta modelo completa","topic":"NOME_DO_TEMA"}],
+  "pra": [3 objetos: {"q":"Caso clínico detalhado com anamnese, exames e achados...","ans":"Conduta completa e raciocínio clínico","topic":"NOME_DO_TEMA"}]
 }
 
-IMPORTANTE: 'a' deve ser o ÍNDICE numérico (0,1,2 ou 3) da opção correta. NÃO use letras.
-As opções NÃO devem ter prefixo "A.", "B." etc. Apenas o texto.`;
+IMPORTANTE: 'a' deve ser o ÍNDICE numérico (0,1,2,3 ou 4) da opção correta. NÃO use letras.
+As opções NÃO devem ter prefixo "A.", "B." etc. Apenas o texto. Devem ser EXATAMENTE 5 opções.`;
 
 // Prompt 4: gera flashcards para memorização
 const PROMPT_FLASHCARDS = `Você é um especialista em criar flashcards de alta qualidade para estudantes de medicina.
@@ -316,9 +318,38 @@ function parseAnthropicJSON(result, label) {
   if (result?.type === 'error') throw new Error('Anthropic API (' + label + '): ' + (result?.error?.message || JSON.stringify(result.error)));
   const raw = result?.content?.[0]?.text || '';
   if (!raw) throw new Error('Resposta vazia (' + label + '). stop_reason: ' + (result?.stop_reason || '?'));
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('JSON ausente (' + label + '). Início: ' + raw.slice(0, 200));
-  return JSON.parse(match[0].replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, ' '));
+  // Remove markdown code fences e caracteres de controle
+  let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  cleaned = cleaned.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, ' ');
+  // Tenta parse direto primeiro
+  try { return JSON.parse(cleaned); } catch {}
+  // Fallback: extrai objeto JSON
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('JSON ausente (' + label + '). Início da resposta: ' + raw.slice(0, 300));
+  try { return JSON.parse(match[0]); } catch {}
+  // Corrige trailing commas
+  let fixed = match[0].replace(/,\s*([\]}])/g, '$1');
+  try { return JSON.parse(fixed); } catch {}
+  // Corrige aspas não-escapadas dentro de valores HTML (problema comum com resumoHTML)
+  fixed = fixed.replace(/"([^"]*)":\s*"([\s\S]*?)(?:"\s*[,}\]])/g, (m, key, val) => {
+    // Se o valor contém aspas internas não-escapadas, escapa-as
+    const escapedVal = val.replace(/(?<!\\)"/g, '\\"');
+    return '"' + key + '":"' + escapedVal + '"' + m.slice(-1);
+  });
+  try { return JSON.parse(fixed); } catch {}
+  // Último recurso: tenta reparar JSON truncado adicionando fechamentos
+  let repaired = fixed;
+  const openBraces = (repaired.match(/\{/g) || []).length;
+  const closeBraces = (repaired.match(/\}/g) || []).length;
+  const openBrackets = (repaired.match(/\[/g) || []).length;
+  const closeBrackets = (repaired.match(/\]/g) || []).length;
+  // Fecha strings abertas
+  if ((repaired.match(/"/g) || []).length % 2 !== 0) repaired += '"';
+  for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += ']';
+  for (let i = 0; i < openBraces - closeBraces; i++) repaired += '}';
+  try { return JSON.parse(repaired); } catch (e) {
+    throw new Error('JSON inválido (' + label + '): ' + e.message + '. Início: ' + match[0].slice(0, 200));
+  }
 }
 
 // Processa a geração em background — conteúdo e quiz em PARALELO
@@ -328,25 +359,27 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 
     const ctx = `Disciplina: ${discipline}\nTítulo: ${title}\n${professor ? 'Professor(a): ' + professor + '\n' : ''}${observations ? 'Observações: ' + observations + '\n' : ''}`;
 
+    // Trunca texto se muito grande (evita respostas truncadas)
+    const truncatedText = pdfText && pdfText.length > 60000 ? pdfText.slice(0, 60000) + '\n\n[...texto truncado por limite]' : pdfText;
     // Monta a parte do PDF (igual para as duas chamadas)
     const pdfPart = pdfBase64
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } }
-      : { type: 'text', text: 'Conteúdo do PDF:\n\n' + pdfText };
+      : { type: 'text', text: 'Conteúdo do PDF:\n\n' + truncatedText };
 
     // Dispara as duas chamadas ao mesmo tempo
     const contentPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 14000, system: PROMPT_CONTENT,
+      model: 'claude-sonnet-4-6', max_tokens: 16000, system: PROMPT_CONTENT,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere o módulo para:\n' + ctx }] }]
     }).then(r => {
-      if (r?.stop_reason === 'max_tokens') throw new Error('Conteúdo muito extenso — tente um PDF menor ou com menos páginas.');
+      if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso — envie apenas as páginas mais importantes da aula.');
       jobs[jobId].progress = 'Conteúdo pronto, aguardando questões...'; return r;
     });
 
     const quizPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, system: PROMPT_QUIZ,
+      model: 'claude-sonnet-4-6', max_tokens: 10000, system: PROMPT_QUIZ,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere as questões para:\n' + ctx }] }]
     }).then(r => {
-      if (r?.stop_reason === 'max_tokens') throw new Error('Quiz truncado — tente um PDF menor.');
+      if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso para gerar todas as questões — envie um PDF menor.');
       jobs[jobId].progress = 'Questões prontas, aguardando conteúdo...'; return r;
     });
 
@@ -398,10 +431,10 @@ async function processRevisionJob(jobId, topics) {
         messages: [{ role: 'user', content: `Gere o quiz de revisão para o tema: ${topic}` }]
       });
       const data = parseAnthropicJSON(result, 'revisão ' + topic);
-      // Normaliza objetivas
+      // Normaliza objetivas (5 opções A-E)
       (data.obj || []).forEach(q => {
         const ans = q.ans !== undefined ? q.ans : q.a;
-        allObj.push({ q: q.q, opts: (q.opts || []).map(o => String(o).replace(/^[A-Da-d][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: q.exp || '', topic: q.topic || topic });
+        allObj.push({ q: q.q, opts: (q.opts || []).map(o => String(o).replace(/^[A-Ea-e][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: q.exp || '', topic: q.topic || topic });
       });
       (data.esc || []).forEach(q => allEsc.push({ ...q, topic: q.topic || topic }));
       (data.pra || []).forEach(q => allPra.push({ ...q, topic: q.topic || topic }));
@@ -554,6 +587,36 @@ http.createServer(async (req, res) => {
       res.end(JSON.stringify({ success: true, docId }));
     } catch (err) {
       console.error('[save-module]', err.message);
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // POST /save-revision — salva revisão no Firestore
+  if (req.method === 'POST' && req.url === '/save-revision') {
+    try {
+      const body = await readBody(req);
+      if (!body.idToken || !body.userId || !body.questions) {
+        res.writeHead(400, CORS);
+        res.end(JSON.stringify({ error: 'idToken, userId e questions são obrigatórios' }));
+        return;
+      }
+      const doc = {
+        userId:    body.userId,
+        title:     body.title || 'Revisão',
+        modules:   body.modules || [],
+        questions: body.questions,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      const result = await saveFirestore('medmind-pro', 'revisions', doc, body.idToken);
+      const docId = result.name ? result.name.split('/').pop() : null;
+      console.log('[save-revision] OK docId=' + docId + ' userId=' + body.userId);
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({ success: true, docId }));
+    } catch (err) {
+      console.error('[save-revision]', err.message);
       res.writeHead(500, CORS);
       res.end(JSON.stringify({ error: err.message }));
     }

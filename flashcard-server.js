@@ -13,7 +13,7 @@ function getKey() {
     if (m) return m[1].trim();
   } catch {}
   try {
-    const e = fs.readFileSync('/Users/Shared/projects/imagex-ris/.env', 'utf8');
+    const e = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
     const m = e.match(/ANTHROPIC_API_KEY=(.+)/);
     if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
   } catch {}
