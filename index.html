@@ -1669,12 +1669,26 @@ S.lastDailyDate=today;S.xp+=xp;saveState(S);
 /* Salvar no Firestore ranking diário */
 if(currentUser)db.collection('dailyChallenge').doc(today).collection('results').doc(currentUser.uid).set({name:S.name,score:score,total:questions.length,time:elapsed,xp:S.xp,timestamp:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(()=>{});
 overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px 16px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
-<div style="font-size:48px;margin-bottom:12px">📅</div>
+<div style="font-size:48px;margin-bottom:12px">${score===questions.length?'🏆':score>=3?'⭐':'📅'}</div>
 <div style="font-size:20px;font-weight:700;margin-bottom:4px">Desafio Diário</div>
-<div style="font-size:14px;color:var(--dim);margin-bottom:20px">${score}/${questions.length} · ${elapsed}s · +${xp} XP${multiplier>1?' ('+multiplier+'x)':''}</div>
-<div style="font-size:14px;color:var(--gold);font-weight:600;margin-bottom:20px">🔥 ${S.dailyStreak} dias consecutivos</div>
+<div style="font-size:14px;color:var(--dim);margin-bottom:8px">${score}/${questions.length} · ${elapsed}s · +${xp} XP${multiplier>1?' ('+multiplier+'x)':''}</div>
+<div style="font-size:14px;color:var(--gold);font-weight:600;margin-bottom:16px">🔥 ${S.dailyStreak} dias consecutivos</div>
+<div id="daily-ranking" style="width:100%;max-width:340px;margin-bottom:16px"><div style="font-size:11px;color:var(--dim)">Carregando ranking...</div></div>
 <button onclick="document.getElementById('daily-overlay').remove();renderChallenges()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
 </div>`;
+/* Buscar ranking diário */
+if(currentUser){db.collection('dailyChallenge').doc(today).collection('results').orderBy('score','desc').orderBy('time','asc').limit(20).get().then(snap=>{
+const rk=document.getElementById('daily-ranking');if(!rk)return;
+if(snap.empty){rk.innerHTML='<div style="font-size:11px;color:var(--dim)">Seja o primeiro hoje!</div>';return;}
+let rh='<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent2)">🏅 Ranking de Hoje</div>';
+snap.docs.forEach((d,i)=>{const r=d.data();const isYou=d.id===currentUser.uid;
+rh+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${isYou?'var(--accent-bg)':'var(--bg2)'};border-radius:8px;margin-bottom:4px;border:1px solid ${isYou?'var(--accent-border)':'rgba(255,255,255,.04)'}">
+<div style="font-size:12px;font-weight:700;width:20px;text-align:center;color:${i<3?'var(--gold)':'var(--dim)'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</div>
+<div style="flex:1;font-size:12px;font-weight:${isYou?'700':'500'};text-align:left">${r.name||'Anônimo'}${isYou?' (você)':''}</div>
+<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--dim)">${r.score}/${r.total} · ${r.time}s</div>
+</div>`;});
+rh+='';rk.innerHTML=rh;
+}).catch(()=>{const rk=document.getElementById('daily-ranking');if(rk)rk.innerHTML='';});}
 return;
 }
 const q=questions[qIdx];
@@ -1695,8 +1709,13 @@ qh+=`</div></div>`;
 overlay.innerHTML=qh;
 }
 window.dailyAnswer=function(chosen,correct){
+const btns=overlay.querySelectorAll('.daily-opt');
+btns.forEach((b,i)=>{b.disabled=true;b.style.pointerEvents='none';
+if(i===correct){b.style.background='rgba(46,213,115,.18)';b.style.borderColor='var(--green)';b.style.color='var(--green)';}
+else if(i===chosen&&chosen!==correct){b.style.background='rgba(252,66,123,.15)';b.style.borderColor='var(--red)';b.style.color='var(--red)';}
+});
 if(chosen===correct)score++;
-qIdx++;render();
+setTimeout(()=>{qIdx++;render();},700);
 };
 render();
 document.body.appendChild(overlay);
@@ -1803,7 +1822,15 @@ let qh=`<div style="padding:max(16px,var(--safe-top)) 16px;flex:1;display:flex;f
 qh+=`</div></div>`;
 overlay.innerHTML=qh;
 }
-window.duelAnswer=function(c,a){if(c===a)score++;qIdx++;render();};
+window.duelAnswer=function(c,a){
+const btns=overlay.querySelectorAll('button[onclick^="duelAnswer"]');
+btns.forEach((b,i)=>{b.disabled=true;b.style.pointerEvents='none';
+if(i===a){b.style.background='rgba(46,213,115,.18)';b.style.borderColor='var(--green)';b.style.color='var(--green)';}
+else if(i===c&&c!==a){b.style.background='rgba(252,66,123,.15)';b.style.borderColor='var(--red)';b.style.color='var(--red)';}
+});
+if(c===a)score++;
+setTimeout(()=>{qIdx++;render();},700);
+};
 render();document.body.appendChild(overlay);
 }
 
@@ -1817,13 +1844,35 @@ const myScore=d.scores?.[currentUser.uid];
 if(myScore===null||myScore===undefined){_playDuelQuiz(duelId,d.questions||[],d.moduleName);return;}
 alert('Aguardando oponente terminar...');return;
 }
-/* done — mostrar resultado */
+/* done — mostrar resultado lado a lado */
 const scores=d.scores||{};
 const myScore=scores[currentUser.uid]||0;
 const oppId=d.creatorId===currentUser.uid?d.opponentId:d.creatorId;
 const oppScore=scores[oppId]||0;
-const oppName=d.creatorId===currentUser.uid?d.opponentName:d.creatorName;
-alert(`Resultado:\nVocê: ${myScore}/${(d.questions||[]).length}\n${oppName}: ${oppScore}/${(d.questions||[]).length}\n\n${myScore>oppScore?'🏆 Você venceu!':myScore<oppScore?'😔 Você perdeu':'🤝 Empate!'}`);
+const oppName=d.creatorId===currentUser.uid?(d.opponentName||'Oponente'):(d.creatorName||'Desafiante');
+const total=(d.questions||[]).length;
+const result=myScore>oppScore?'🏆 Você venceu!':myScore<oppScore?'😔 Você perdeu':'🤝 Empate!';
+const ov=document.createElement('div');ov.id='duel-result-overlay';
+ov.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .3s ease';
+ov.innerHTML=`<div style="text-align:center;padding:20px">
+<div style="font-size:40px;margin-bottom:8px">⚔️</div>
+<div style="font-size:18px;font-weight:700;margin-bottom:4px">${d.moduleName||'Duelo'}</div>
+<div style="font-size:22px;font-weight:700;margin:16px 0 20px;color:${myScore>oppScore?'var(--green)':myScore<oppScore?'var(--red)':'var(--gold)'}">${result}</div>
+<div style="display:flex;gap:16px;justify-content:center;margin-bottom:24px">
+<div style="background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:14px;padding:16px 24px;min-width:110px">
+<div style="font-size:11px;color:var(--dim);margin-bottom:4px">Você</div>
+<div style="font-size:28px;font-weight:700;color:var(--accent2)">${myScore}</div>
+<div style="font-size:11px;color:var(--dim)">de ${total}</div>
+</div>
+<div style="background:var(--bg2);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px 24px;min-width:110px">
+<div style="font-size:11px;color:var(--dim);margin-bottom:4px">${oppName}</div>
+<div style="font-size:28px;font-weight:700;color:var(--pink)">${oppScore}</div>
+<div style="font-size:11px;color:var(--dim)">de ${total}</div>
+</div>
+</div>
+<button onclick="document.getElementById('duel-result-overlay').remove()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+</div>`;
+document.body.appendChild(ov);
 }
 
 /* === G3: Aceitar duelo por URL === */
