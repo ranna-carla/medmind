@@ -151,20 +151,20 @@ Schema exato:
   }
 }`;
 
-// Prompt 3: gera quiz de revisão para um tema livre
-const PROMPT_REVISION = `Você é um especialista em criar questões de revisão para estudantes de medicina.
-Dado um tema/tópico, gere um quiz de revisão em JSON.
-Retorne APENAS o JSON puro, sem markdown, sem blocos de código.
+// Prompt 3: revisão — 3 prompts especializados (rodam em paralelo)
+const PROMPT_REV_OBJ = `Gere EXATAMENTE 7 questões objetivas de medicina sobre o tema dado.
+Retorne APENAS JSON puro: [{"q":"Pergunta?","opts":["A","B","C","D","E"],"a":INDEX_0a4,"exp":"Explicação"}]
+'a' é ÍNDICE numérico (0-4). Opções SEM prefixo "A.". EXATAMENTE 5 opções por questão.`;
 
-Schema exato:
-{
-  "obj": [7 objetos: {"q":"Pergunta?","opts":["opção A","opção B","opção C","opção D","opção E"],"a":INDEX_CORRETO_0a4,"exp":"Explicação breve","topic":"NOME_DO_TEMA"}],
-  "esc": [5 objetos: {"q":"Pergunta dissertativa?","ans":"Resposta modelo completa","topic":"NOME_DO_TEMA"}],
-  "pra": [3 objetos: {"q":"Caso clínico detalhado com anamnese, exames e achados...","ans":"Conduta completa e raciocínio clínico","topic":"NOME_DO_TEMA"}]
-}
+const PROMPT_REV_ESC = `Gere EXATAMENTE 5 questões dissertativas de medicina sobre o tema dado.
+Retorne APENAS JSON puro: [{"q":"Pergunta?","ans":"Resposta modelo completa"}]`;
 
-IMPORTANTE: 'a' deve ser o ÍNDICE numérico (0,1,2,3 ou 4) da opção correta. NÃO use letras.
-As opções NÃO devem ter prefixo "A.", "B." etc. Apenas o texto. Devem ser EXATAMENTE 5 opções.`;
+const PROMPT_REV_PRA = `Gere EXATAMENTE 3 casos clínicos de medicina sobre o tema dado.
+Cada caso: anamnese breve, exames, achados. Pergunta sobre conduta.
+Retorne APENAS JSON puro: [{"q":"Caso clínico...","ans":"Conduta e raciocínio clínico"}]`;
+
+// Compat: mantém PROMPT_REVISION para referência
+const PROMPT_REVISION = PROMPT_REV_OBJ;
 
 // Prompt 4: gera flashcards para memorização
 const PROMPT_FLASHCARDS = `Gere flashcards de recall rápido para estudantes de medicina.
@@ -419,47 +419,65 @@ function _truncStr(s, max) { return s && s.length > max ? s.slice(0, max) + '...
 
 async function processRevisionJob(jobId, topics) {
   try {
-    jobs[jobId].progress = `Gerando ${topics.length} tópico(s) em paralelo...`;
+    const totalSteps = topics.length * 3; // 3 chamadas por tópico (obj, esc, pra)
+    let stepsDone = 0;
+    jobs[jobId].progress = `Gerando ${topics.length} tópico(s)...`;
+    jobs[jobId].stepsDone = 0;
+    jobs[jobId].stepsTotal = totalSteps;
     jobs[jobId].topicsDone = 0;
     jobs[jobId].topicsTotal = topics.length;
 
-    // Dispara TODAS as chamadas em paralelo (não sequencial)
-    const promises = topics.map((topic, i) =>
-      callAnthropic({
-        model: 'claude-sonnet-4-6', max_tokens: 6000, temperature: 0, system: PROMPT_REVISION,
-        messages: [{ role: 'user', content: `Gere o quiz de revisão para o tema: ${topic}` }]
-      }).then(result => {
-        jobs[jobId].topicsDone = (jobs[jobId].topicsDone || 0) + 1;
-        jobs[jobId].progress = `Tópico pronto: ${topic} (${jobs[jobId].topicsDone}/${topics.length})`;
-        return { topic, result };
-      }).catch(err => {
-        console.error('[revision topic ' + topic + ']', err.message);
-        return { topic, error: err.message };
-      })
-    );
+    // 9 chamadas em paralelo: 3 tipos × N tópicos
+    const allPromises = [];
+    for (const topic of topics) {
+      // Objetivas
+      allPromises.push(
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2500, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] })
+        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
+        .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'obj', error: e.message }; })
+      );
+      // Dissertativas
+      allPromises.push(
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] })
+        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
+        .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'esc', error: e.message }; })
+      );
+      // Casos clínicos
+      allPromises.push(
+        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 2000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] })
+        .then(r => { stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
+        .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'pra', error: e.message }; })
+      );
+    }
 
-    const results = await Promise.all(promises);
+    const results = await Promise.all(allPromises);
 
     const allObj = [], allEsc = [], allPra = [];
     let successCount = 0;
-    for (const { topic, result, error } of results) {
+    for (const { topic, type, result, error } of results) {
       if (error || !result) continue;
       try {
-        const data = parseAnthropicJSON(result, 'revisão ' + topic);
-        (data.obj || []).forEach(q => {
-          const ans = q.ans !== undefined ? q.ans : q.a;
-          allObj.push({ q: _truncStr(q.q, 300), opts: (q.opts || []).map(o => String(o).replace(/^[A-Ea-e][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: _truncStr(q.exp, 200), topic: q.topic || topic });
-        });
-        (data.esc || []).forEach(q => allEsc.push({ q: _truncStr(q.q, 300), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
-        (data.pra || []).forEach(q => allPra.push({ q: _truncStr(q.q, 500), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
+        const raw = parseAnthropicJSON(result, type + ' ' + topic);
+        const items = Array.isArray(raw) ? raw : (raw[type] || raw.obj || raw.esc || raw.pra || []);
+        if (type === 'obj') {
+          items.forEach(q => {
+            const ans = q.ans !== undefined ? q.ans : q.a;
+            allObj.push({ q: _truncStr(q.q, 300), opts: (q.opts || []).map(o => String(o).replace(/^[A-Ea-e][\.\)]\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, exp: _truncStr(q.exp, 200), topic: q.topic || topic });
+          });
+        } else if (type === 'esc') {
+          items.forEach(q => allEsc.push({ q: _truncStr(q.q, 300), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
+        } else {
+          items.forEach(q => allPra.push({ q: _truncStr(q.q, 500), ans: _truncStr(q.ans, 500), topic: q.topic || topic }));
+        }
         successCount++;
-      } catch (e) { console.error('[revision parse ' + topic + ']', e.message); }
+      } catch (e) { console.error('[revision parse ' + type + ' ' + topic + ']', e.message); }
     }
 
-    if (successCount === 0) throw new Error('Nenhum tópico gerado com sucesso. Tente novamente.');
+    if (successCount === 0) throw new Error('Nenhum tópico gerado. Tente novamente.');
 
     jobs[jobId].status = 'ready';
     jobs[jobId].progress = 'Pronto!';
+    jobs[jobId].stepsDone = totalSteps;
     jobs[jobId].topicsDone = topics.length;
     jobs[jobId].quiz = { obj: allObj, esc: allEsc, pra: allPra };
   } catch (err) {
@@ -574,7 +592,7 @@ http.createServer(async (req, res) => {
     const job = jobs[jobMatch[1]];
     if (!job) { res.writeHead(404, CORS); res.end(JSON.stringify({ error: 'Job não encontrado' })); return; }
     res.writeHead(200, CORS);
-    res.end(JSON.stringify({ status: job.status, progress: job.progress, module: job.module, quiz: job.quiz, cards: job.cards, error: job.error, topicsDone: job.topicsDone, topicsTotal: job.topicsTotal }));
+    res.end(JSON.stringify({ status: job.status, progress: job.progress, module: job.module, quiz: job.quiz, cards: job.cards, error: job.error, topicsDone: job.topicsDone, topicsTotal: job.topicsTotal, stepsDone: job.stepsDone, stepsTotal: job.stepsTotal }));
     return;
   }
 

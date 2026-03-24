@@ -2267,8 +2267,8 @@ try{
   const data=await resp.json();
   if(data.status==='processing'){
     revGeneratingJob.progress=data.progress||'Processando...';
-    revGeneratingJob.topicsDone=data.topicsDone||0;
-    revGeneratingJob.topicsTotal=data.topicsTotal||revGeneratingJob.topics.length;
+    revGeneratingJob.stepsDone=data.stepsDone||0;
+    revGeneratingJob.stepsTotal=data.stepsTotal||revGeneratingJob.topics.length*3;
     _updateGeneratingUI();
     setTimeout(_pollRevisionJob,1500);
   }else if(data.status==='ready'){
@@ -2282,22 +2282,28 @@ try{
 
 function _updateGeneratingUI(){
 if(!revGeneratingJob)return;
-const prog=document.getElementById('revGenProgress');
 const txt=document.getElementById('revGenText');
 const bar=document.getElementById('revGenBar');
+const pctEl=document.getElementById('revGenPct');
 if(txt)txt.textContent=revGeneratingJob.progress;
-const pct=revGeneratingJob.topicsTotal?Math.round((revGeneratingJob.topicsDone/revGeneratingJob.topicsTotal)*100):10;
-if(bar)bar.style.width=Math.max(5,pct)+'%';
+const steps=revGeneratingJob.stepsTotal||1;
+const done=revGeneratingJob.stepsDone||0;
+const pct=Math.round((done/steps)*100);
+if(bar)bar.style.width=Math.max(3,pct)+'%';
+if(pctEl)pctEl.textContent=done+'/'+steps+' etapas · '+pct+'%';
 }
 
 function _renderRevisionGenerating(){
-const pct=revGeneratingJob?Math.round((revGeneratingJob.topicsDone/Math.max(1,revGeneratingJob.topicsTotal))*100):5;
+const steps=revGeneratingJob?.stepsTotal||revGeneratingJob?.topics?.length*3||3;
+const done=revGeneratingJob?.stepsDone||0;
+const pct=Math.round((done/steps)*100);
 return`<div style="text-align:center;padding:40px 16px">
 <div class="brain-pulse" style="font-size:56px;margin-bottom:16px">🧠</div>
 <div style="font-size:18px;font-weight:700;margin-bottom:6px">Gerando revisao...</div>
-<div id="revGenText" style="font-size:13px;color:var(--dim);margin-bottom:16px">${revGeneratingJob?.progress||'Iniciando...'}</div>
-<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="revGenBar" style="height:100%;width:${Math.max(5,pct)}%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width .5s ease"></div></div>
-<div style="font-size:11px;color:var(--dim2)">Nao feche esta tela</div>
+<div id="revGenText" style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5">${revGeneratingJob?.progress||'Iniciando...'}</div>
+<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:8px"><div id="revGenBar" style="height:100%;width:${Math.max(3,pct)}%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;transition:width .4s ease"></div></div>
+<div id="revGenPct" style="font-size:11px;color:var(--dim2);font-family:'JetBrains Mono',monospace;margin-bottom:16px">${done}/${steps} etapas · ${pct}%</div>
+<div style="font-size:10px;color:var(--dim2)">📝 Objetivas · ✍️ Dissertativas · 🩺 Casos clinicos</div>
 </div>`;
 }
 
