@@ -2952,6 +2952,8 @@ let sugPdfFile=null;
 let sugVisibility='private';
 
 function renderSugerir(){
+/* Se há um job de geração em andamento, não re-renderiza o form */
+if(_gerarJobId&&document.getElementById('gerar-overlay')){return;}
 sugPdfFile=null;sugVisibility='private';
 let h=`<div style="text-align:center;padding:16px 0 12px">
 <div style="font-size:40px;margin-bottom:6px">🤖</div>
@@ -2993,13 +2995,6 @@ ${DISCIPLINES_LIST.map(d=>'<option value="'+d+'">'+d+'</option>').join('')}
 
 h+=`<button onclick="gerarModulo()" id="btnGerar" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">✨ Gerar Módulo com IA</button>`;
 
-h+=`<div id="gerarProgress" style="display:none;margin-top:16px;background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(108,92,231,.2);text-align:center">
-<div style="font-size:32px;margin-bottom:8px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
-<div style="font-size:14px;font-weight:600;margin-bottom:4px">Gerando seu módulo...</div>
-<div id="gerarStatus" style="font-size:12px;color:var(--dim)">Enviando PDF para IA</div>
-<div style="height:4px;background:var(--bg3);border-radius:2px;margin-top:12px;overflow:hidden"><div id="gerarBar" style="height:100%;width:10%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:2px;transition:width 1s ease"></div></div>
-</div>`;
-
 h+=`<div style="background:linear-gradient(135deg,rgba(108,92,231,.08),rgba(232,67,147,.06));border:1px solid rgba(108,92,231,.15);border-radius:var(--r);padding:12px 14px;margin-top:14px">
 <div style="font-size:11px;color:var(--dim);line-height:1.7">✅ Resumo completo · Abas temáticas · 15 questões objetivas · 7 dissertativas · 5 casos clínicos · Gerado em ~2 min</div></div>`;
 
@@ -3032,95 +3027,107 @@ if(!titleInput.value){titleInput.value=file.name.replace(/\.pdf$/i,'').replace(/
 function handleSugPDF(input){applyPdfFile(input.files[0]);}
 function handleSugPDFDrop(e){applyPdfFile(e.dataTransfer?.files?.[0]);}
 
-function setGerarStatus(msg,pct){
-const el=document.getElementById('gerarStatus');const bar=document.getElementById('gerarBar');
-if(el)el.textContent=msg;if(bar)bar.style.width=pct+'%';}
+let _gerarJobId=null; /* job em andamento — impede re-render destruir o progresso */
 
 async function gerarModulo(){
-const disc=document.getElementById('sugDisc').value;
-const titulo=document.getElementById('sugTitulo').value.trim();
-const prof=document.getElementById('sugProf').value.trim();
-const obs=document.getElementById('sugObs').value.trim();
+const disc=document.getElementById('sugDisc')?.value;
+const titulo=(document.getElementById('sugTitulo')?.value||'').trim();
+const prof=(document.getElementById('sugProf')?.value||'').trim();
+const obs=(document.getElementById('sugObs')?.value||'').trim();
 if(!sugPdfFile){alert('Selecione o PDF da aula');return;}
 if(!disc){alert('Selecione a disciplina');return;}
 if(!titulo){alert('Digite o título da aula');return;}
-const btn=document.getElementById('btnGerar');
-const prog=document.getElementById('gerarProgress');
-btn.disabled=true;btn.style.opacity='0.6';prog.style.display='block';
+if(!currentUser){alert('Faça login para gerar módulos');return;}
+
+/* Troca toda a tela para overlay de progresso (não é destruído ao navegar) */
+const overlay=document.createElement('div');overlay.id='gerar-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .3s ease;padding:20px';
+overlay.innerHTML=`
+<div style="text-align:center;max-width:340px;width:100%">
+<div id="gerarEmoji" style="font-size:48px;margin-bottom:12px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
+<div style="font-size:18px;font-weight:700;margin-bottom:4px">Gerando seu módulo...</div>
+<div id="gerarStatus2" style="font-size:13px;color:var(--dim);margin-bottom:16px">Lendo PDF...</div>
+<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="gerarBar2" style="height:100%;width:5%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width 1s ease"></div></div>
+<div style="font-size:11px;color:var(--dim2)">Não feche esta tela</div>
+<button id="gerarCancelBtn" onclick="document.getElementById('gerar-overlay')?.remove();_gerarJobId=null" style="margin-top:20px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>
+</div>`;
+document.body.appendChild(overlay);
+
+function setStatus(msg,pct){
+  const el=document.getElementById('gerarStatus2');const bar=document.getElementById('gerarBar2');
+  if(el)el.textContent=msg;if(bar)bar.style.width=pct+'%';
+}
+
 try{
-/* 1. Ler PDF como base64 diretamente no browser */
-setGerarStatus('Lendo PDF...',15);
+/* 1. Ler PDF como base64 */
+setStatus('Lendo PDF...',10);
 const pdfBase64=await new Promise((resolve,reject)=>{
   const reader=new FileReader();
   reader.onload=e=>resolve(e.target.result.split(',')[1]);
-  reader.onerror=reject;
+  reader.onerror=()=>reject(new Error('Erro ao ler o PDF'));
   reader.readAsDataURL(sugPdfFile);
 });
 
-/* 2. Iniciar job de geração — retorna jobId imediatamente */
-setGerarStatus('Iniciando geração com IA...',25);
-const startResp=await fetch('/generate-module',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({pdfBase64,discipline:disc,title:titulo,professor:prof,observations:obs})
-});
+/* 2. Iniciar job */
+setStatus('Enviando para IA...',20);
+let startResp;
+try{
+  startResp=await fetch('/generate-module',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({pdfBase64,discipline:disc,title:titulo,professor:prof,observations:obs})
+  });
+}catch(netErr){throw new Error('Sem conexão com o servidor. Verifique se está online.');}
+if(!startResp.ok)throw new Error('Servidor retornou erro '+startResp.status);
 const startData=await startResp.json();
 if(!startData.jobId)throw new Error(startData.error||'Erro ao iniciar geração');
 const jobId=startData.jobId;
+_gerarJobId=jobId;
 
-/* 3. Polling a cada 4s até o job terminar */
-const msgs=[
-  [30,'IA lendo o PDF...'],
-  [40,'Analisando o conteúdo...'],
-  [50,'Criando resumo...'],
-  [60,'Gerando questões...'],
-  [70,'Montando casos clínicos...'],
-  [80,'Finalizando módulo...'],
-  [88,'Quase pronto...']
-];
-let msgIdx=0;
+/* 3. Polling com retry */
+setStatus('IA processando o PDF...',25);
+const msgs=['IA lendo o PDF...','Analisando conteúdo...','Criando resumo...','Gerando questões...','Montando casos clínicos...','Finalizando módulo...','Quase pronto...'];
+let msgIdx=0;let retryCount=0;
 const moduleData=await new Promise((resolve,reject)=>{
   const poll=setInterval(async()=>{
+    if(!document.getElementById('gerar-overlay')){clearInterval(poll);reject(new Error('Cancelado'));return;}
     try{
-      if(msgIdx<msgs.length){setGerarStatus(msgs[msgIdx][1],msgs[msgIdx][0]);msgIdx++;}
+      if(msgIdx<msgs.length){setStatus(msgs[msgIdx],25+msgIdx*9);msgIdx++;}
       const r=await fetch('/job-status/'+jobId);
+      if(!r.ok)throw new Error('status '+r.status);
       const d=await r.json();
+      retryCount=0; /* reset retry on success */
       if(d.status==='ready'){clearInterval(poll);resolve(d.module);}
       else if(d.status==='error'){clearInterval(poll);reject(new Error(d.error||'Erro na geração'));}
-      else if(d.progress){setGerarStatus(d.progress,Math.min(88,30+msgIdx*8));}
-    }catch(e){clearInterval(poll);reject(e);}
+      else if(d.progress){setStatus(d.progress,Math.min(88,25+msgIdx*9));}
+    }catch(e){
+      retryCount++;
+      if(retryCount>=5){clearInterval(poll);reject(new Error('Conexão perdida. Tente novamente.'));}
+      /* else silently retry next interval */
+    }
   },4000);
 });
 
-/* 4. Salvar módulo no Firestore via servidor (bypassa regras de segurança do client) */
-setGerarStatus('Salvando módulo...',93);
+/* 4. Salvar no Firestore */
+setStatus('Salvando módulo...',92);
 const idToken=await currentUser.getIdToken();
 const saveResp=await fetch('/save-module',{
   method:'POST',
   headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-    idToken,
-    userId:currentUser.uid,
-    userName:S.name||'Estudante',
-    userEmail:currentUser.email||'',
-    discipline:disc,
-    title:titulo,
-    professor:prof,
-    visibility:sugVisibility,
-    module:moduleData
-  })
+  body:JSON.stringify({idToken,userId:currentUser.uid,userName:S.name||'Estudante',userEmail:currentUser.email||'',discipline:disc,title:titulo,professor:prof,visibility:sugVisibility,module:moduleData})
 });
 const saveData=await saveResp.json();
 if(!saveData.success)throw new Error(saveData.error||'Erro ao salvar');
 
-/* 5. Tela de sucesso */
-setGerarStatus('Pronto!',100);
+/* 5. Sucesso! */
+setStatus('Pronto!',100);
+_gerarJobId=null;sugPdfFile=null;
 await loadGeneratedModules();
-document.getElementById('libraryContent').innerHTML=`
-<div style="text-align:center;padding:50px 16px">
+overlay.innerHTML=`
+<div style="text-align:center;padding:20px;max-width:360px">
 <div style="font-size:64px;margin-bottom:12px">🎉</div>
 <div style="font-size:20px;font-weight:700;margin-bottom:6px">Módulo gerado!</div>
-<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px"><strong style="color:var(--text)">${moduleData.name}</strong></div>
+<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px"><strong style="color:var(--text)">${moduleData.name||titulo}</strong></div>
 <div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:8px">${disc} · ${sugVisibility==='public'?'🌐 Público':'🔒 Privado'}</div>
 <div style="background:var(--bg2);border-radius:12px;padding:12px;margin:12px 0 20px;display:flex;justify-content:space-around;border:1px solid rgba(255,255,255,.05)">
 <div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--green)">${(moduleData.quiz?.obj||[]).length}</div><div style="font-size:10px;color:var(--dim)">objetivas</div></div>
@@ -3129,15 +3136,24 @@ document.getElementById('libraryContent').innerHTML=`
 <div style="text-align:center"><div style="font-size:16px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:10px;color:var(--dim)">seções</div></div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
-<button onclick="homeFilter='meus';loadGeneratedModules().then(()=>{goPage('home');})" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
-<button onclick="renderSugerir()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Gerar outro módulo</button>
+<button onclick="document.getElementById('gerar-overlay')?.remove();homeFilter='meus';loadGeneratedModules().then(()=>{goPage('home');})" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
+<button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Gerar outro módulo</button>
 </div>
 </div>`;
-sugPdfFile=null;
 }catch(e){
 console.error('Erro ao gerar:',e);
-prog.style.display='none';btn.disabled=false;btn.style.opacity='1';
-document.getElementById('libraryContent').innerHTML+=`<div style="margin-top:12px;padding:12px 14px;background:var(--red-bg);border:1px solid var(--red);border-radius:10px;font-size:13px;color:var(--red)">❌ Erro: ${e.message}</div>`;
+_gerarJobId=null;
+const ov=document.getElementById('gerar-overlay');
+if(ov){
+  ov.innerHTML=`<div style="text-align:center;padding:20px;max-width:340px">
+  <div style="font-size:48px;margin-bottom:12px">😔</div>
+  <div style="font-size:18px;font-weight:700;margin-bottom:8px">Erro na geração</div>
+  <div style="font-size:13px;color:var(--red);line-height:1.5;margin-bottom:20px;background:var(--red-bg);padding:12px;border-radius:10px;border:1px solid rgba(252,66,123,.2)">${e.message}</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+  <button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Tentar novamente</button>
+  <button onclick="document.getElementById('gerar-overlay')?.remove()" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Fechar</button>
+  </div></div>`;
+}else{alert('❌ Erro: '+e.message);}
 }}
 
 /* === ADMIN: ver solicitações no perfil === */
