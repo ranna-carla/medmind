@@ -1684,10 +1684,16 @@ if(myArenas.length){
 h+=`<div class="mod-section-title">🏆 Arenas</div>`;
 myArenas.forEach(a=>{
 const parts=(a.participantIds||[]).length;
-const isExpiring=a.endDate&&(a.endDate.toDate?a.endDate.toDate():new Date(a.endDate))-Date.now()<86400000;
+const endD=a.endDate?(a.endDate.toDate?a.endDate.toDate():new Date(a.endDate)):null;
+const isExpiring=endD&&(endD-Date.now())<86400000&&Date.now()<endD;
+const isExpired=endD&&Date.now()>endD;
+const myScore=(a.scores||{})[currentUser?.uid]||0;
+const today=new Date().toISOString().slice(0,10);
+const playedToday=a.participants?.[currentUser?.uid]?.lastRound===today;
 h+=`<div class="mod-card" onclick="openArenaDetail('${a.id}')" ${isExpiring?'style="border-color:var(--red);animation:pulse 1.5s infinite"':''}>
-<div class="mod-icon" style="background:var(--gold-bg);color:var(--gold)">🏆</div>
-<div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${parts} participantes${isExpiring?' · <span style="color:var(--red)">Encerra em breve!</span>':''}</div></div>
+<div class="mod-icon" style="background:${isExpired?'var(--bg3)':'var(--gold-bg)'};color:var(--gold)">${a.moduleIcon||'🏆'}</div>
+<div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${a.moduleName?a.moduleName+' · ':''}${parts} jogadores · ${myScore} pts${isExpired?' · <span style="color:var(--dim)">Encerrada</span>':isExpiring?' · <span style="color:var(--red)">Último dia!</span>':''}</div></div>
+${!isExpired&&!playedToday?'<div style="color:var(--green);font-size:11px;font-weight:600">Jogar ▶</div>':''}
 </div>`;
 });
 }
@@ -1993,90 +1999,278 @@ history.replaceState(null,'',location.pathname);
 }
 
 /* === G4: Arena (Grupos) === */
+let _arenaSelectedModules=[];
+let _arenaInvitedFriends=[];
+
 function createArena(){
+_arenaSelectedModules=[];
+_arenaInvitedFriends=[];
+const allMods=[...MODULES.filter(m=>!m.locked),...generatedModulesCache.filter(m=>m.module).map(m=>({id:m.docId,name:m.module.name,icon:m.module.icon||'📄',quiz:m.module.quiz}))];
 const overlay=document.createElement('div');overlay.id='arena-create';
 overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
-overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px">
+
+function renderArenaForm(){
+const selIds=_arenaSelectedModules.map(m=>m.id);
+let h=`<div style="padding:max(16px,var(--safe-top)) 16px 100px">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
 <button onclick="document.getElementById('arena-create').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
 <div style="font-size:16px;font-weight:700;flex:1">🏆 Criar Arena</div>
 </div>
-<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Nome da Arena</label>
+
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:var(--dim)">NOME DA ARENA</label>
 <input id="arenaName" placeholder="Ex: Grupo Embriologia P2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:14px">
-<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Duração</label>
-<select id="arenaDuration" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:14px">
+
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:var(--dim)">DURAÇÃO</label>
+<select id="arenaDuration" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:16px">
 <option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="14">14 dias</option>
 </select>
-<button onclick="finalizeArena()" style="width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Criar e Convidar</button>
-</div>`;
+
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;color:var(--dim)">MÓDULO (escolha 1)</label>`;
+if(_arenaSelectedModules.length){
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
+  _arenaSelectedModules.forEach(m=>{
+    h+=`<span style="background:var(--accent-bg);color:var(--accent2);font-size:11px;font-weight:600;padding:4px 10px;border-radius:100px;display:inline-flex;align-items:center;gap:4px">${m.icon||'📄'} ${m.name} <span onclick="_arenaSelectedModules=_arenaSelectedModules.filter(x=>x.id!=='${m.id}');renderArenaForm()" style="cursor:pointer;margin-left:4px">✕</span></span>`;
+  });
+  h+=`</div>`;
+}
+allMods.forEach(m=>{
+  const sel=selIds.includes(m.id);
+  const hasQuiz=m.quiz?.obj?.length>0;
+  if(!hasQuiz)return;
+  h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}${_arenaSelectedModules.length>=1&&!sel?';opacity:.4;pointer-events:none':''}" onclick="_arenaToggleMod('${m.id}','${(m.name||'').replace(/'/g,"\\'")}','${m.icon||'📄'}');renderArenaForm()">
+  <div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.icon||'📄'}</div>
+  <div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${(m.quiz?.obj||[]).length} questões</div></div>
+  <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
+  </div>`;
+});
+
+/* Convidar amigos */
+if(friendsData.length){
+  h+=`<label style="font-size:12px;font-weight:600;display:block;margin-top:16px;margin-bottom:8px;color:var(--dim)">CONVIDAR AMIGOS (opcional)</label>`;
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
+  friendsData.forEach(f=>{
+    const inv=_arenaInvitedFriends.includes(f.uid);
+    h+=`<div onclick="_arenaToggleFriend('${f.uid}');renderArenaForm()" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:100px;border:1.5px solid ${inv?'var(--accent)':'rgba(255,255,255,.08)'};background:${inv?'var(--accent-bg)':'var(--bg2)'};cursor:pointer">
+    <div style="width:24px;height:24px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;overflow:hidden">${f.photoURL?`<img src="${f.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(f.avatar||f.name?.charAt(0)||'?')}</div>
+    <span style="font-size:12px;font-weight:600;color:${inv?'var(--accent2)':'var(--text)'}">${f.name||'Amigo'}</span>
+    ${inv?'<span style="font-size:10px;color:var(--accent2)">✓</span>':''}
+    </div>`;
+  });
+  h+=`</div>`;
+}
+
+const canCreate=_arenaSelectedModules.length>0;
+h+=`<button onclick="finalizeArena()" style="width:100%;padding:14px;border-radius:12px;border:none;background:${canCreate?'linear-gradient(135deg,var(--accent),var(--pink))':'var(--bg3)'};color:${canCreate?'#fff':'var(--dim)'};font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:${canCreate?'pointer':'not-allowed'};margin-top:8px" ${canCreate?'':'disabled'}>Criar Arena${_arenaInvitedFriends.length?' e Convidar '+_arenaInvitedFriends.length+' amigo(s)':''}</button>`;
+h+=`</div>`;
+overlay.innerHTML=h;
+}
+
+window.renderArenaForm=renderArenaForm;
+renderArenaForm();
 document.body.appendChild(overlay);
 }
 
+function _arenaToggleMod(id,name,icon){
+const idx=_arenaSelectedModules.findIndex(m=>m.id===id);
+if(idx>=0)_arenaSelectedModules.splice(idx,1);
+else _arenaSelectedModules=[{id,name,icon}];
+}
+function _arenaToggleFriend(uid){
+const idx=_arenaInvitedFriends.indexOf(uid);
+if(idx>=0)_arenaInvitedFriends.splice(idx,1);
+else _arenaInvitedFriends.push(uid);
+}
+
 async function finalizeArena(){
+if(!_arenaSelectedModules.length){_showToast('Selecione um módulo');return;}
 const name=(document.getElementById('arenaName')?.value||'').trim()||'Arena';
 const days=parseInt(document.getElementById('arenaDuration')?.value||'7');
 document.getElementById('arena-create')?.remove();
 const code=Math.random().toString(36).substring(2,8).toUpperCase();
+const selMod=_arenaSelectedModules[0];
+/* Extrair questões do módulo */
+const mod=MODULES.find(m=>m.id===selMod.id)||generatedModulesCache.find(m=>m.docId===selMod.id)?.module;
+if(!mod||!mod.quiz?.obj){_showToast('Módulo sem questões');return;}
+const allQ=[...mod.quiz.obj];
 try{
+const participants={[currentUser.uid]:{name:S.name,photo:S.photoURL||S.avatar||'',score:0,rounds:0,lastRound:''}};
 await db.collection('challenges').add({
 name:name,code:code,type:'group',status:'active',
 creatorId:currentUser.uid,creatorName:S.name,
-participantIds:[currentUser.uid],invited:[],
-moduleNames:[],scores:{[currentUser.uid]:0},
+participantIds:[currentUser.uid],
+invited:_arenaInvitedFriends,
+moduleId:selMod.id,moduleName:selMod.name,moduleIcon:selMod.icon||'📄',
+questions:allQ,
+participants:participants,
+scores:{[currentUser.uid]:0},
 createdAt:firebase.firestore.FieldValue.serverTimestamp(),
 endDate:new Date(Date.now()+days*86400000)
 });
 const link='https://medmind.win7med.com.br?arena='+code;
-const text='Entre na minha arena no MedMind! 🏆 '+link;
+const text=`🏆 Entre na minha arena "${name}" no MedMind! Tema: ${selMod.name} — ${link}`;
 if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
-else{try{await navigator.clipboard.writeText(text);alert('📋 Link da arena copiado!');}catch(e){prompt('Link:',link);}}
+else{try{await navigator.clipboard.writeText(text);_showToast('📋 Link da arena copiado!');}catch(e){prompt('Link:',link);}}
 renderChallenges();
-}catch(e){console.error('Erro criar arena:',e);alert('Erro ao criar arena');}
+}catch(e){console.error('Erro criar arena:',e);_showToast('Erro ao criar arena');}
 }
 
 async function joinArena(arenaId){
 try{
 await db.collection('challenges').doc(arenaId).update({
 participantIds:firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
-['scores.'+currentUser.uid]:0
+['scores.'+currentUser.uid]:0,
+['participants.'+currentUser.uid]:{name:S.name,photo:S.photoURL||S.avatar||'',score:0,rounds:0,lastRound:''}
 });
+_showToast('Entrou na arena!');
 renderChallenges();
-}catch(e){console.error('Erro entrar arena:',e);alert('Erro');}
+}catch(e){console.error('Erro entrar arena:',e);_showToast('Erro ao entrar');}
 }
 
-function openArenaDetail(arenaId){
+async function openArenaDetail(arenaId){
 const a=userArenas.find(x=>x.id===arenaId);if(!a)return;
-const participants=a.participantIds||[];
+const pIds=a.participantIds||[];
 const scores=a.scores||{};
-const sorted=participants.map(uid=>({uid,score:scores[uid]||0})).sort((a,b)=>b.score-a.score);
+const pData=a.participants||{};
+/* Buscar nomes de quem não está em participants (legado) */
+const namesMap={};
+for(const uid of pIds){
+  if(pData[uid]?.name){namesMap[uid]=pData[uid];}
+  else if(uid===currentUser?.uid){namesMap[uid]={name:S.name,photo:S.photoURL||S.avatar||'',score:scores[uid]||0};}
+  else{
+    const fd=friendsData.find(f=>f.uid===uid);
+    namesMap[uid]={name:fd?.name||'Jogador',photo:fd?.photoURL||fd?.avatar||'',score:scores[uid]||0};
+  }
+}
+const sorted=pIds.map(uid=>({uid,name:namesMap[uid]?.name||'Jogador',photo:namesMap[uid]?.photo||'',score:scores[uid]||0,rounds:pData[uid]?.rounds||0})).sort((a,b)=>b.score-a.score);
+const endDate=a.endDate?(a.endDate.toDate?a.endDate.toDate():new Date(a.endDate)):null;
+const daysLeft=endDate?Math.max(0,Math.ceil((endDate-Date.now())/86400000)):0;
+const isExpired=endDate&&Date.now()>endDate;
+const today=new Date().toISOString().slice(0,10);
+const myData=pData[currentUser?.uid]||{};
+const playedToday=myData.lastRound===today;
+
 const overlay=document.createElement('div');overlay.id='arena-detail';
 overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
-let h=`<div style="padding:max(16px,var(--safe-top)) 16px">
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+let h=`<div style="padding:max(16px,var(--safe-top)) 16px 100px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
 <button onclick="document.getElementById('arena-detail').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">←</button>
-<div style="font-size:16px;font-weight:700;flex:1">${a.name||'Arena'}</div>
+<div style="flex:1"><div style="font-size:16px;font-weight:700">${a.name||'Arena'}</div>
+<div style="font-size:11px;color:var(--dim)">${a.moduleName||''} · ${pIds.length} jogadores · ${isExpired?'<span style="color:var(--red)">Encerrada</span>':`${daysLeft}d restantes`}</div></div>
 </div>`;
+
+/* Botão Jogar Rodada */
+if(!isExpired){
+  if(playedToday){
+    h+=`<div style="padding:14px;border-radius:12px;background:var(--bg2);border:1px solid rgba(255,255,255,.06);text-align:center;margin-bottom:16px">
+    <div style="font-size:13px;font-weight:600;color:var(--green)">✅ Rodada de hoje completa!</div>
+    <div style="font-size:11px;color:var(--dim);margin-top:4px">Volte amanhã para jogar de novo</div></div>`;
+  }else{
+    h+=`<button onclick="playArenaRound('${arenaId}')" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">▶ Jogar Rodada (10 questões)</button>`;
+  }
+}
+
 /* Pódio top 3 */
 if(sorted.length>=3){
-h+=`<div style="display:flex;align-items:flex-end;justify-content:center;gap:12px;margin-bottom:20px">
-<div style="text-align:center;order:1"><div style="font-size:28px">🥈</div><div style="font-size:12px;font-weight:600">${sorted[1].score} XP</div></div>
-<div style="text-align:center;order:0"><div style="font-size:36px">🥇</div><div style="font-size:14px;font-weight:700">${sorted[0].score} XP</div></div>
-<div style="text-align:center;order:2"><div style="font-size:24px">🥉</div><div style="font-size:12px;font-weight:600">${sorted[2].score} XP</div></div>
+h+=`<div style="display:flex;align-items:flex-end;justify-content:center;gap:16px;margin-bottom:20px;padding:16px 0">
+<div style="text-align:center;order:1">
+<div style="width:40px;height:40px;border-radius:50%;background:var(--bg3);margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden">${sorted[1].photo?`<img src="${sorted[1].photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:sorted[1].name.charAt(0)}</div>
+<div style="font-size:20px">🥈</div><div style="font-size:11px;font-weight:600;color:var(--text)">${sorted[1].name}</div><div style="font-size:11px;color:var(--dim)">${sorted[1].score} pts</div></div>
+<div style="text-align:center;order:0">
+<div style="width:50px;height:50px;border-radius:50%;background:var(--bg3);margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid var(--gold);overflow:hidden">${sorted[0].photo?`<img src="${sorted[0].photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:sorted[0].name.charAt(0)}</div>
+<div style="font-size:28px">🥇</div><div style="font-size:13px;font-weight:700;color:var(--gold)">${sorted[0].name}</div><div style="font-size:12px;font-weight:600;color:var(--gold)">${sorted[0].score} pts</div></div>
+<div style="text-align:center;order:2">
+<div style="width:36px;height:36px;border-radius:50%;background:var(--bg3);margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:13px;overflow:hidden">${sorted[2].photo?`<img src="${sorted[2].photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:sorted[2].name.charAt(0)}</div>
+<div style="font-size:18px">🥉</div><div style="font-size:11px;font-weight:600;color:var(--text)">${sorted[2].name}</div><div style="font-size:11px;color:var(--dim)">${sorted[2].score} pts</div></div>
 </div>`;
 }
-/* Lista */
+
+/* Lista completa */
+h+=`<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Ranking</div>`;
 sorted.forEach((p,i)=>{
 const isYou=p.uid===currentUser?.uid;
 h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${isYou?'var(--accent-bg)':'var(--bg2)'};border-radius:10px;margin-bottom:6px;border:1px solid ${isYou?'var(--accent-border)':'rgba(255,255,255,.05)'}">
-<div style="font-size:14px;font-weight:700;width:24px;text-align:center;color:var(--dim)">${i+1}</div>
-<div style="flex:1;font-size:13px;font-weight:600">${isYou?S.name+' (você)':p.uid}</div>
-<div style="font-size:12px;font-weight:600;color:var(--accent2);font-family:'JetBrains Mono',monospace">${p.score} XP</div>
+<div style="font-size:14px;font-weight:700;width:24px;text-align:center;color:${i<3?'var(--gold)':'var(--dim)'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</div>
+<div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:12px;overflow:hidden;flex-shrink:0">${p.photo?`<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:p.name.charAt(0)}</div>
+<div style="flex:1"><div style="font-size:13px;font-weight:600">${p.name}${isYou?' (você)':''}</div><div style="font-size:10px;color:var(--dim)">${p.rounds} rodada${p.rounds!==1?'s':''} jogadas</div></div>
+<div style="font-size:13px;font-weight:700;color:var(--accent2);font-family:'JetBrains Mono',monospace">${p.score}</div>
 </div>`;
 });
+
 /* Share */
 h+=`<button onclick="shareArena('${a.code||''}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bg2);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;border:1px solid var(--accent-border)">📤 Convidar mais pessoas</button>`;
 h+=`</div>`;
 overlay.innerHTML=h;
+document.body.appendChild(overlay);
+}
+
+/* Jogar rodada da arena: 10 questões aleatórias do módulo */
+function playArenaRound(arenaId){
+document.getElementById('arena-detail')?.remove();
+const a=userArenas.find(x=>x.id===arenaId);if(!a||!a.questions?.length)return;
+const allQ=[...a.questions];_shuffle(allQ);
+const questions=allQ.slice(0,Math.min(10,allQ.length));
+const overlay=document.createElement('div');overlay.id='arena-quiz-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:65;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let qIdx=0,score=0,startTime=Date.now();
+function render(){
+if(qIdx>=questions.length){
+  const elapsed=Math.round((Date.now()-startTime)/1000);
+  const xp=score*XP_CORRECT+(score===questions.length?30:0);
+  S.xp+=xp;saveState(S);
+  /* Atualizar score na arena */
+  const today=new Date().toISOString().slice(0,10);
+  const prevScore=(a.scores||{})[currentUser.uid]||0;
+  db.collection('challenges').doc(arenaId).update({
+    ['scores.'+currentUser.uid]:prevScore+score,
+    ['participants.'+currentUser.uid+'.score']:prevScore+score,
+    ['participants.'+currentUser.uid+'.rounds']:firebase.firestore.FieldValue.increment(1),
+    ['participants.'+currentUser.uid+'.lastRound']:today
+  }).catch(e=>console.error('Erro atualizar arena:',e));
+  /* Atualizar local para refletir imediatamente */
+  if(a.scores)a.scores[currentUser.uid]=prevScore+score;
+  if(a.participants&&a.participants[currentUser.uid]){
+    a.participants[currentUser.uid].score=prevScore+score;
+    a.participants[currentUser.uid].rounds=(a.participants[currentUser.uid].rounds||0)+1;
+    a.participants[currentUser.uid].lastRound=today;
+  }
+  overlay.innerHTML=`<div style="padding:max(16px,var(--safe-top)) 16px;text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+  <div style="font-size:48px;margin-bottom:12px">${score===questions.length?'🏆':score>=7?'⭐':'🏅'}</div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Rodada Completa!</div>
+  <div style="font-size:14px;color:var(--dim);margin-bottom:4px">${a.name||'Arena'}</div>
+  <div style="font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:4px">${score}/${questions.length} acertos</div>
+  <div style="font-size:13px;color:var(--dim);margin-bottom:4px">${elapsed}s · +${xp} XP</div>
+  <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:20px">Seu total: ${prevScore+score} pts na arena</div>
+  <button onclick="document.getElementById('arena-quiz-overlay').remove();openArenaDetail('${arenaId}')" style="padding:14px 40px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Ver Ranking</button>
+  </div>`;
+  return;
+}
+const q=questions[qIdx];
+let qh=`<div style="padding:max(16px,var(--safe-top)) 16px 16px;flex:1;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+<button onclick="document.getElementById('arena-quiz-overlay').remove();openArenaDetail('${arenaId}')" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:14px;font-weight:700;flex:1">🏆 ${a.name||'Arena'}</div>
+<div style="font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace">${qIdx+1}/${questions.length}</div>
+</div>
+<div style="height:3px;background:var(--bg3);border-radius:2px;margin-bottom:20px"><div style="height:100%;width:${Math.round(qIdx/questions.length*100)}%;background:linear-gradient(90deg,var(--gold),var(--accent));border-radius:2px;transition:width .3s"></div></div>
+${q.tag?`<div style="font-size:10px;font-weight:600;color:var(--gold);background:rgba(249,202,36,.1);padding:3px 10px;border-radius:100px;display:inline-block;margin-bottom:10px;align-self:flex-start">${q.tag}</div>`:''}
+<div style="font-size:15px;font-weight:600;line-height:1.5;margin-bottom:20px">${q.q}</div>
+<div style="display:flex;flex-direction:column;gap:8px">`;
+(q.opts||[]).forEach((o,i)=>{
+  qh+=`<button class="arena-opt" onclick="arenaAnswer(${i},${q.ans})" style="text-align:left;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;line-height:1.4">${o}</button>`;
+});
+qh+=`</div></div>`;
+overlay.innerHTML=qh;
+}
+window.arenaAnswer=function(chosen,correct){
+const btns=overlay.querySelectorAll('.arena-opt');
+btns.forEach((b,i)=>{b.disabled=true;b.style.cursor='default';
+  if(i===correct)b.style.background='rgba(0,200,83,.15)',b.style.borderColor='var(--green)',b.style.color='var(--green)';
+  else if(i===chosen)b.style.background='rgba(255,107,107,.15)',b.style.borderColor='var(--red)',b.style.color='var(--red)';
+});
+if(chosen===correct)score++;
+setTimeout(()=>{qIdx++;render();},700);
+};
+render();
 document.body.appendChild(overlay);
 }
 
@@ -2085,14 +2279,14 @@ if(!code)return;
 const link='https://medmind.win7med.com.br?arena='+code;
 const text='Entre na arena MedMind! 🏆 '+link;
 if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
-else{try{await navigator.clipboard.writeText(text);alert('📋 Copiado!');}catch(e){}}
+else{try{await navigator.clipboard.writeText(text);_showToast('📋 Copiado!');}catch(e){}}
 }
 
 async function acceptArenaFromURL(code){
 if(!currentUser||!code)return;
 try{
 const snap=await db.collection('challenges').where('code','==',code.toUpperCase()).limit(1).get();
-if(snap.empty){alert('Arena não encontrada');return;}
+if(snap.empty){_showToast('Arena não encontrada');return;}
 const doc=snap.docs[0];
 await joinArena(doc.id);
 history.replaceState(null,'',location.pathname);
