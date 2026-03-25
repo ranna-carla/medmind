@@ -1733,10 +1733,12 @@ const isExpiring=endD&&(endD-Date.now())<86400000&&Date.now()<endD;
 const isExpired=endD&&Date.now()>endD;
 const myScore=(a.scores||{})[uid]||0;
 const playedToday=a.participants?.[uid]?.lastRound===today;
+const isMyArena=a.creatorId===uid;
 h+=`<div class="mod-card" onclick="openArenaDetail('${a.id}')" ${isExpiring?'style="border-color:var(--red);animation:pulse 1.5s infinite"':''}>
 <div class="mod-icon" style="background:${isExpired?'var(--bg3)':'var(--gold-bg)'};color:var(--gold)">${a.moduleIcon||'🏆'}</div>
 <div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${a.moduleName?a.moduleName+' · ':''}${parts} jogadores · ${myScore} pts${isExpired?' · <span style="color:var(--dim)">Encerrada</span>':isExpiring?' · <span style="color:var(--red)">Último dia!</span>':''}</div></div>
 ${!isExpired&&!playedToday?'<div style="color:var(--green);font-size:11px;font-weight:600">Jogar ▶</div>':''}
+${isMyArena?`<button onclick="event.stopPropagation();deleteArena('${a.id}')" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:4px;flex-shrink:0" title="Excluir">🗑</button>`:''}
 </div>`;
 });
 h+=`<div style="margin-bottom:14px"></div>`;
@@ -1758,6 +1760,7 @@ h+=`<div class="mod-card" onclick="openDuelDetail('${d.id}')" style="${won?'bord
 <div class="mod-icon" style="background:${won?'rgba(0,200,83,.1)':lost?'rgba(255,107,107,.1)':'var(--pink-bg)'};color:${won?'var(--green)':lost?'var(--red)':'var(--pink)'}">${won?'🏆':lost?'😤':'⚔️'}</div>
 <div class="mod-info"><div class="mod-name">${d.moduleName||'Duelo'}</div><div class="mod-desc">vs ${oppName} · ${statusLabel}${d.status==='done'&&myScore!=null?' · '+myScore+'-'+oppScore:''}</div></div>
 ${d.status==='done'&&lost?`<div onclick="event.stopPropagation();quickRevanche('${d.moduleId}','${(d.moduleName||'').replace(/'/g,"\\'")}','${oppName.replace(/'/g,"\\'")}')" style="padding:6px 10px;border-radius:100px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer">Revanche</div>`:''}
+${d.creatorId===uid?`<button onclick="event.stopPropagation();deleteDuel('${d.id}')" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:4px;flex-shrink:0" title="Excluir">🗑</button>`:''}
 </div>`;
 });
 h+=`<div style="margin-bottom:14px"></div>`;
@@ -1836,19 +1839,24 @@ finalizeDuel(modId,modName);
 function _listenChallenges(){
 if(!currentUser)return;
 if(unsubDuels)unsubDuels();
-unsubDuels=db.collection('duels').where('participantIds','array-contains',currentUser.uid).orderBy('createdAt','desc').limit(20).onSnapshot(snap=>{
+unsubDuels=db.collection('duels').where('participantIds','array-contains',currentUser.uid).limit(20).onSnapshot(snap=>{
 userDuels=snap.docs.map(d=>({id:d.id,...d.data()}));
-/* Update badge */
+userDuels.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
 const invCount=userDuels.filter(d=>d.opponentId===currentUser.uid&&d.status==='pending').length;
 _updateChallengeBadge(invCount);
+/* Re-renderizar se estiver na aba desafios */
+if(document.getElementById('challengesContent')&&document.querySelector('.bnav-btn[data-pg="challenges"].on'))renderChallenges();
 },e=>{console.warn('Duels listen error:',e);});
 if(unsubArenas)unsubArenas();
-unsubArenas=db.collection('challenges').where('participantIds','array-contains',currentUser.uid).orderBy('createdAt','desc').limit(20).onSnapshot(snap=>{
+unsubArenas=db.collection('challenges').where('participantIds','array-contains',currentUser.uid).limit(20).onSnapshot(snap=>{
 userArenas=snap.docs.map(d=>({id:d.id,...d.data()}));
+userArenas.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
+if(document.getElementById('challengesContent')&&document.querySelector('.bnav-btn[data-pg="challenges"].on'))renderChallenges();
 },e=>{
-/* Fallback: also try invited */
-unsubArenas=db.collection('challenges').orderBy('createdAt','desc').limit(30).onSnapshot(snap2=>{
+/* Fallback sem orderBy */
+unsubArenas=db.collection('challenges').limit(30).onSnapshot(snap2=>{
 userArenas=snap2.docs.map(d=>({id:d.id,...d.data()})).filter(a=>(a.participantIds||[]).includes(currentUser.uid)||(a.invited||[]).includes(currentUser.uid)||a.creatorId===currentUser.uid);
+userArenas.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
 },e2=>{console.warn('Arenas listen error:',e2);});
 });
 }
@@ -2169,7 +2177,7 @@ let h=`<div style="padding:max(16px,var(--safe-top)) 16px 100px">
 <option value="3">3 dias</option><option value="7" selected>7 dias</option><option value="14">14 dias</option>
 </select>
 
-<label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;color:var(--dim)">MÓDULO (escolha 1)</label>`;
+<label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;color:var(--dim)">MÓDULOS (até 3)</label>`;
 if(_arenaSelectedModules.length){
   h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">`;
   _arenaSelectedModules.forEach(m=>{
@@ -2181,7 +2189,7 @@ allMods.forEach(m=>{
   const sel=selIds.includes(m.id);
   const hasQuiz=m.quiz?.obj?.length>0;
   if(!hasQuiz)return;
-  h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}${_arenaSelectedModules.length>=1&&!sel?';opacity:.4;pointer-events:none':''}" onclick="_arenaToggleMod('${m.id}','${(m.name||'').replace(/'/g,"\\'")}','${m.icon||'📄'}');renderArenaForm()">
+  h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}${_arenaSelectedModules.length>=3&&!sel?';opacity:.4;pointer-events:none':''}" onclick="_arenaToggleMod('${m.id}','${(m.name||'').replace(/'/g,"\\'")}','${m.icon||'📄'}');renderArenaForm()">
   <div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.icon||'📄'}</div>
   <div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${(m.quiz?.obj||[]).length} questões</div></div>
   <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
@@ -2217,7 +2225,8 @@ document.body.appendChild(overlay);
 function _arenaToggleMod(id,name,icon){
 const idx=_arenaSelectedModules.findIndex(m=>m.id===id);
 if(idx>=0)_arenaSelectedModules.splice(idx,1);
-else _arenaSelectedModules=[{id,name,icon}];
+else if(_arenaSelectedModules.length<3)_arenaSelectedModules.push({id,name,icon});
+else{_showToast('Máximo 3 módulos');return;}
 }
 function _arenaToggleFriend(uid){
 const idx=_arenaInvitedFriends.indexOf(uid);
@@ -2231,11 +2240,14 @@ const name=(document.getElementById('arenaName')?.value||'').trim()||'Arena';
 const days=parseInt(document.getElementById('arenaDuration')?.value||'7');
 document.getElementById('arena-create')?.remove();
 const code=Math.random().toString(36).substring(2,8).toUpperCase();
-const selMod=_arenaSelectedModules[0];
-/* Extrair questões do módulo */
-const mod=MODULES.find(m=>m.id===selMod.id)||generatedModulesCache.find(m=>m.docId===selMod.id)?.module;
-if(!mod||!mod.quiz?.obj){_showToast('Módulo sem questões');return;}
-const allQ=[...mod.quiz.obj];
+/* Extrair questões de todos os módulos selecionados */
+let allQ=[];
+const modNames=[];const modIcons=[];
+_arenaSelectedModules.forEach(selMod=>{
+  const mod=MODULES.find(m=>m.id===selMod.id)||generatedModulesCache.find(m=>m.docId===selMod.id)?.module;
+  if(mod?.quiz?.obj){allQ=allQ.concat(mod.quiz.obj);modNames.push(selMod.name);modIcons.push(selMod.icon||'📄');}
+});
+if(!allQ.length){_showToast('Módulos sem questões');return;}
 try{
 const participants={[currentUser.uid]:{name:S.name,photo:S.photoURL||S.avatar||'',score:0,rounds:0,lastRound:''}};
 await db.collection('challenges').add({
@@ -2243,7 +2255,7 @@ name:name,code:code,type:'group',status:'active',
 creatorId:currentUser.uid,creatorName:S.name,
 participantIds:[currentUser.uid],
 invited:_arenaInvitedFriends,
-moduleId:selMod.id,moduleName:selMod.name,moduleIcon:selMod.icon||'📄',
+moduleId:_arenaSelectedModules.map(m=>m.id).join(','),moduleName:modNames.join(' · '),moduleIcon:modIcons[0]||'🏆',
 questions:allQ,
 participants:participants,
 scores:{[currentUser.uid]:0},
@@ -2251,7 +2263,7 @@ createdAt:firebase.firestore.FieldValue.serverTimestamp(),
 endDate:new Date(Date.now()+days*86400000)
 });
 const link='https://medmind.win7med.com.br?arena='+code;
-const text=`🏆 Entre na minha arena "${name}" no MedMind! Tema: ${selMod.name} — ${link}`;
+const text=`🏆 Entre na minha arena "${name}" no MedMind! Tema: ${modNames.join(', ')} — ${link}`;
 if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
 else{try{await navigator.clipboard.writeText(text);_showToast('📋 Link da arena copiado!');}catch(e){prompt('Link:',link);}}
 renderChallenges();
