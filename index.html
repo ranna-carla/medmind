@@ -2357,9 +2357,27 @@ if(isCreator){
 h+=`<div style="font-size:10px;color:var(--dim);text-align:center;margin-top:8px">Você é o admin desta arena</div>`;
 }
 
+/* ═══ CHAT ═══ */
+h+=`<div style="margin-top:20px">
+<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💬 Chat da Arena</div>
+<div id="arena-chat-msgs" style="background:var(--bg2);border-radius:12px;border:1px solid rgba(255,255,255,.05);padding:12px;min-height:100px;max-height:250px;overflow-y:auto;margin-bottom:10px">
+<div style="text-align:center;font-size:11px;color:var(--dim)">Carregando...</div>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="arena-quick-emojis">
+${['🔥','💪','😂','🏆','👏','😤','🤯','❤️','💀','🫡'].map(e=>`<button onclick="sendArenaMsg('${arenaId}','${e}')" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:var(--bg3);font-size:16px;cursor:pointer;flex-shrink:0">${e}</button>`).join('')}
+</div>
+<div style="display:flex;gap:8px">
+<input id="arena-chat-input" type="text" placeholder="Mensagem..." maxlength="200" onkeydown="if(event.key==='Enter')sendArenaMsg('${arenaId}')" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+<button onclick="sendArenaMsg('${arenaId}')" style="padding:10px 16px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Enviar</button>
+</div>
+</div>`;
+
 h+=`</div>`;
 overlay.innerHTML=h;
 document.body.appendChild(overlay);
+
+/* Iniciar listener do chat */
+_listenArenaChat(arenaId);
 }
 
 /* Jogar rodada da arena: 10 questões aleatórias do módulo */
@@ -2469,6 +2487,80 @@ try{
   _showToast('Duelo cancelado');
   renderChallenges();
 }catch(e){console.error('Erro excluir duelo:',e);_showToast('Erro ao excluir');}
+}
+
+/* ═══ CHAT DA ARENA ═══ */
+let _arenaChatUnsub=null;
+
+function _listenArenaChat(arenaId){
+if(_arenaChatUnsub)_arenaChatUnsub();
+_arenaChatUnsub=db.collection('challenges').doc(arenaId).collection('messages')
+  .orderBy('ts','desc').limit(50)
+  .onSnapshot(snap=>{
+    const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).reverse();
+    _renderArenaChatMsgs(msgs);
+  },e=>{console.error('Chat listen error:',e);});
+/* Limpar listener ao fechar overlay */
+const overlay=document.getElementById('arena-detail');
+if(overlay){
+  const obs=new MutationObserver(()=>{
+    if(!document.getElementById('arena-detail')){if(_arenaChatUnsub){_arenaChatUnsub();_arenaChatUnsub=null;}obs.disconnect();}
+  });
+  obs.observe(document.body,{childList:true});
+}
+}
+
+function _renderArenaChatMsgs(msgs){
+const el=document.getElementById('arena-chat-msgs');if(!el)return;
+if(!msgs.length){el.innerHTML='<div style="text-align:center;font-size:11px;color:var(--dim);padding:20px 0">Nenhuma mensagem ainda. Diga oi! 👋</div>';return;}
+let h='';
+let lastDate='';
+msgs.forEach(m=>{
+  const isMe=m.uid===currentUser?.uid;
+  const time=m.ts?.toDate?m.ts.toDate():m.ts?new Date(m.ts):new Date();
+  const dateStr=time.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const timeStr=time.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  if(dateStr!==lastDate){
+    h+=`<div style="text-align:center;font-size:9px;color:var(--dim);margin:8px 0 4px;font-weight:600">${dateStr}</div>`;
+    lastDate=dateStr;
+  }
+  const isEmoji=m.text&&m.text.length<=2&&/^\p{Emoji}/u.test(m.text);
+  if(isEmoji){
+    h+=`<div style="display:flex;${isMe?'justify-content:flex-end':'justify-content:flex-start'};margin-bottom:4px">
+    <div style="text-align:center">
+    ${!isMe?`<div style="font-size:9px;color:var(--dim);margin-bottom:1px">${m.name||''}</div>`:''}
+    <div style="font-size:32px;line-height:1.2">${m.text}</div>
+    <div style="font-size:8px;color:var(--dim)">${timeStr}</div>
+    </div></div>`;
+  }else{
+    h+=`<div style="display:flex;${isMe?'justify-content:flex-end':'justify-content:flex-start'};margin-bottom:6px">
+    <div style="max-width:80%;padding:8px 12px;border-radius:${isMe?'12px 12px 4px 12px':'12px 12px 12px 4px'};background:${isMe?'var(--accent-bg)':'var(--bg3)'};border:1px solid ${isMe?'var(--accent-border)':'rgba(255,255,255,.05)'}">
+    ${!isMe?`<div style="font-size:9px;font-weight:600;color:var(--accent2);margin-bottom:2px">${m.name||''}</div>`:''}
+    <div style="font-size:12px;color:var(--text);line-height:1.4;word-break:break-word">${_escapeHtml(m.text||'')}</div>
+    <div style="font-size:8px;color:var(--dim);text-align:right;margin-top:2px">${timeStr}</div>
+    </div></div>`;
+  }
+});
+el.innerHTML=h;
+el.scrollTop=el.scrollHeight;
+}
+
+function _escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function sendArenaMsg(arenaId,emoji){
+const input=document.getElementById('arena-chat-input');
+const text=emoji||(input?.value||'').trim();
+if(!text||!currentUser)return;
+if(input&&!emoji)input.value='';
+try{
+  await db.collection('challenges').doc(arenaId).collection('messages').add({
+    uid:currentUser.uid,
+    name:S.name||'Anônimo',
+    photo:S.photoURL||S.avatar||'',
+    text:text,
+    ts:firebase.firestore.FieldValue.serverTimestamp()
+  });
+}catch(e){console.error('Erro enviar msg:',e);_showToast('Erro ao enviar');}
 }
 
 async function acceptArenaFromURL(code){
