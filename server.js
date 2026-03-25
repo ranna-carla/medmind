@@ -167,16 +167,20 @@ Retorne APENAS JSON puro: [{"q":"Caso clínico...","ans":"Conduta e raciocínio 
 const PROMPT_REVISION = PROMPT_REV_OBJ;
 
 // Prompt 4: gera flashcards para memorização
-const PROMPT_FLASHCARDS = `Gere flashcards de recall rápido para estudantes de medicina.
+const PROMPT_FLASHCARDS = `Você é um especialista em criar flashcards médicos para estudantes de medicina.
+Crie flashcards de recall rápido a partir do conteúdo ou tema fornecido.
 
 REGRAS OBRIGATÓRIAS:
-- FRENTE: pergunta CURTA testando 1 conceito. Máximo 1-2 frases. Ex: "Qual estrutura induz a placa neural?", "Defeito do fechamento cranial do tubo neural?"
-- VERSO: resposta CURTA. Máximo 1-2 frases ou palavra-chave. Ex: "Notocorda", "Anencefalia", "3 Na+ pra fora, 2 K+ pra dentro"
-- NUNCA parágrafos longos. Flashcard testa recall, não explica conteúdo.
-- Perguntas diretas: "O que é X?", "Qual a função de Y?", "Onde ocorre Z?", "Qual o mecanismo de X?"
-- Varie: definições, mecanismos, classificações, valores, tratamentos
+- Cada flashcard testa UM conceito apenas
+- FRENTE: pergunta direta e curta (máximo 15 palavras). Formatos: "O que é X?", "Qual a função de Y?", "Onde ocorre Z?", "Qual a diferença entre X e Y?", "Cite 3 características de X"
+- VERSO: resposta objetiva e concisa (máximo 2 frases curtas ou lista com no máximo 4 itens). Sem parágrafos longos.
+- NUNCA usar formato de alternativas (A, B, C, D)
+- NUNCA usar "a resposta correta é..." ou "a alternativa correta é..."
+- Foque em: definições, funções, localizações, classificações, mecanismos, diferenças entre conceitos
+- Use linguagem de material didático brasileiro
+- Varie os tipos de pergunta para cobrir todo o conteúdo
 
-Retorne APENAS JSON puro: {"cards":[{"front":"pergunta curta","back":"resposta curta"}]}`;
+Retorne APENAS JSON puro: {"cards":[{"front":"pergunta","back":"resposta","tag":"subtema"}]}`;
 
 // Prompt 5: feedback individual para resposta do aluno
 const PROMPT_FEEDBACK = `Você é um professor de medicina avaliando a resposta de um aluno.
@@ -492,13 +496,20 @@ async function processRevisionJob(jobId, topics) {
 }
 
 // Processa geração de flashcards
-async function processFlashcardJob(jobId, topics, qty) {
+async function processFlashcardJob(jobId, topics, qty, moduleContent) {
   try {
-    jobs[jobId].progress = 'Gerando flashcards...';
-    const topicStr = topics.join(', ');
+    jobs[jobId].progress = 'Gerando flashcards com IA...';
+    let userMsg;
+    if (moduleContent) {
+      // Gerar a partir do conteúdo real do módulo
+      userMsg = `Gere ${qty} flashcards a partir deste conteúdo de estudo:\n\n${moduleContent}`;
+    } else {
+      // Tema livre
+      userMsg = `Gere ${qty} flashcards sobre: ${topics.join(', ')}`;
+    }
     const result = await callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, system: PROMPT_FLASHCARDS,
-      messages: [{ role: 'user', content: `Gere ${qty} flashcards sobre: ${topicStr}` }]
+      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: PROMPT_FLASHCARDS,
+      messages: [{ role: 'user', content: userMsg }]
     });
     const data = parseAnthropicJSON(result, 'flashcards');
     const cards = (data.cards || []).slice(0, qty);
@@ -733,7 +744,8 @@ http.createServer(async (req, res) => {
       if (topics.length === 0) { res.writeHead(400, CORS); res.end(JSON.stringify({ error: 'Informe pelo menos 1 tópico' })); return; }
       const jobId = 'fc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       jobs[jobId] = { status: 'processing', progress: 'Iniciando flashcards...', cards: null, error: null, createdAt: Date.now() };
-      processFlashcardJob(jobId, topics, qty);
+      const moduleContent = body.content ? String(body.content).substring(0, 15000) : null;
+      processFlashcardJob(jobId, topics, qty, moduleContent);
       res.writeHead(202, CORS);
       res.end(JSON.stringify({ jobId, status: 'processing' }));
     } catch (err) {
@@ -843,6 +855,36 @@ http.createServer(async (req, res) => {
     } catch(err) {
       console.error('[admin/toggle-block]', err.message);
       res.writeHead(err.message.includes('negado') ? 403 : 500, CORS);
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // GET /api/curated-seed — retorna array MODULES hardcoded do index.html
+  if (req.method === 'GET' && req.url === '/api/curated-seed') {
+    try {
+      const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+      // Encontra "let MODULES=[{" e extrai até "];\n"
+      const start = html.indexOf('let MODULES=[{');
+      if (start === -1) throw new Error('MODULES não encontrado no index.html');
+      // Busca o final do array: "];\n" após o início
+      let depth = 0, i = start + 'let MODULES='.length, inStr = false, strChar = '';
+      for (; i < html.length; i++) {
+        const c = html[i];
+        if (inStr) { if (c === strChar && html[i-1] !== '\\') inStr = false; continue; }
+        if (c === "'" || c === '"' || c === '`') { inStr = true; strChar = c; continue; }
+        if (c === '[') depth++;
+        if (c === ']') { depth--; if (depth === 0) break; }
+      }
+      if (depth !== 0) throw new Error('Não foi possível parsear MODULES');
+      const arrStr = html.substring(start + 'let MODULES='.length, i + 1);
+      const mods = new Function('return ' + arrStr)();
+      console.log('[curated-seed] Extraídos ' + mods.length + ' módulos');
+      res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(mods));
+    } catch (err) {
+      console.error('[curated-seed]', err.message);
+      res.writeHead(500, CORS);
       res.end(JSON.stringify({ error: err.message }));
     }
     return;

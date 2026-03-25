@@ -775,12 +775,14 @@ pendingRequests=[];friendsData=[];
 }});
 
 /* === Firestore Sync === */
+
 async function loadUserData(user){
 try{const doc=await db.collection('users').doc(user.uid).get();
 if(doc.exists){S={...ds(),...doc.data()};if(!S.participants)S.participants=[];if(!S.quizHistory)S.quizHistory=[];if(!S.modules)S.modules={};if(!S.friends)S.friends=[];if(!S.savedModules)S.savedModules=[];if(!S.createdModules)S.createdModules=[];if(!S.favorites)S.favorites=[];if(!S.avatar)S.avatar='';if(!S.photoURL)S.photoURL='';if(!S.lastAccessed)S.lastAccessed=[];if(!S.flashcardErrors)S.flashcardErrors={};}
 else{S=ds();S.name=user.displayName||user.email.split('@')[0];S.email=user.email;await saveToCloud();}
 if(!S.friendCode)await ensureFriendCode(user.uid);
 await loadFriendsData();
+await loadCuratedModules();
 listenFriendRequests();
 }catch(e){console.error('Erro ao carregar dados:',e);S=ds();S.name=user.displayName||user.email.split('@')[0];}}
 async function saveToCloud(){
@@ -884,7 +886,7 @@ function ds(){return{name:'Estudante',xp:0,streak:0,bestStreak:0,quizHistory:[],
 let S=loadState();
 const PEERS=[{name:'Ana Clara',xp:820},{name:'Pedro H.',xp:650},{name:'Mariana S.',xp:1150},{name:'Lucas R.',xp:430},{name:'Isabela M.',xp:980},{name:'Gabriel F.',xp:310},{name:'Camila O.',xp:560}];
 
-const MODULES=[{
+let MODULES=[{
 id:'gametogenese',name:'Gametogênese e Embriologia',desc:'Espermatogênese, Oogênese, Fecundação, 1ª e 2ª Semana',icon:'🧬',color:'#6c5ce7',
 tabs:[{id:'resumo',label:'📄 Resumo'},{id:'esp',label:'🔵 Espermatogênese'},{id:'ovo',label:'🩷 Oogênese'},{id:'fec',label:'🟢 Fecundação'},{id:'s1',label:'🌱 1ª Semana'},{id:'s2',label:'🟠 2ª Semana'},{id:'quiz',label:'📝 Quiz'}],
 sections:{
@@ -1533,6 +1535,11 @@ resumoHTML:'<div class="res-title">Sinais e Sintomas Gerais</div><div class="res
 {id:'locked1',name:'Histologia Básica',desc:'Em breve…',icon:'🔬',color:'#636e72',locked:true},
 {id:'locked2',name:'Anatomia Cardíaca',desc:'Em breve…',icon:'❤️',color:'#636e72',locked:true},
 ];
+const MODULES_FALLBACK=[...MODULES];
+async function loadCuratedModules(){
+try{const snap=await db.collection('curatedModules').get();
+if(!snap.empty){MODULES=snap.docs.map(d=>({...d.data(),_docId:d.id}));console.log('[Curadoria] '+MODULES.length+' módulos carregados do Firestore');}
+}catch(e){console.warn('[Curadoria] Fallback para módulos hardcoded:',e);MODULES=[...MODULES_FALLBACK];}}
 
 let curMod=null;
 let navHistory=['home'];
@@ -2095,6 +2102,8 @@ goPage('challenges');
 /* ═══════ BLOCO F: REVISÃO E FLASHCARDS ═══════ */
 let reviewTab='revisions';
 let revScreen='list';
+let fcScreen='list';
+let fcDeckName='';
 let revTopicInputs=[''];
 let revGeneratingJob=null;
 let revCachedList=[];
@@ -2113,20 +2122,22 @@ if(reviewTab==='revisions'){
   else if(revScreen==='generating')h+=_renderRevisionGenerating();
   else h+=_renderRevisionList();
 }else{
-  h+=_renderFlashcardsList();
+  if(fcScreen==='create') h+=_renderFlashcardsCreate();
+  else h+=_renderFlashcardsList();
 }
 el.innerHTML=h;
 if(reviewTab==='revisions'&&revScreen==='list')_loadRevisions();
-if(reviewTab==='flashcards')_loadFlashDecks();
-if(reviewTab==='flashcards'&&!generatedModulesCache.length&&currentUser)loadGeneratedModules().then(()=>{const el2=document.getElementById('reviewContent');if(el2&&reviewTab==='flashcards'){let h2='<div style="display:flex;gap:6px;margin-bottom:16px">';[['revisions','📝 Revisoes'],['flashcards','🃏 Flashcards']].forEach(([t,label])=>{h2+=`<button onclick="reviewTab=\'${t}\';revScreen=\'list\';renderReview()" style="flex:1;padding:10px 16px;border-radius:100px;border:1px solid ${reviewTab===t?'var(--accent)':'rgba(255,255,255,.08)'};background:${reviewTab===t?'var(--accent-bg)':'transparent'};color:${reviewTab===t?'var(--accent2)':'var(--dim)'};font-family:\'Sora\',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">${label}</button>`;});h2+='</div>';h2+=_renderFlashcardsList();el2.innerHTML=h2;}});
+if(reviewTab==='flashcards'&&fcScreen==='list')_loadFlashDecks();
+if(reviewTab==='flashcards'&&!generatedModulesCache.length&&currentUser)loadGeneratedModules().then(()=>{if(reviewTab==='flashcards')renderReview();});
 }
 
 /* ── REVISÕES: Lista ── */
 async function _loadRevisions(){
 if(!currentUser)return;
 try{
-  const snap=await db.collection('revisions').where('userId','==',currentUser.uid).orderBy('createdAt','desc').limit(50).get();
+  const snap=await db.collection('revisions').where('userId','==',currentUser.uid).limit(50).get();
   revCachedList=snap.docs.map(d=>({docId:d.id,...d.data()}));
+  revCachedList.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const now=Date.now();
   revCachedList.forEach(r=>{
     const exp=r.expiresAt?new Date(r.expiresAt).getTime():0;
@@ -2172,18 +2183,6 @@ function _renderRevisionList(){
 let h='';
 h+=`<button onclick="revScreen='create';revTopicInputs=[''];renderReview()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">📝 Nova Revisao</button>`;
 h+=`<div id="revListArea"></div>`;
-/* Card AI Flashcards */
-h+=`<div style="margin-top:20px;background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(255,255,255,.05)">
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-<div style="font-size:24px">🤖</div>
-<div><div style="font-size:14px;font-weight:700">Gerar Flashcards com IA</div><div style="font-size:11px;color:var(--dim)">Digite um tema e gere 20 cards</div></div>
-</div>
-<div style="display:flex;gap:8px">
-<input id="aiFlashTopic" type="text" placeholder="Ex: Potencial de acao, Sinapse" style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
-<button onclick="_generateAIFlashcards()" style="padding:10px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Gerar</button>
-</div>
-<div id="aiFlashStatus" style="margin-top:8px;font-size:11px;color:var(--dim);text-align:center"></div>
-</div>`;
 return h;
 }
 
@@ -2523,8 +2522,9 @@ let _fcDecksCache=[]; /* decks salvos do Firestore */
 async function _loadFlashDecks(){
 if(!currentUser)return;
 try{
-  const snap=await db.collection('flashdecks').where('userId','==',currentUser.uid).orderBy('createdAt','desc').limit(20).get();
+  const snap=await db.collection('flashdecks').where('userId','==',currentUser.uid).limit(20).get();
   _fcDecksCache=snap.docs.map(d=>({docId:d.id,...d.data()}));
+  _fcDecksCache.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
   const now=Date.now();
   _fcDecksCache.forEach(d=>{
     const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;
@@ -2537,29 +2537,7 @@ try{
 
 function _rerenderFlashDecks(){
 const el=document.getElementById('fcDecksArea');if(!el)return;
-if(!_fcDecksCache.length){el.innerHTML='';return;}
-const now=Date.now();
-let h='<div class="mod-section-title" style="margin-bottom:10px">📚 Seus Decks</div>';
-_fcDecksCache.forEach(d=>{
-  const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;
-  const daysLeft=exp?Math.max(0,Math.ceil((exp-now)/86400000)):99;
-  const expColor=daysLeft>3?'var(--green)':daysLeft>1?'var(--gold)':'var(--red)';
-  const r=d.results||{};const total=d.totalCards||0;
-  const pct=total?Math.round((r.right||0)/total*100):0;
-  h+=`<div class="mod-card" onclick="_openSavedDeck('${d.docId}')">
-  <div class="mod-icon" style="background:var(--accent-bg);color:var(--accent2)">🃏</div>
-  <div class="mod-info">
-    <div class="mod-name">${d.title||'Deck'}</div>
-    <div class="mod-desc" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-      <span>${total} cards</span>
-      ${pct>0?`<span style="color:var(--green)">${pct}% dominado</span>`:''}
-      <span style="color:${expColor}">${daysLeft}d</span>
-    </div>
-  </div>
-  <button onclick="event.stopPropagation();_deleteFlashDeck('${d.docId}')" style="background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:4px">🗑</button>
-  </div>`;
-});
-el.innerHTML=h;
+el.innerHTML=_buildDecksHtml();
 }
 
 async function _openSavedDeck(docId){
@@ -2601,21 +2579,66 @@ function _toggleFcModule(type,id,name,icon,color){
   renderReview();
 }
 
+function _buildDecksHtml(){
+if(!_fcDecksCache.length)return '';
+const now=Date.now();
+let h='<div class="mod-section-title" style="margin-bottom:10px">📚 Seus Decks Salvos</div>';
+_fcDecksCache.forEach(d=>{
+  const exp=d.expiresAt?new Date(d.expiresAt).getTime():0;
+  const daysLeft=exp?Math.max(0,Math.ceil((exp-now)/86400000)):99;
+  const expColor=daysLeft>3?'var(--green)':daysLeft>1?'var(--gold)':'var(--red)';
+  const r=d.results||{};const total=d.totalCards||0;
+  const pct=total?Math.round((r.right||0)/total*100):0;
+  const pending=total-(r.right||0);
+  const modNames=(d.modules||[]).map(m=>m.name||m).filter(Boolean).join(' · ');
+  h+=`<div style="background:var(--bg2);border:1px solid rgba(255,255,255,.06);border-radius:var(--r);padding:14px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${d.title||'Deck'}</div>
+      <button onclick="_deleteFlashDeck('${d.docId}')" style="background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:2px 4px" title="Apagar deck">🗑</button>
+    </div>
+    ${modNames?`<div style="font-size:11px;color:var(--dim);margin-bottom:8px;line-height:1.4">${modNames}</div>`:''}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px">
+      <span style="color:var(--text);font-weight:600">${total} cards</span>
+      <span style="color:var(--green)">${r.right||0} dominados</span>
+      ${pending>0?`<span style="color:var(--gold)">${pending} pendentes</span>`:''}
+      <span style="color:${expColor}">expira em ${daysLeft}d</span>
+    </div>
+    ${pct>0?`<div style="height:4px;border-radius:2px;background:var(--bg3);margin-bottom:10px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green);border-radius:2px"></div></div>`:''}
+    <button onclick="_openSavedDeck('${d.docId}')" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">▶ Praticar</button>
+  </div>`;
+});
+return h;
+}
+
 function _renderFlashcardsList(){
 let h='';
-
+/* Botão criar novo deck */
+h+=`<button onclick="fcScreen='create';_fcSelectedModules=[];fcDeckName='';renderReview()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">🃏 Novo Deck</button>`;
 /* Decks salvos */
-h+=`<div id="fcDecksArea"></div>`;
+h+=`<div id="fcDecksArea">${_buildDecksHtml()}</div>`;
+/* Card AI tema livre */
+h+=`<div style="margin-top:16px;background:var(--bg2);border-radius:var(--r);padding:16px;border:1px solid rgba(255,255,255,.05)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+<div style="font-size:24px">🤖</div>
+<div><div style="font-size:14px;font-weight:700">Gerar Flashcards com IA</div><div style="font-size:11px;color:var(--dim)">Digite um tema e gere 15 cards</div></div>
+</div>
+<div style="display:flex;gap:8px">
+<input id="aiFlashTopic" type="text" placeholder="Ex: Potencial de acao, Sinapse" style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:var(--bg3);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box">
+<button onclick="_generateAIFlashcards()" style="padding:10px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Gerar</button>
+</div>
+<div id="aiFlashStatus" style="margin-top:8px;font-size:11px;color:var(--dim);text-align:center"></div>
+</div>`;
+return h;
+}
 
+function _renderFlashcardsCreate(){
+let h='';
+h+=`<button onclick="fcScreen='list';renderReview()" style="background:none;border:none;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;padding:4px 0;margin-bottom:12px;font-weight:600">← Voltar</button>`;
+h+=`<div style="text-align:center;margin-bottom:16px"><div style="font-size:32px;margin-bottom:6px">🃏</div><div style="font-size:16px;font-weight:700">Novo Deck</div><div style="font-size:12px;color:var(--dim);margin-top:4px">Nomeie seu deck, selecione ate 3 modulos</div></div>`;
+/* Input nome */
+h+=`<input id="fcDeckNameInput" type="text" value="${(fcDeckName||'').replace(/"/g,'&quot;')}" oninput="fcDeckName=this.value" placeholder="Nome do deck (ex: Semana de prova)" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:16px" />`;
 const selIds=_fcSelectedModules.map(m=>m.id);
 const totalCards=_fcSelectedModules.length===0?0:15;
-
-/* Header seleção */
-h+=`<div style="text-align:center;margin-bottom:14px">
-<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px">Criar novo deck · ate 3 modulos · 15 cards</div>
-<div style="font-size:10px;color:var(--dim2);margin-top:3px">${_fcSelectedModules.length===1?'15 cards do modulo':_fcSelectedModules.length===2?'8 + 7 cards':'5 cards de cada'}</div>
-</div>`;
-
 /* Chips selecionados */
 if(_fcSelectedModules.length){
   h+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
@@ -2625,8 +2648,8 @@ if(_fcSelectedModules.length){
   h+=`</div>`;
   h+=`<button onclick="_startFlashcardSession()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px">▶ Iniciar Sessao (${totalCards} cards)</button>`;
 }
-
-/* Seus módulos */
+/* Selecionar módulos */
+h+=`<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Selecione ate 3 modulos</div>`;
 const myGen=getActiveModules().filter(m=>m.userId===currentUser?.uid&&m.module);
 if(myGen.length){
   h+='<div class="mod-section-title">📚 Seus Modulos</div>';
@@ -2634,12 +2657,11 @@ if(myGen.length){
     const mod=m.module;const sel=selIds.includes(m.docId);
     h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('gen','${m.docId}','${(mod.name||m.title||'').replace(/'/g,"\\'")}','${mod.icon||'📄'}','${mod.color||'#6c5ce7'}')">
     <div class="mod-icon" style="background:${mod.color||'var(--accent)'}22">${mod.icon||'📄'}</div>
-    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${_countQuizCards(mod)} cards</div></div>
+    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div></div>
     <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
     </div>`;
   });
 }
-/* Públicos */
 const pubGen=getActiveModules().filter(m=>m.userId!==currentUser?.uid&&m.visibility==='public'&&m.module);
 if(pubGen.length){
   h+='<div class="mod-section-title">🌐 Publicos</div>';
@@ -2647,18 +2669,17 @@ if(pubGen.length){
     const mod=m.module;const sel=selIds.includes(m.docId);
     h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('gen','${m.docId}','${(mod.name||m.title||'').replace(/'/g,"\\'")}','${mod.icon||'📄'}','${mod.color||'#6c5ce7'}')">
     <div class="mod-icon" style="background:rgba(108,92,231,.12)">${mod.icon||'📄'}</div>
-    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div><div class="mod-desc">${_countQuizCards(mod)} cards · ${m.userName||''}</div></div>
+    <div class="mod-info"><div class="mod-name">${mod.name||m.title||'Modulo'}</div></div>
     <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
     </div>`;
   });
 }
-/* Curadoria */
 h+='<div class="mod-section-title">📖 Curadoria</div>';
 MODULES.filter(m=>!m.locked).forEach(m=>{
   const sel=selIds.includes(m.id);
   h+=`<div class="mod-card" style="${sel?'border-color:var(--accent);background:var(--accent-bg)':''}" onclick="_toggleFcModule('static','${m.id}','${m.name.replace(/'/g,"\\'")}','${m.icon}','${m.color}')">
   <div class="mod-icon" style="background:${m.color}22">${m.icon}</div>
-  <div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${_countQuizCards(m)} cards</div></div>
+  <div class="mod-info"><div class="mod-name">${m.name}</div></div>
   <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'rgba(255,255,255,.15)'};background:${sel?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0">${sel?'✓':''}</div>
   </div>`;
 });
@@ -2671,25 +2692,70 @@ return (mod.quiz.obj||[]).length+(mod.quiz.esc||[]).length+(mod.quiz.pra||[]).le
 }
 
 /* ── Motor de Flashcards ── */
-function _startFlashcardSession(){
+function _extractModuleContent(mod){
+  let text='';
+  Object.values(mod.sections||{}).forEach(section=>{
+    if(section.title)text+='## '+section.title+'\n';
+    (section.cards||[]).forEach(card=>{
+      if(card.t)text+=card.t+': ';
+      if(card.b)text+=_stripHtml(card.b)+'\n';
+    });
+    text+='\n';
+  });
+  return text.trim();
+}
+
+async function _startFlashcardSession(){
 if(!_fcSelectedModules.length){_showToast('Selecione pelo menos 1 modulo');return;}
-const count=_fcSelectedModules.length;
-const perMod=Math.floor(15/count);
-const extra=15%count;
-let allCards=[];
-_fcSelectedModules.forEach((sel,i)=>{
-  const quota=perMod+(i<extra?1:0);
+/* Extrair conteúdo textual dos módulos selecionados */
+const topics=[];
+let contentParts=[];
+_fcSelectedModules.forEach(sel=>{
   let mod=null;
   if(sel.type==='static'){mod=MODULES.find(x=>x.id===sel.id);}
   else{const m=generatedModulesCache.find(x=>x.docId===sel.id);if(m)mod=m.module;}
   if(!mod)return;
-  const cards=_extractCards(mod);
-  _shuffle(cards);
-  allCards=allCards.concat(cards.slice(0,quota));
+  topics.push(mod.name||sel.name);
+  const txt=_extractModuleContent(mod);
+  if(txt)contentParts.push('# '+mod.name+'\n'+txt);
 });
-if(!allCards.length){_showToast('Nenhum card disponivel');return;}
-const title=_fcSelectedModules.map(m=>m.name).join(' · ');
-_launchFlashcards(title,allCards,_fcSelectedModules);
+if(!topics.length){_showToast('Nenhum modulo encontrado');return;}
+const content=contentParts.join('\n\n').substring(0,15000);
+const title=fcDeckName.trim()||_fcSelectedModules.map(m=>m.name).join(' · ');
+/* Mostrar overlay de loading */
+const loadOverlay=document.createElement('div');
+loadOverlay.id='fc-loading-overlay';
+loadOverlay.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px';
+loadOverlay.innerHTML='<div class="spinner" style="width:40px;height:40px;border:3px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite"></div><div style="font-size:14px;font-weight:600;color:var(--text)">Gerando flashcards com IA...</div><div id="fc-load-status" style="font-size:12px;color:var(--dim)">Enviando conteudo do modulo</div><button onclick="document.getElementById(\'fc-loading-overlay\')?.remove()" style="margin-top:12px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:\'Sora\',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>';
+document.body.appendChild(loadOverlay);
+try{
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,content,qty:15})});
+  const ct=resp.headers.get('content-type')||'';
+  if(!ct.includes('json')){loadOverlay.remove();_showToast('Servidor precisa ser reiniciado');return;}
+  const data=await resp.json();
+  if(!data.jobId){loadOverlay.remove();_showToast(data.error||'Erro ao iniciar');return;}
+  const statusEl=document.getElementById('fc-load-status');
+  if(statusEl)statusEl.textContent='Processando...';
+  /* Polling */
+  const poll=async()=>{
+    if(!document.getElementById('fc-loading-overlay'))return;
+    try{
+      const r=await fetch('/job-status/'+data.jobId);
+      const d=await r.json();
+      if(d.status==='ready'&&d.cards){
+        loadOverlay.remove();
+        _launchFlashcards(title,d.cards,_fcSelectedModules);
+      }else if(d.status==='error'){
+        loadOverlay.remove();
+        _showToast('Erro: '+(d.error||'desconhecido'));
+      }else{
+        if(statusEl)statusEl.textContent=d.progress||'Gerando...';
+        setTimeout(poll,2000);
+      }
+    }catch(e){loadOverlay.remove();_showToast('Erro de conexao');}
+  };
+  setTimeout(poll,2000);
+}catch(e){loadOverlay.remove();_showToast('Erro: '+e.message);}
 }
 
 /* Compat: antigo startFlashcards para sessão diária etc */
@@ -2708,26 +2774,49 @@ function _truncateAnswer(text,maxLen){
   const cut=text.lastIndexOf(' ',maxLen);
   return text.slice(0,cut>0?cut:maxLen)+'...';
 }
+function _stripHtml(html){
+  return (html||'')
+    .replace(/<br\s*\/?>/gi,' · ')
+    .replace(/<\/(p|li|td|tr|th|div)>/gi,' · ')
+    .replace(/<\/?(strong|em|b|i|u|small|span)>/gi,'')
+    .replace(/<[^>]*>/g,' ')
+    .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/\s*·\s*·\s*/g,' · ')
+    .replace(/\s+/g,' ')
+    .replace(/^[\s·]+|[\s·]+$/g,'')
+    .trim();
+}
+
+function _toFlashQuestion(title){
+  const t=(title||'').trim();
+  if(t.includes('?'))return t;
+  if(/^(Visão Geral|Resumo|Introdução)/i.test(t))return 'Descreva: '+t;
+  if(/^[0-9]/.test(t))return 'Quais são '+t+'?';
+  if(/gênese|ação|ção|mento$/i.test(t))return 'O que é '+t+'?';
+  if(/Etapas|Resultados|Estruturas/i.test(t))return 'Quais são as '+t.toLowerCase()+'?';
+  return 'O que é/são '+t+'?';
+}
+
 function _extractCards(mod){
 const cards=[];
 const modName=mod.name||'';
-if(mod.quiz?.obj)mod.quiz.obj.forEach(q=>{
-  const ansIdx=q.ans!==undefined?q.ans:q.a;
-  const opts=q.opts||q.options||[];
-  const correctOpt=opts[ansIdx];
-  const letters=['A','B','C','D','E'];
-  /* Obj: só a alternativa correta, sem explicação */
-  const backText=correctOpt?(letters[ansIdx]||'')+') '+correctOpt:'Sem resposta';
-  cards.push({front:q.q||q.question||'',back:backText,tag:q.tag||q.topic||'',module:modName,type:'obj'});
+/* Gerar flashcards a partir do CONTEÚDO (sections.cards), não do quiz */
+Object.entries(mod.sections||{}).forEach(([key,section])=>{
+  (section.cards||[]).forEach(card=>{
+    if(!card.t||!card.b)return;
+    const front=_toFlashQuestion(card.t);
+    const back=_stripHtml(card.b).substring(0,200);
+    if(front&&back)cards.push({front,back,tag:section.title||key,module:modName,type:'content'});
+  });
 });
-if(mod.quiz?.esc)mod.quiz.esc.forEach(q=>{
-  /* Esc: resumir resposta longa em até 120 chars */
-  cards.push({front:q.q||q.question||'',back:_truncateAnswer(q.ans||q.answer,120),tag:q.tag||q.topic||'',module:modName,type:'writ'});
-});
-if(mod.quiz?.pra)mod.quiz.pra.forEach(q=>{
-  /* Pra: resumir em até 120 chars */
-  cards.push({front:q.q||q.question||q.case||'',back:_truncateAnswer(q.ans||q.answer,120),tag:q.tag||q.topic||'Caso Clinico',module:modName,type:'case'});
-});
+/* Se módulo não tem sections (ex: gerado por IA com formato diferente), tenta quiz como fallback mínimo */
+if(!cards.length&&mod.quiz){
+  if(mod.quiz.esc)(mod.quiz.esc||[]).forEach(q=>{
+    const front=(q.q||q.question||'').trim();
+    const back=_stripHtml(q.ans||q.answer||'').substring(0,200);
+    if(front&&back)cards.push({front,back,tag:q.tag||'',module:modName,type:'writ'});
+  });
+}
 return cards;
 }
 
@@ -2823,8 +2912,16 @@ if(fcState.idx>=fcState.cards.length){
 }
 }
 
-function _renderFlashcardComplete(){
+async function _renderFlashcardComplete(){
 const fc=fcState;if(!fc)return;
+/* Auto-save: salva o deck automaticamente se ainda não foi salvo */
+if(!fc.deckId&&currentUser){
+  const name=fc.title||fcDeckName||'Flashcards';
+  const docId=await _saveFlashDeck(name);
+  if(docId)fc.deckId=docId;
+}else if(fc.deckId){
+  await _updateFlashDeckResults();
+}
 const total=fc.cards.length;
 const elapsed=Math.round((Date.now()-fc.startTime)/1000);
 const min=Math.floor(elapsed/60);const sec=elapsed%60;
@@ -2843,8 +2940,8 @@ div.innerHTML=`<div class="fcs-scroll"><div class="fcs-inner" style="display:fle
 <div class="fcs-stat"><div class="fcs-stat-num" style="color:var(--text)">${fc.results.mid}</div><div class="fcs-stat-label" style="color:var(--dim)">🤔 Quase</div></div>
 <div class="fcs-stat" style="border-color:rgba(255,107,107,.2)"><div class="fcs-stat-num" style="color:var(--red)">${fc.results.wrong}</div><div class="fcs-stat-label" style="color:var(--red)">❌ Errei</div></div>
 </div>
-<div id="fcSaveDeckArea" style="margin-bottom:12px;width:100%">
-${!fc.deckId?`<div style="display:flex;gap:8px"><input id="fcDeckNameInput" type="text" value="${(fc.title||'').replace(/"/g,'&quot;')}" placeholder="Nome do deck..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;outline:none;box-sizing:border-box"><button onclick="_doSaveDeck()" style="padding:10px 16px;border-radius:10px;border:none;background:var(--green);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">💾 Salvar</button></div>`:`<div style="font-size:12px;color:var(--green);font-weight:600;text-align:center">✓ Deck salvo</div>`}
+<div style="margin-bottom:12px;width:100%">
+<div style="font-size:12px;color:var(--green);font-weight:600;text-align:center">${fc.deckId?'✓ Deck salvo automaticamente':'⏳ Salvando...'}</div>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px;width:100%">
 ${fc.wrongCards.length?`<button onclick="retryWrongCards()" style="padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔁 Revisar errados (${fc.wrongCards.length})</button>`:''}
@@ -2862,10 +2959,7 @@ const docId=await _saveFlashDeck(name);
 if(docId){fcState.deckId=docId;_renderFlashcardComplete();}
 }
 async function _saveAndClose(){
-if(fcState&&!fcState.deckId){
-  const name=fcState.title||'Flashcards';
-  await _saveFlashDeck(name);
-}else if(fcState?.deckId){
+if(fcState?.deckId){
   await _updateFlashDeckResults();
 }
 closeFlashcards();
@@ -2887,9 +2981,13 @@ _shuffle(fcState.cards);
 _renderFlashcardOverlay();
 }
 
-function closeFlashcards(){
+async function closeFlashcards(){
 const el=document.getElementById('fc-overlay');if(el)el.remove();
 fcState=null;
+fcScreen='list';
+reviewTab='flashcards';
+await _loadFlashDecks();
+renderReview();
 }
 
 /* Gerar novos cards via IA sobre os mesmos módulos */
