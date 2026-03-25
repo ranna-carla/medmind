@@ -1803,8 +1803,8 @@ h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim)">
 }
 
 el.innerHTML=h;
-/* Listen realtime updates */
-_listenChallenges();
+/* Listen realtime updates — só inicia uma vez */
+if(!unsubDuels&&!unsubArenas)_listenChallenges();
 }
 
 /* Desafio rápido: abre seletor de módulo pré-direcionado ao amigo */
@@ -1836,6 +1836,15 @@ if(!modId){_showToast('Módulo não encontrado');return;}
 finalizeDuel(modId,modName);
 }
 
+let _challengeRenderTimer=null;
+function _debouncedRenderChallenges(){
+/* Não re-renderizar se tem overlay aberto (arena-create, duel-create, etc) */
+if(document.getElementById('arena-create')||document.getElementById('duel-create-overlay')||document.getElementById('arena-detail')||document.getElementById('duel-result-overlay')||document.getElementById('arena-quiz-overlay'))return;
+if(!document.querySelector('.bnav-btn[data-pg="challenges"].on'))return;
+if(_challengeRenderTimer)clearTimeout(_challengeRenderTimer);
+_challengeRenderTimer=setTimeout(()=>{renderChallenges();},300);
+}
+
 function _listenChallenges(){
 if(!currentUser)return;
 if(unsubDuels)unsubDuels();
@@ -1844,16 +1853,14 @@ userDuels=snap.docs.map(d=>({id:d.id,...d.data()}));
 userDuels.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
 const invCount=userDuels.filter(d=>d.opponentId===currentUser.uid&&d.status==='pending').length;
 _updateChallengeBadge(invCount);
-/* Re-renderizar se estiver na aba desafios */
-if(document.getElementById('challengesContent')&&document.querySelector('.bnav-btn[data-pg="challenges"].on'))renderChallenges();
+_debouncedRenderChallenges();
 },e=>{console.warn('Duels listen error:',e);});
 if(unsubArenas)unsubArenas();
 unsubArenas=db.collection('challenges').where('participantIds','array-contains',currentUser.uid).limit(20).onSnapshot(snap=>{
 userArenas=snap.docs.map(d=>({id:d.id,...d.data()}));
 userArenas.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
-if(document.getElementById('challengesContent')&&document.querySelector('.bnav-btn[data-pg="challenges"].on'))renderChallenges();
+_debouncedRenderChallenges();
 },e=>{
-/* Fallback sem orderBy */
 unsubArenas=db.collection('challenges').limit(30).onSnapshot(snap2=>{
 userArenas=snap2.docs.map(d=>({id:d.id,...d.data()})).filter(a=>(a.participantIds||[]).includes(currentUser.uid)||(a.invited||[]).includes(currentUser.uid)||a.creatorId===currentUser.uid);
 userArenas.sort((a,b)=>{const ta=a.createdAt?.toDate?a.createdAt.toDate().getTime():0;const tb=b.createdAt?.toDate?b.createdAt.toDate().getTime():0;return tb-ta;});
