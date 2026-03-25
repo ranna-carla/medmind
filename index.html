@@ -1614,97 +1614,223 @@ let userDuels=[];
 let userArenas=[];
 let unsubDuels=null,unsubArenas=null;
 
+function _getDuelStats(){
+const uid=currentUser?.uid;if(!uid)return{wins:0,losses:0,draws:0,total:0,pct:0,bestStreak:0};
+let wins=0,losses=0,draws=0,streak=0,bestStreak=0;
+userDuels.filter(d=>d.status==='done').forEach(d=>{
+  const my=d.scores?.[uid];const opp=Object.entries(d.scores||{}).find(([k])=>k!==uid)?.[1];
+  if(my==null||opp==null)return;
+  if(my>opp){wins++;streak++;if(streak>bestStreak)bestStreak=streak;}
+  else if(my<opp){losses++;streak=0;}
+  else{draws++;streak=0;}
+});
+const total=wins+losses+draws;
+return{wins,losses,draws,total,pct:total?Math.round(wins/total*100):0,bestStreak};
+}
+
 function renderChallenges(){
 const el=document.getElementById('challengesContent');if(!el)return;
 let h='';
-
-/* === G2: DESAFIO DIÁRIO === */
 const today=new Date().toISOString().slice(0,10);
+const uid=currentUser?.uid;
+
+/* ═══ 1. DESAFIO DIÁRIO + STREAK VISUAL ═══ */
 const didDaily=S.lastDailyDate===today;
 const dailyStreak=S.dailyStreak||0;
 const multiplier=dailyStreak>=30?3:dailyStreak>=7?2:dailyStreak>=3?1.5:1;
-const mLabel=multiplier>1?` · <span style="color:var(--gold)">${multiplier}x XP</span>`:'';
-h+=`<div style="background:linear-gradient(135deg,rgba(249,202,36,.15),rgba(249,202,36,.05));border:1.5px solid rgba(249,202,36,.3);border-radius:var(--r);padding:16px;margin-bottom:16px;cursor:${didDaily?'default':'pointer'}" ${didDaily?'':`onclick="startDailyChallenge()"`}>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-<div style="font-size:28px">📅</div>
+const nextMult=dailyStreak>=7?'3x em '+(30-dailyStreak)+'d':dailyStreak>=3?'2x em '+(7-dailyStreak)+'d':'1.5x em '+(3-dailyStreak)+'d';
+
+h+=`<div style="background:linear-gradient(135deg,rgba(249,202,36,.12),rgba(249,202,36,.03));border:1.5px solid rgba(249,202,36,.25);border-radius:var(--r);padding:16px;margin-bottom:14px;cursor:${didDaily?'default':'pointer'}" ${didDaily?'':`onclick="startDailyChallenge()"`}>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+<div style="font-size:32px">${didDaily?'✅':'📅'}</div>
 <div style="flex:1">
-<div style="font-size:15px;font-weight:700;color:var(--gold)">Desafio do Dia</div>
-<div style="font-size:11px;color:var(--dim)">5 perguntas aleatórias${mLabel}</div>
+<div style="font-size:15px;font-weight:700;color:${didDaily?'var(--green)':'var(--gold)'}">${didDaily?'Desafio Completo!':'Desafio do Dia'}</div>
+<div style="font-size:11px;color:var(--dim)">5 perguntas${multiplier>1?` · <span style="color:var(--gold)">${multiplier}x XP</span>`:''}</div>
 </div>
-${didDaily?'<div style="font-size:11px;color:var(--green);font-weight:600">✅ Feito</div>':`<div style="font-size:11px;color:var(--gold);font-weight:600">Jogar ▶</div>`}
-</div>
-${dailyStreak>0?`<div style="font-size:11px;color:var(--dim)">🔥 ${dailyStreak} dias consecutivos</div>`:''}
+${didDaily?'':`<div style="padding:8px 16px;border-radius:100px;background:var(--gold);color:#000;font-size:12px;font-weight:700">Jogar</div>`}
 </div>`;
 
-/* === Botões criar === */
-h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
-<button onclick="createDuel()" style="flex:1;padding:14px 10px;border-radius:12px;border:none;background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);text-align:center">
-<div style="font-size:22px;margin-bottom:4px">⚔️</div>Duelo 1v1</button>
-<button onclick="createArena()" style="flex:1;padding:14px 10px;border-radius:12px;border:none;background:var(--bg2);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);text-align:center">
-<div style="font-size:22px;margin-bottom:4px">🏆</div>Arena</button>
-</div>`;
+/* Mini calendário 7 dias */
+h+=`<div style="display:flex;gap:4px;align-items:center">`;
+for(let i=6;i>=0;i--){
+  const d=new Date(Date.now()-i*86400000);
+  const ds=d.toISOString().slice(0,10);
+  const dayName=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
+  const isToday=ds===today;
+  const wasPlayed=ds===S.lastDailyDate||(i===0&&didDaily);
+  /* Verificar se jogou nesse dia: se o streak cobre esse dia */
+  const daysAgo=i;
+  const played=daysAgo===0?didDaily:dailyStreak>daysAgo;
+  h+=`<div style="flex:1;text-align:center">
+  <div style="font-size:9px;color:var(--dim);margin-bottom:3px">${dayName}</div>
+  <div style="width:100%;aspect-ratio:1;border-radius:6px;background:${played?'var(--green)':isToday?'rgba(249,202,36,.2)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${played?'#fff':isToday?'var(--gold)':'var(--dim)'};border:${isToday&&!played?'1.5px solid var(--gold)':'1px solid transparent'}">${played?'🔥':d.getDate()}</div>
+  </div>`;
+}
+h+=`</div>`;
+if(dailyStreak>0){
+  h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+  <div style="font-size:11px;color:var(--gold);font-weight:600">🔥 ${dailyStreak} dia${dailyStreak>1?'s':''} consecutivo${dailyStreak>1?'s':''}</div>
+  ${multiplier<3?`<div style="font-size:10px;color:var(--dim)">Próximo: ${nextMult}</div>`:`<div style="font-size:10px;color:var(--gold)">🏆 Multiplicador máximo!</div>`}
+  </div>`;
+}
+h+=`</div>`;
 
-/* === Convites pendentes === */
-const invitedDuels=userDuels.filter(d=>d.opponentId===currentUser?.uid&&d.status==='pending');
-const invitedArenas=userArenas.filter(a=>a.invited&&a.invited.includes(currentUser?.uid)&&!(a.participantIds||[]).includes(currentUser?.uid));
+/* ═══ 2. CONVITES PENDENTES (destaque) ═══ */
+const invitedDuels=userDuels.filter(d=>d.opponentId===uid&&d.status==='pending');
+const invitedArenas=userArenas.filter(a=>a.invited&&a.invited.includes(uid)&&!(a.participantIds||[]).includes(uid));
 if(invitedDuels.length||invitedArenas.length){
-h+=`<div class="mod-section-title">📬 Convites</div>`;
+h+=`<div style="margin-bottom:14px">`;
 invitedDuels.forEach(d=>{
-h+=`<div class="mod-card" onclick="acceptDuel('${d.id}')">
-<div class="mod-icon" style="background:var(--pink-bg);color:var(--pink)">⚔️</div>
-<div class="mod-info"><div class="mod-name">Duelo de ${d.creatorName||'Alguém'}</div><div class="mod-desc">${d.moduleName||''} · 10 questões</div></div>
-<div style="color:var(--green);font-size:12px;font-weight:600">Aceitar ▶</div>
+h+=`<div onclick="acceptDuel('${d.id}')" style="background:linear-gradient(135deg,rgba(108,92,231,.12),rgba(232,67,147,.08));border:1.5px solid var(--accent-border);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">
+<div style="font-size:24px">⚔️</div>
+<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${d.creatorName||'Alguém'} te desafiou!</div><div style="font-size:11px;color:var(--dim)">${d.moduleName||''} · 10 questões</div></div>
+<div style="padding:8px 14px;border-radius:100px;background:var(--accent);color:#fff;font-size:11px;font-weight:700">Aceitar</div>
 </div>`;
 });
 invitedArenas.forEach(a=>{
-h+=`<div class="mod-card" onclick="joinArena('${a.id}')">
-<div class="mod-icon" style="background:var(--gold-bg);color:var(--gold)">🏆</div>
-<div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${(a.participantIds||[]).length} participantes</div></div>
-<div style="color:var(--green);font-size:12px;font-weight:600">Entrar ▶</div>
+h+=`<div onclick="joinArena('${a.id}')" style="background:linear-gradient(135deg,rgba(249,202,36,.1),rgba(249,202,36,.03));border:1.5px solid rgba(249,202,36,.2);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">
+<div style="font-size:24px">🏆</div>
+<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${a.creatorName||'Alguém'} te convidou!</div><div style="font-size:11px;color:var(--dim)">${a.name||'Arena'} · ${(a.participantIds||[]).length} jogadores</div></div>
+<div style="padding:8px 14px;border-radius:100px;background:var(--gold);color:#000;font-size:11px;font-weight:700">Entrar</div>
 </div>`;
 });
+h+=`</div>`;
 }
 
-/* === Seus Duelos === */
-const myDuels=userDuels.filter(d=>(d.creatorId===currentUser?.uid||d.opponentId===currentUser?.uid)&&d.status!=='pending'||d.creatorId===currentUser?.uid);
-if(myDuels.length){
-h+=`<div class="mod-section-title">⚔️ Seus Duelos</div>`;
-myDuels.slice(0,10).forEach(d=>{
-const statusLabel=d.status==='pending'?'⏳ Aguardando':d.status==='active'?'🟢 Ativo':d.status==='done'?'✅ Finalizado':'';
-h+=`<div class="mod-card" onclick="openDuelDetail('${d.id}')">
-<div class="mod-icon" style="background:var(--pink-bg);color:var(--pink)">⚔️</div>
-<div class="mod-info"><div class="mod-name">${d.moduleName||'Duelo'}</div><div class="mod-desc">vs ${d.creatorId===currentUser?.uid?(d.opponentName||'Oponente'):(d.creatorName||'Desafiante')} · ${statusLabel}</div></div>
-</div>`;
+/* ═══ 3. DESAFIAR AMIGOS (1 tap) ═══ */
+if(friendsData.length){
+h+=`<div style="margin-bottom:14px">
+<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">⚔️ Desafiar amigo</div>
+<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">`;
+friendsData.forEach(f=>{
+  const initial=f.name?f.name.charAt(0).toUpperCase():'?';
+  const lvl=getLevel(f.xp||0);
+  h+=`<div onclick="quickDuel('${f.uid}','${(f.name||'').replace(/'/g,"\\'")}')" style="flex-shrink:0;text-align:center;cursor:pointer;width:64px">
+  <div style="width:48px;height:48px;border-radius:50%;background:var(--bg3);margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden;border:2px solid var(--accent-border)">${f.photoURL?`<img src="${f.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:f.avatar||initial}</div>
+  <div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name||'Amigo'}</div>
+  <div style="font-size:9px;color:var(--dim)">${lvl.emoji} ${lvl.name}</div>
+  </div>`;
 });
+h+=`</div></div>`;
 }
 
-/* === Arenas ativas === */
-const myArenas=userArenas.filter(a=>(a.participantIds||[]).includes(currentUser?.uid)||a.creatorId===currentUser?.uid);
+/* ═══ 4. BOTÕES CRIAR ═══ */
+h+=`<div style="display:flex;gap:10px;margin-bottom:14px">
+<button onclick="createDuel()" style="flex:1;padding:12px 10px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(232,67,147,.08));color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--accent-border);text-align:center">
+<div style="font-size:20px;margin-bottom:2px">⚔️</div>Novo Duelo</button>
+<button onclick="createArena()" style="flex:1;padding:12px 10px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(249,202,36,.12),rgba(249,202,36,.04));color:var(--text);font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid rgba(249,202,36,.2);text-align:center">
+<div style="font-size:20px;margin-bottom:2px">🏆</div>Nova Arena</button>
+</div>`;
+
+/* ═══ 5. ARENAS ATIVAS ═══ */
+const myArenas=userArenas.filter(a=>(a.participantIds||[]).includes(uid)||a.creatorId===uid);
 if(myArenas.length){
-h+=`<div class="mod-section-title">🏆 Arenas</div>`;
+h+=`<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏆 Suas Arenas</div>`;
 myArenas.forEach(a=>{
 const parts=(a.participantIds||[]).length;
 const endD=a.endDate?(a.endDate.toDate?a.endDate.toDate():new Date(a.endDate)):null;
 const isExpiring=endD&&(endD-Date.now())<86400000&&Date.now()<endD;
 const isExpired=endD&&Date.now()>endD;
-const myScore=(a.scores||{})[currentUser?.uid]||0;
-const today=new Date().toISOString().slice(0,10);
-const playedToday=a.participants?.[currentUser?.uid]?.lastRound===today;
+const myScore=(a.scores||{})[uid]||0;
+const playedToday=a.participants?.[uid]?.lastRound===today;
 h+=`<div class="mod-card" onclick="openArenaDetail('${a.id}')" ${isExpiring?'style="border-color:var(--red);animation:pulse 1.5s infinite"':''}>
 <div class="mod-icon" style="background:${isExpired?'var(--bg3)':'var(--gold-bg)'};color:var(--gold)">${a.moduleIcon||'🏆'}</div>
 <div class="mod-info"><div class="mod-name">${a.name||'Arena'}</div><div class="mod-desc">${a.moduleName?a.moduleName+' · ':''}${parts} jogadores · ${myScore} pts${isExpired?' · <span style="color:var(--dim)">Encerrada</span>':isExpiring?' · <span style="color:var(--red)">Último dia!</span>':''}</div></div>
 ${!isExpired&&!playedToday?'<div style="color:var(--green);font-size:11px;font-weight:600">Jogar ▶</div>':''}
 </div>`;
 });
+h+=`<div style="margin-bottom:14px"></div>`;
 }
 
-if(!myDuels.length&&!myArenas.length&&!invitedDuels.length&&!invitedArenas.length){
-h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim);margin-top:10px"><div style="font-size:13px;line-height:1.6">Crie um duelo ou arena para<br>desafiar seus amigos!</div></div>`;
+/* ═══ 6. DUELOS ═══ */
+const myDuels=userDuels.filter(d=>(d.creatorId===uid||d.opponentId===uid)&&d.status!=='pending'||d.creatorId===uid);
+if(myDuels.length){
+h+=`<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚔️ Seus Duelos</div>`;
+myDuels.slice(0,10).forEach(d=>{
+const myScore=d.scores?.[uid];
+const oppId=Object.keys(d.scores||{}).find(k=>k!==uid);
+const oppScore=oppId?d.scores[oppId]:null;
+const won=d.status==='done'&&myScore!=null&&oppScore!=null&&myScore>oppScore;
+const lost=d.status==='done'&&myScore!=null&&oppScore!=null&&myScore<oppScore;
+const statusLabel=d.status==='pending'?'⏳ Aguardando':d.status==='active'?'🟡 Em andamento':won?'🏆 Vitória':lost?'😤 Derrota':d.status==='done'?'🤝 Empate':'';
+const oppName=d.creatorId===uid?(d.opponentName||'Oponente'):(d.creatorName||'Desafiante');
+h+=`<div class="mod-card" onclick="openDuelDetail('${d.id}')" style="${won?'border-color:rgba(0,200,83,.2)':lost?'border-color:rgba(255,107,107,.2)':''}">
+<div class="mod-icon" style="background:${won?'rgba(0,200,83,.1)':lost?'rgba(255,107,107,.1)':'var(--pink-bg)'};color:${won?'var(--green)':lost?'var(--red)':'var(--pink)'}">${won?'🏆':lost?'😤':'⚔️'}</div>
+<div class="mod-info"><div class="mod-name">${d.moduleName||'Duelo'}</div><div class="mod-desc">vs ${oppName} · ${statusLabel}${d.status==='done'&&myScore!=null?' · '+myScore+'-'+oppScore:''}</div></div>
+${d.status==='done'&&lost?`<div onclick="event.stopPropagation();quickRevanche('${d.moduleId}','${(d.moduleName||'').replace(/'/g,"\\'")}','${oppName.replace(/'/g,"\\'")}')" style="padding:6px 10px;border-radius:100px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer">Revanche</div>`:''}
+</div>`;
+});
+h+=`<div style="margin-bottom:14px"></div>`;
+}
+
+/* ═══ 7. HISTÓRICO W/L ═══ */
+const stats=_getDuelStats();
+if(stats.total>0){
+h+=`<div style="background:var(--bg2);border-radius:var(--r);padding:14px;border:1px solid rgba(255,255,255,.05);margin-bottom:14px">
+<div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 Seu Desempenho</div>
+<div style="display:flex;gap:12px;margin-bottom:10px">
+<div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(0,200,83,.08)">
+<div style="font-size:20px;font-weight:800;color:var(--green)">${stats.wins}</div>
+<div style="font-size:10px;color:var(--dim);font-weight:600">Vitórias</div>
+</div>
+<div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,107,107,.08)">
+<div style="font-size:20px;font-weight:800;color:var(--red)">${stats.losses}</div>
+<div style="font-size:10px;color:var(--dim);font-weight:600">Derrotas</div>
+</div>
+<div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(255,255,255,.04)">
+<div style="font-size:20px;font-weight:800;color:var(--dim)">${stats.draws}</div>
+<div style="font-size:10px;color:var(--dim);font-weight:600">Empates</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="font-size:12px;color:var(--text);font-weight:600">${stats.pct}% de vitórias</div>
+${stats.bestStreak>1?`<div style="font-size:11px;color:var(--gold)">🔥 Melhor sequência: ${stats.bestStreak}</div>`:''}
+</div>
+<div style="height:4px;border-radius:2px;background:var(--bg3);margin-top:8px;overflow:hidden"><div style="height:100%;width:${stats.pct}%;background:var(--green);border-radius:2px"></div></div>
+</div>`;
+}
+
+/* ═══ EMPTY STATE ═══ */
+if(!myDuels.length&&!myArenas.length&&!invitedDuels.length&&!invitedArenas.length&&!stats.total){
+h+=`<div style="text-align:center;padding:30px 16px;color:var(--dim)">
+<div style="font-size:36px;margin-bottom:8px">⚡</div>
+<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Hora de competir!</div>
+<div style="font-size:12px;line-height:1.5">Desafie seus amigos em duelos 1v1<br>ou crie uma arena de grupo</div>
+</div>`;
 }
 
 el.innerHTML=h;
 /* Listen realtime updates */
 _listenChallenges();
+}
+
+/* Desafio rápido: abre seletor de módulo pré-direcionado ao amigo */
+function quickDuel(friendUid,friendName){
+/* Reusar createDuel mas com contexto de quem é o oponente */
+const allMods=[...MODULES.filter(m=>!m.locked&&m.quiz?.obj?.length),...generatedModulesCache.filter(m=>m.module?.quiz?.obj?.length).map(m=>({id:m.docId,name:m.module.name,icon:m.module.icon||'📄',quiz:m.module.quiz}))];
+if(!allMods.length){_showToast('Nenhum módulo com questões');return;}
+const overlay=document.createElement('div');overlay.id='duel-create-overlay';
+overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;animation:fu .3s ease;overflow-y:auto';
+let mh=`<div style="padding:max(16px,var(--safe-top)) 16px 16px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+<button onclick="document.getElementById('duel-create-overlay').remove()" style="background:none;border:none;color:var(--dim);font-size:20px;cursor:pointer">✕</button>
+<div style="font-size:16px;font-weight:700;flex:1">⚔️ Desafiar ${friendName}</div>
+</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:16px">Escolha o módulo:</div>`;
+allMods.forEach(m=>{
+mh+=`<div class="mod-card" onclick="finalizeDuel('${m.id}','${(m.name||'').replace(/'/g,"\\'")}')">
+<div class="mod-icon" style="background:var(--accent-bg);color:var(--accent)">${m.icon||'📄'}</div>
+<div class="mod-info"><div class="mod-name">${m.name}</div><div class="mod-desc">${(m.quiz?.obj||[]).length} questões</div></div>
+</div>`;
+});
+mh+=`</div>`;
+overlay.innerHTML=mh;
+document.body.appendChild(overlay);
+}
+
+function quickRevanche(modId,modName,oppName){
+if(!modId){_showToast('Módulo não encontrado');return;}
+finalizeDuel(modId,modName);
 }
 
 function _listenChallenges(){
