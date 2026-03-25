@@ -401,7 +401,7 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
     if (rawQuiz.obj) {
       rawQuiz.obj = rawQuiz.obj.map(q => {
         const ans = q.ans !== undefined ? q.ans : q.a;
-        return { q: q.q, opts: (q.opts || []).map(o => String(o).replace(/^[A-D]\.\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, tag: q.tag || q.exp || '', exp: q.exp || '' };
+        return { q: q.q, opts: (q.opts || []).map(o => String(o).replace(/^[A-D]\.\s*/, '')), ans: typeof ans === 'number' ? ans : parseInt(ans, 10) || 0, tag: q.tag || '', exp: q.exp || '' };
       });
     }
     moduleData.quiz = rawQuiz;
