@@ -2072,7 +2072,22 @@ render();document.body.appendChild(overlay);
 function openDuelDetail(duelId){
 const d=userDuels.find(x=>x.id===duelId);if(!d)return;
 if(d.status==='pending'&&d.creatorId===currentUser?.uid){
-alert('Aguardando oponente aceitar o duelo. Compartilhe o link!');return;
+/* Mostrar overlay com status + opção de cancelar */
+const ov=document.createElement('div');ov.id='duel-result-overlay';
+ov.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .3s ease';
+const link='https://medmind.win7med.com.br?duel='+d.code;
+ov.innerHTML=`<div style="text-align:center;padding:20px">
+<div style="font-size:40px;margin-bottom:12px">⏳</div>
+<div style="font-size:18px;font-weight:700;margin-bottom:4px">${d.moduleName||'Duelo'}</div>
+<div style="font-size:13px;color:var(--dim);margin-bottom:20px">Aguardando oponente aceitar</div>
+<div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px">
+<button onclick="navigator.share?navigator.share({title:'Duelo MedMind',text:'Te desafio! ⚔️',url:'${link}'}):navigator.clipboard.writeText('${link}').then(()=>_showToast('Link copiado!'))" style="padding:12px 20px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer">📤 Compartilhar</button>
+<button onclick="deleteDuel('${duelId}')" style="padding:12px 20px;border-radius:10px;border:none;background:rgba(255,107,107,.08);color:var(--red);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,107,.15)">Cancelar Duelo</button>
+</div>
+<button onclick="document.getElementById('duel-result-overlay').remove()" style="padding:10px 30px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Voltar</button>
+</div>`;
+document.body.appendChild(ov);
+return;
 }
 if(d.status==='active'){
 const myScore=d.scores?.[currentUser.uid];
@@ -2105,7 +2120,10 @@ ov.innerHTML=`<div style="text-align:center;padding:20px">
 <div style="font-size:11px;color:var(--dim)">de ${total}</div>
 </div>
 </div>
-<button onclick="document.getElementById('duel-result-overlay').remove()" style="padding:12px 40px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+<div style="display:flex;gap:10px;justify-content:center">
+<button onclick="document.getElementById('duel-result-overlay').remove()" style="padding:12px 30px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Voltar</button>
+${d.creatorId===currentUser?.uid?`<button onclick="deleteDuel('${duelId}')" style="padding:12px 16px;border-radius:10px;border:none;background:rgba(255,107,107,.08);color:var(--red);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,107,.15)">🗑</button>`:''}
+</div>
 </div>`;
 document.body.appendChild(ov);
 }
@@ -2322,8 +2340,23 @@ h+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;backg
 </div>`;
 });
 
-/* Share */
-h+=`<button onclick="shareArena('${a.code||''}')" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--bg2);color:var(--accent2);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px;border:1px solid var(--accent-border)">📤 Convidar mais pessoas</button>`;
+/* Ações */
+h+=`<div style="display:flex;gap:8px;margin-top:14px">
+<button onclick="shareArena('${a.code||''}')" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--bg2);color:var(--accent2);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--accent-border)">📤 Convidar</button>`;
+
+/* Admin controls: só o criador vê */
+const isCreator=a.creatorId===currentUser?.uid;
+if(isCreator){
+h+=`<button onclick="endArena('${arenaId}')" style="flex:1;padding:12px;border-radius:10px;border:none;background:rgba(249,202,36,.1);color:var(--gold);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(249,202,36,.2)">🏁 Encerrar</button>
+<button onclick="deleteArena('${arenaId}')" style="padding:12px;border-radius:10px;border:none;background:rgba(255,107,107,.08);color:var(--red);font-family:'Sora',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,107,107,.15)">🗑</button>`;
+}
+h+=`</div>`;
+
+/* Info admin */
+if(isCreator){
+h+=`<div style="font-size:10px;color:var(--dim);text-align:center;margin-top:8px">Você é o admin desta arena</div>`;
+}
+
 h+=`</div>`;
 overlay.innerHTML=h;
 document.body.appendChild(overlay);
@@ -2406,6 +2439,36 @@ const link='https://medmind.win7med.com.br?arena='+code;
 const text='Entre na arena MedMind! 🏆 '+link;
 if(navigator.share){try{await navigator.share({title:'Arena MedMind',text:text,url:link});}catch(e){}}
 else{try{await navigator.clipboard.writeText(text);_showToast('📋 Copiado!');}catch(e){}}
+}
+
+async function endArena(arenaId){
+if(!confirm('Encerrar esta arena agora? Os jogadores não poderão mais jogar rodadas.'))return;
+try{
+  await db.collection('challenges').doc(arenaId).update({endDate:new Date(),status:'ended'});
+  document.getElementById('arena-detail')?.remove();
+  _showToast('Arena encerrada!');
+  renderChallenges();
+}catch(e){console.error('Erro encerrar arena:',e);_showToast('Erro ao encerrar');}
+}
+
+async function deleteArena(arenaId){
+if(!confirm('Excluir esta arena permanentemente? Todos os dados serão perdidos.'))return;
+try{
+  await db.collection('challenges').doc(arenaId).delete();
+  document.getElementById('arena-detail')?.remove();
+  _showToast('Arena excluída');
+  renderChallenges();
+}catch(e){console.error('Erro excluir arena:',e);_showToast('Erro ao excluir');}
+}
+
+async function deleteDuel(duelId){
+if(!confirm('Cancelar este duelo?'))return;
+try{
+  await db.collection('duels').doc(duelId).delete();
+  document.getElementById('duel-result-overlay')?.remove();
+  _showToast('Duelo cancelado');
+  renderChallenges();
+}catch(e){console.error('Erro excluir duelo:',e);_showToast('Erro ao excluir');}
 }
 
 async function acceptArenaFromURL(code){
