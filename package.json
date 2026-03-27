@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "firebase-tools": "^15.11.0"
+    "firebase-admin": "^13.7.0",
+    "firebase-tools": "^15.11.0",
+    "pdf-parse": "^2.4.5",
+    "stripe": "^21.0.1"
   }
 }
