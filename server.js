@@ -7,6 +7,28 @@ const path  = require('path');
 const PORT = 3737;
 const ROOT = __dirname;
 
+// Garante diretório de logs
+try { fs.mkdirSync(path.join(__dirname, 'logs'), { recursive: true }); } catch {}
+
+// ---- Cost logging ----
+const COST_LOG_PATH = path.join(__dirname, 'logs', 'api-costs.jsonl');
+const PRICING = {
+  'claude-sonnet-4-6':          { input: 3.00, output: 15.00 },
+  'claude-haiku-4-5-20251001':  { input: 0.80, output: 4.00  },
+};
+function logApiCost({ model, feature, inputTokens, outputTokens, userId, jobId }) {
+  try {
+    const p = PRICING[model] || PRICING['claude-sonnet-4-6'];
+    const costUsd = (inputTokens * p.input + outputTokens * p.output) / 1_000_000;
+    fs.appendFileSync(COST_LOG_PATH, JSON.stringify({
+      ts: new Date().toISOString(), model, feature,
+      inputTokens, outputTokens,
+      costUsd: Math.round(costUsd * 1_000_000) / 1_000_000,
+      userId: userId || null, jobId: jobId || null,
+    }) + '\n');
+  } catch (e) { console.error('[cost-log]', e.message); }
+}
+
 // Lê API key — tenta imagex-ris primeiro, depois medmind
 function getAnthropicKey() {
   try {
@@ -373,17 +395,19 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 
     // Dispara as duas chamadas ao mesmo tempo
     const contentPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 16000, temperature: 0, system: PROMPT_CONTENT,
+      model: 'claude-sonnet-4-6', max_tokens: 20000, temperature: 0, system: PROMPT_CONTENT,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere o módulo para:\n' + ctx }] }]
     }).then(r => {
+      if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'module-content', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso — envie apenas as páginas mais importantes da aula.');
       jobs[jobId].progress = 'Conteúdo pronto, aguardando questões...'; return r;
     });
 
     const quizPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 10000, temperature: 0, system: PROMPT_QUIZ,
+      model: 'claude-sonnet-4-6', max_tokens: 14000, temperature: 0, system: PROMPT_QUIZ,
       messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere as questões para:\n' + ctx }] }]
     }).then(r => {
+      if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'module-quiz', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso para gerar todas as questões — envie um PDF menor.');
       jobs[jobId].progress = 'Questões prontas, aguardando conteúdo...'; return r;
     });
@@ -441,19 +465,19 @@ async function processRevisionJob(jobId, topics) {
       // Objetivas
       allPromises.push(
         callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 4096, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (obj ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
+        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-obj', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (obj ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'obj', error: e.message }; })
       );
       // Dissertativas
       allPromises.push(
         callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (esc ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
+        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-esc', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (esc ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'esc', error: e.message }; })
       );
       // Casos clínicos
       allPromises.push(
         callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (pra ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
+        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-pra', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (pra ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'pra', error: e.message }; })
       );
     }
@@ -511,6 +535,7 @@ async function processFlashcardJob(jobId, topics, qty, moduleContent) {
       model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: PROMPT_FLASHCARDS,
       messages: [{ role: 'user', content: userMsg }]
     });
+    if (result?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'flashcards', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0, jobId });
     const data = parseAnthropicJSON(result, 'flashcards');
     const cards = (data.cards || []).slice(0, qty);
     jobs[jobId].status = 'ready';
@@ -768,12 +793,56 @@ http.createServer(async (req, res) => {
         model: 'claude-sonnet-4-6', max_tokens: 500, system: PROMPT_FEEDBACK,
         messages: [{ role: 'user', content: `Pergunta: ${body.question}\n\nResposta esperada: ${body.expectedAnswer}\n\nResposta do aluno: ${body.userAnswer}` }]
       });
+      if (result?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'feedback', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0 });
       const feedback = parseAnthropicJSON(result, 'feedback');
       res.writeHead(200, CORS);
       res.end(JSON.stringify(feedback));
     } catch (err) {
       console.error('[revision-feedback]', err.message);
       res.writeHead(500, CORS);
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
+  // GET /admin/cost-summary — retorna custos agregados + log recente
+  if (req.method === 'GET' && req.url.startsWith('/admin/cost-summary')) {
+    try {
+      const params = new URL(req.url, 'http://localhost').searchParams;
+      const idToken = params.get('idToken');
+      if (!idToken) { res.writeHead(401, CORS); res.end(JSON.stringify({ error: 'idToken obrigatório' })); return; }
+      await verifyAdminToken(idToken);
+      const days = parseInt(params.get('days')) || 30;
+      const cutoff = new Date(Date.now() - days * 86400000);
+      let lines = [];
+      try { lines = fs.readFileSync(COST_LOG_PATH, 'utf8').trim().split('\n').filter(Boolean); } catch {}
+      const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+      const filtered = entries.filter(e => new Date(e.ts) >= cutoff);
+      const totals = { totalCostUsd: 0, totalInputTokens: 0, totalOutputTokens: 0, totalCalls: filtered.length };
+      const byDay = {}, byFeature = {}, byModel = {};
+      for (const e of filtered) {
+        totals.totalCostUsd += e.costUsd;
+        totals.totalInputTokens += e.inputTokens;
+        totals.totalOutputTokens += e.outputTokens;
+        const day = e.ts.slice(0, 10);
+        if (!byDay[day]) byDay[day] = { date: day, costUsd: 0, calls: 0 };
+        byDay[day].costUsd += e.costUsd; byDay[day].calls++;
+        if (!byFeature[e.feature]) byFeature[e.feature] = { feature: e.feature, costUsd: 0, calls: 0, inputTokens: 0, outputTokens: 0 };
+        byFeature[e.feature].costUsd += e.costUsd; byFeature[e.feature].calls++; byFeature[e.feature].inputTokens += e.inputTokens; byFeature[e.feature].outputTokens += e.outputTokens;
+        if (!byModel[e.model]) byModel[e.model] = { model: e.model, costUsd: 0, calls: 0 };
+        byModel[e.model].costUsd += e.costUsd; byModel[e.model].calls++;
+      }
+      totals.totalCostUsd = Math.round(totals.totalCostUsd * 1_000_000) / 1_000_000;
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        totals,
+        byDay: Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)),
+        byFeature: Object.values(byFeature).sort((a, b) => b.costUsd - a.costUsd),
+        byModel: Object.values(byModel).sort((a, b) => b.costUsd - a.costUsd),
+        recentLogs: filtered.reverse().slice(0, 200),
+      }));
+    } catch (err) {
+      res.writeHead(err.message.includes('negado') ? 403 : 500, CORS);
       res.end(JSON.stringify({ error: err.message }));
     }
     return;

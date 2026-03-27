@@ -371,6 +371,10 @@ html,body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;m
         <span class="sb-item-icon">📩</span><span>Solicitações</span>
         <span class="sb-badge" id="badge-sug">—</span>
       </div>
+      <div class="sb-section">Sistema</div>
+      <div class="sb-item" onclick="goSection('custos')">
+        <span class="sb-item-icon">💰</span><span>Custos</span>
+      </div>
     </div>
     <div class="sb-footer">
       <div class="sb-user">
@@ -629,6 +633,72 @@ html,body{background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;m
       </div>
     </div>
 
+    <!-- CUSTOS -->
+    <div class="section" id="sec-custos">
+      <div class="filter-tabs" id="cost-period-tabs">
+        <button class="filter-tab" onclick="filterCostPeriod('today',this)">Hoje</button>
+        <button class="filter-tab" onclick="filterCostPeriod('7d',this)">7 dias</button>
+        <button class="filter-tab on" onclick="filterCostPeriod('30d',this)">30 dias</button>
+        <button class="filter-tab" onclick="filterCostPeriod('all',this)">Todos</button>
+      </div>
+
+      <div id="cost-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0">
+        <div class="card" style="padding:20px;text-align:center">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">Custo Total (USD)</div>
+          <div id="cost-total-usd" style="font-size:28px;font-weight:700;color:var(--green)">—</div>
+        </div>
+        <div class="card" style="padding:20px;text-align:center">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">Total Chamadas</div>
+          <div id="cost-total-calls" style="font-size:28px;font-weight:700;color:var(--accent)">—</div>
+        </div>
+        <div class="card" style="padding:20px;text-align:center">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">Input Tokens</div>
+          <div id="cost-total-input" style="font-size:28px;font-weight:700;color:var(--blue)">—</div>
+        </div>
+        <div class="card" style="padding:20px;text-align:center">
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px">Output Tokens</div>
+          <div id="cost-total-output" style="font-size:28px;font-weight:700;color:var(--pink)">—</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Custo por Dia (USD)</div></div>
+          <div class="card-body"><canvas id="chart-cost-daily" height="220"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Custo por Funcionalidade</div></div>
+          <div class="card-body"><canvas id="chart-cost-feature" height="220"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Log Detalhado <span id="cost-log-count" style="font-weight:400;color:var(--dim);font-size:12px"></span></div>
+          <select id="cost-feature-filter" onchange="renderCostLog()" style="background:var(--card);color:var(--txt);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:4px 8px;font-size:12px">
+            <option value="all">Todas as funcoes</option>
+            <option value="module-content">Conteudo</option>
+            <option value="module-quiz">Quiz</option>
+            <option value="revision-obj">Rev. Objetivas</option>
+            <option value="revision-esc">Rev. Dissertativas</option>
+            <option value="revision-pra">Rev. Casos Clinicos</option>
+            <option value="flashcards">Flashcards</option>
+            <option value="feedback">Feedback</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr>
+              <th>Data/Hora</th><th>Modelo</th><th>Funcao</th><th>Input Tok</th><th>Output Tok</th><th>Custo (USD)</th><th>Job ID</th>
+            </tr></thead>
+            <tbody id="cost-log-tbody">
+              <tr><td colspan="7" class="tbl-empty">Carregue os dados selecionando um periodo acima</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -796,6 +866,7 @@ const SECTION_META = {
   curadoria:  { title:'Curadoria',    sub:'Módulos selecionados pela administração' },
   challenges: { title:'Grupos / Duelos', sub:'Desafios criados na plataforma' },
   suggestions:{ title:'Solicitações',  sub:'Pedidos de criação de módulo' },
+  custos:     { title:'Custos',        sub:'Monitoramento de custos com APIs' },
 };
 
 function goSection(name) {
@@ -807,6 +878,7 @@ function goSection(name) {
   const meta = SECTION_META[name] || {};
   document.getElementById('section-title').textContent = meta.title || name;
   document.getElementById('section-sub').innerHTML = (meta.sub || '') + ' <span class="rt-dot"></span>';
+  if (name === 'custos' && !costData) loadCostData(costPeriod);
 }
 
 /* ============================================================
@@ -1768,6 +1840,100 @@ async function adminDeleteUser() {
    NOTIFICATION
    ============================================================ */
 let notifTimer;
+/* ============================================================
+   CUSTOS
+   ============================================================ */
+let costData = null;
+let costPeriod = '30d';
+let chartDaily = null, chartFeature = null;
+
+const FEATURE_LABELS = {
+  'module-content': 'Conteúdo', 'module-quiz': 'Quiz',
+  'revision-obj': 'Rev. Objetivas', 'revision-esc': 'Rev. Dissertativas',
+  'revision-pra': 'Rev. Casos Clínicos', 'flashcards': 'Flashcards', 'feedback': 'Feedback',
+};
+const MODEL_LABELS = { 'claude-sonnet-4-6': 'Sonnet 4.6', 'claude-haiku-4-5-20251001': 'Haiku 4.5' };
+
+function fmtUsd(v) { return '$' + (v||0).toFixed(4); }
+function fmtTok(v) { if (!v) return '0'; if (v >= 1e6) return (v/1e6).toFixed(1)+'M'; if (v >= 1e3) return (v/1e3).toFixed(1)+'K'; return String(v); }
+
+async function loadCostData(period) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    const idToken = await user.getIdToken();
+    const days = period === 'all' ? 3650 : period === 'today' ? 1 : period === '7d' ? 7 : 30;
+    const res = await fetch('/admin/cost-summary?idToken=' + encodeURIComponent(idToken) + '&days=' + days);
+    const json = await res.json();
+    if (json.error) { showNotif(json.error, 'red'); return; }
+    costData = json;
+    renderCostDashboard();
+  } catch (e) { showNotif('Erro ao carregar custos: ' + e.message, 'red'); }
+}
+
+function filterCostPeriod(p, el) {
+  costPeriod = p;
+  document.querySelectorAll('#cost-period-tabs .filter-tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  loadCostData(p);
+}
+
+function renderCostDashboard() {
+  if (!costData) return;
+  const t = costData.totals;
+  document.getElementById('cost-total-usd').textContent = fmtUsd(t.totalCostUsd);
+  document.getElementById('cost-total-calls').textContent = t.totalCalls;
+  document.getElementById('cost-total-input').textContent = fmtTok(t.totalInputTokens);
+  document.getElementById('cost-total-output').textContent = fmtTok(t.totalOutputTokens);
+
+  const dailyLabels = costData.byDay.map(d => d.date.slice(5));
+  const dailyValues = costData.byDay.map(d => Math.round(d.costUsd * 10000) / 10000);
+  if (chartDaily) chartDaily.destroy();
+  chartDaily = new Chart(document.getElementById('chart-cost-daily'), {
+    type: 'bar',
+    data: { labels: dailyLabels, datasets: [{ label: 'USD', data: dailyValues, backgroundColor: 'rgba(108,92,231,.7)', borderRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#888' } }, x: { ticks: { color: '#888' } } } }
+  });
+
+  const featLabels = costData.byFeature.map(f => FEATURE_LABELS[f.feature] || f.feature);
+  const featValues = costData.byFeature.map(f => Math.round(f.costUsd * 10000) / 10000);
+  const featColors = ['#6c5ce7','#e84393','#00b894','#0984e3','#fdcb6e','#e17055','#ff6b6b'];
+  if (chartFeature) chartFeature.destroy();
+  chartFeature = new Chart(document.getElementById('chart-cost-feature'), {
+    type: 'doughnut',
+    data: { labels: featLabels, datasets: [{ data: featValues, backgroundColor: featColors.slice(0, featValues.length) }] },
+    options: { responsive: true, plugins: { legend: { position: 'right', labels: { color: '#ccc', font: { size: 11 } } } } }
+  });
+
+  renderCostLog();
+}
+
+function renderCostLog() {
+  if (!costData) return;
+  const filter = document.getElementById('cost-feature-filter').value;
+  const logs = filter === 'all' ? costData.recentLogs : costData.recentLogs.filter(l => l.feature === filter);
+  document.getElementById('cost-log-count').textContent = '(' + logs.length + ' registros)';
+  if (!logs.length) {
+    document.getElementById('cost-log-tbody').innerHTML = '<tr><td colspan="7" class="tbl-empty">Nenhum registro encontrado</td></tr>';
+    return;
+  }
+  let html = '';
+  for (const l of logs) {
+    const dt = new Date(l.ts);
+    const dateStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    html += '<tr>'
+      + '<td style="white-space:nowrap">' + dateStr + '</td>'
+      + '<td>' + (MODEL_LABELS[l.model] || l.model) + '</td>'
+      + '<td>' + (FEATURE_LABELS[l.feature] || l.feature) + '</td>'
+      + '<td style="text-align:right">' + (l.inputTokens||0).toLocaleString('pt-BR') + '</td>'
+      + '<td style="text-align:right">' + (l.outputTokens||0).toLocaleString('pt-BR') + '</td>'
+      + '<td style="text-align:right;color:var(--green)">' + fmtUsd(l.costUsd) + '</td>'
+      + '<td style="font-size:10px;color:var(--dim)">' + (l.jobId || '—') + '</td>'
+      + '</tr>';
+  }
+  document.getElementById('cost-log-tbody').innerHTML = html;
+}
+
 function showNotif(msg, type='') {
   const el = document.getElementById('notif');
   el.textContent = msg;
