@@ -3,6 +3,11 @@ const http  = require('http');
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
+const { callAI } = require('./ai-router');
+const { getSubscription, checkLimit, incrementUsage } = require('./plan-limits');
+const { createCheckoutSession, createPortalSession, processStripeEvent, verifyWebhook } = require('./stripe-handler');
+let pdfParse;
+try { pdfParse = require('pdf-parse'); } catch {}
 
 const PORT = 3737;
 const ROOT = __dirname;
@@ -15,6 +20,7 @@ const COST_LOG_PATH = path.join(__dirname, 'logs', 'api-costs.jsonl');
 const PRICING = {
   'claude-sonnet-4-6':          { input: 3.00, output: 15.00 },
   'claude-haiku-4-5-20251001':  { input: 0.80, output: 4.00  },
+  'ollama':                     { input: 0, output: 0 },
 };
 function logApiCost({ model, feature, inputTokens, outputTokens, userId, jobId }) {
   try {
@@ -29,20 +35,20 @@ function logApiCost({ model, feature, inputTokens, outputTokens, userId, jobId }
   } catch (e) { console.error('[cost-log]', e.message); }
 }
 
-// Lê API key — tenta imagex-ris primeiro, depois medmind
-function getAnthropicKey() {
-  try {
-    const env = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
-    const m = env.match(/ANTHROPIC_API_KEY=(.+)/);
-    if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
-  } catch {}
-  try {
-    const env = fs.readFileSync('/etc/claude-hub/api-keys.env', 'utf8');
-    const m = env.match(/ANTHROPIC_API_KEY_PRODUCAO=(.+)/);
-    if (m) return m[1].trim();
-  } catch {}
-  return '';
-}
+// [COMENTADO] getAnthropicKey — agora em ai-router.js
+// function getAnthropicKey() {
+//   try {
+//     const env = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
+//     const m = env.match(/ANTHROPIC_API_KEY=(.+)/);
+//     if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
+//   } catch {}
+//   try {
+//     const env = fs.readFileSync('/etc/claude-hub/api-keys.env', 'utf8');
+//     const m = env.match(/ANTHROPIC_API_KEY_PRODUCAO=(.+)/);
+//     if (m) return m[1].trim();
+//   } catch {}
+//   return '';
+// }
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -94,34 +100,34 @@ function readBody(req) {
   });
 }
 
-// Chama Anthropic API (timeout de 5 min)
-function callAnthropic(payload) {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify(payload);
-    const req = https.request({
-      hostname: 'api.anthropic.com',
-      path:     '/v1/messages',
-      method:   'POST',
-      headers: {
-        'Content-Type':      'application/json',
-        'x-api-key':         getAnthropicKey(),
-        'anthropic-version': '2023-06-01',
-        'Content-Length':    Buffer.byteLength(body),
-      }
-    }, res => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
-        catch(e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(300000, () => { req.destroy(); reject(new Error('Anthropic API timeout (5min)')); });
-    req.write(body);
-    req.end();
-  });
-}
+// [COMENTADO] callAnthropic — substituído por callAI (ai-router.js)
+// function callAnthropic(payload) {
+//   return new Promise((resolve, reject) => {
+//     const body = JSON.stringify(payload);
+//     const req = https.request({
+//       hostname: 'api.anthropic.com',
+//       path:     '/v1/messages',
+//       method:   'POST',
+//       headers: {
+//         'Content-Type':      'application/json',
+//         'x-api-key':         getAnthropicKey(),
+//         'anthropic-version': '2023-06-01',
+//         'Content-Length':    Buffer.byteLength(body),
+//       }
+//     }, res => {
+//       const chunks = [];
+//       res.on('data', c => chunks.push(c));
+//       res.on('end', () => {
+//         try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+//         catch(e) { reject(e); }
+//       });
+//     });
+//     req.on('error', reject);
+//     req.setTimeout(300000, () => { req.destroy(); reject(new Error('Anthropic API timeout (5min)')); });
+//     req.write(body);
+//     req.end();
+//   });
+// }
 
 // Prompt 1: gera apenas conteúdo (resumo + seções)
 const PROMPT_CONTENT = `Você é um especialista em criar módulos de estudo para o app MedMind (medicina).
@@ -243,6 +249,33 @@ function verifyAdminToken(idToken) {
           const user = json.users && json.users[0];
           if (!user) return reject(new Error('Token inválido'));
           if (user.email !== ADMIN_EMAIL) return reject(new Error('Acesso negado'));
+          resolve({ uid: user.localId, email: user.email });
+        } catch(e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('Timeout ao verificar token')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function verifyUserToken(idToken) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({ idToken });
+    const req = https.request({
+      hostname: 'identitytoolkit.googleapis.com',
+      path: `/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(Buffer.concat(chunks).toString());
+          const user = json.users && json.users[0];
+          if (!user) return reject(new Error('Token invalido'));
           resolve({ uid: user.localId, email: user.email });
         } catch(e) { reject(e); }
       });
@@ -380,7 +413,7 @@ function parseAnthropicJSON(result, label) {
 }
 
 // Processa a geração em background — conteúdo e quiz em PARALELO
-async function processJob(jobId, { pdfBase64, pdfText, discipline, title, professor, observations }) {
+async function processJob(jobId, { pdfBase64, pdfText, discipline, title, professor, observations }, plan) {
   try {
     jobs[jobId].progress = 'Gerando conteúdo e questões em paralelo...';
 
@@ -388,31 +421,44 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 
     // Trunca texto se muito grande (evita respostas truncadas)
     const truncatedText = pdfText && pdfText.length > 40000 ? pdfText.slice(0, 40000) + '\n\n[...texto truncado]' : pdfText;
+
+    // Para plano free (Ollama), sempre usar texto (sem base64 documents)
+    let textContent = pdfText;
+    if (!textContent && pdfBase64 && pdfParse) {
+      try { const buf = Buffer.from(pdfBase64, 'base64'); textContent = (await pdfParse(buf)).text; } catch(e) { console.error('[pdf-parse]', e.message); }
+    }
+
     // Monta a parte do PDF (igual para as duas chamadas)
-    const pdfPart = pdfBase64
-      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } }
-      : { type: 'text', text: 'Conteúdo do PDF:\n\n' + truncatedText };
+    const usePlan = plan || 'free';
+    const pdfPart = (usePlan === 'free' || !pdfBase64)
+      ? { type: 'text', text: 'Conteúdo do PDF:\n\n' + (truncatedText || textContent || '') }
+      : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } };
 
     // Dispara as duas chamadas ao mesmo tempo
-    const contentPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 20000, temperature: 0, system: PROMPT_CONTENT,
-      messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere o módulo para:\n' + ctx }] }]
-    }).then(r => {
-      if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'module-content', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
+    const contentPromise = callAI({
+      plan: usePlan, feature: 'module', jobId,
+      payload: { max_tokens: 20000, temperature: 0, system: PROMPT_CONTENT,
+        messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere o módulo para:\n' + ctx }] }] }
+    }).then(({ result: r, deliverAt }) => {
+      if (r?.usage) logApiCost({ model: r.model || 'unknown', feature: 'module-content', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso — envie apenas as páginas mais importantes da aula.');
-      jobs[jobId].progress = 'Conteúdo pronto, aguardando questões...'; return r;
+      jobs[jobId].progress = 'Conteúdo pronto, aguardando questões...'; return { r, deliverAt };
     });
 
-    const quizPromise = callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 14000, temperature: 0, system: PROMPT_QUIZ,
-      messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere as questões para:\n' + ctx }] }]
-    }).then(r => {
-      if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'module-quiz', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
+    const quizPromise = callAI({
+      plan: usePlan, feature: 'module', jobId,
+      payload: { max_tokens: 14000, temperature: 0, system: PROMPT_QUIZ,
+        messages: [{ role: 'user', content: [pdfPart, { type: 'text', text: 'Gere as questões para:\n' + ctx }] }] }
+    }).then(({ result: r, deliverAt }) => {
+      if (r?.usage) logApiCost({ model: r.model || 'unknown', feature: 'module-quiz', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId });
       if (r?.stop_reason === 'max_tokens') throw new Error('PDF muito extenso para gerar todas as questões — envie um PDF menor.');
-      jobs[jobId].progress = 'Questões prontas, aguardando conteúdo...'; return r;
+      jobs[jobId].progress = 'Questões prontas, aguardando conteúdo...'; return { r, deliverAt };
     });
 
-    const [contentResult, quizResult] = await Promise.all([contentPromise, quizPromise]);
+    const [contentWrap, quizWrap] = await Promise.all([contentPromise, quizPromise]);
+    const contentResult = contentWrap.r;
+    const quizResult = quizWrap.r;
+    const deliverAt = contentWrap.deliverAt || quizWrap.deliverAt;
 
     jobs[jobId].progress = 'Estruturando módulo...';
 
@@ -436,9 +482,14 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
     moduleData.locked   = false;
     moduleData.sections = moduleData.sections || {};
 
-    jobs[jobId].status   = 'ready';
     jobs[jobId].module   = moduleData;
     jobs[jobId].progress = 'Pronto!';
+    if (deliverAt && deliverAt > Date.now()) {
+      jobs[jobId].status = 'delayed';
+      jobs[jobId].deliverAt = deliverAt;
+    } else {
+      jobs[jobId].status = 'ready';
+    }
   } catch (err) {
     console.error('[job ' + jobId + ']', err.message);
     jobs[jobId].status = 'error';
@@ -449,7 +500,7 @@ async function processJob(jobId, { pdfBase64, pdfText, discipline, title, profes
 // Processa geração de revisão — um tópico por vez para mostrar progresso
 function _truncStr(s, max) { return s && s.length > max ? s.slice(0, max) + '...' : s || ''; }
 
-async function processRevisionJob(jobId, topics) {
+async function processRevisionJob(jobId, topics, plan) {
   try {
     const totalSteps = topics.length * 3; // 3 chamadas por tópico (obj, esc, pra)
     let stepsDone = 0;
@@ -462,22 +513,23 @@ async function processRevisionJob(jobId, topics) {
     // 9 chamadas em paralelo: 3 tipos × N tópicos
     const allPromises = [];
     for (const topic of topics) {
+      const usePlan = plan || 'free';
       // Objetivas
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 4096, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-obj', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (obj ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `📝 Objetivas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
+        callAI({ plan: usePlan, feature: 'revision', jobId, payload: { max_tokens: 4096, temperature: 0, system: PROMPT_REV_OBJ, messages: [{ role: 'user', content: topic }] } })
+        .then(({ result: r }) => { if (r?.usage) logApiCost({ model: r.model || 'unknown', feature: 'revision-obj', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (obj ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `Objetivas de ${topic} ok (${stepsDone}/${totalSteps})`; return { topic, type: 'obj', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'obj', error: e.message }; })
       );
       // Dissertativas
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-esc', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (esc ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `✍️ Dissertativas de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
+        callAI({ plan: usePlan, feature: 'revision', jobId, payload: { max_tokens: 3000, temperature: 0, system: PROMPT_REV_ESC, messages: [{ role: 'user', content: topic }] } })
+        .then(({ result: r }) => { if (r?.usage) logApiCost({ model: r.model || 'unknown', feature: 'revision-esc', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (esc ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `Dissertativas de ${topic} ok (${stepsDone}/${totalSteps})`; return { topic, type: 'esc', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'esc', error: e.message }; })
       );
-      // Casos clínicos
+      // Casos clinicos
       allPromises.push(
-        callAnthropic({ model: 'claude-sonnet-4-6', max_tokens: 3000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] })
-        .then(r => { if (r?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'revision-pra', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (pra ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `🩺 Casos de ${topic} ✓ (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
+        callAI({ plan: usePlan, feature: 'revision', jobId, payload: { max_tokens: 3000, temperature: 0, system: PROMPT_REV_PRA, messages: [{ role: 'user', content: topic }] } })
+        .then(({ result: r }) => { if (r?.usage) logApiCost({ model: r.model || 'unknown', feature: 'revision-pra', inputTokens: r.usage.input_tokens || 0, outputTokens: r.usage.output_tokens || 0, jobId }); if (r?.stop_reason === 'max_tokens') throw new Error('Resposta truncada (pra ' + topic + ')'); stepsDone++; jobs[jobId].stepsDone = stepsDone; jobs[jobId].progress = `Casos de ${topic} ok (${stepsDone}/${totalSteps})`; return { topic, type: 'pra', result: r }; })
         .catch(e => { stepsDone++; jobs[jobId].stepsDone = stepsDone; return { topic, type: 'pra', error: e.message }; })
       );
     }
@@ -520,27 +572,32 @@ async function processRevisionJob(jobId, topics) {
 }
 
 // Processa geração de flashcards
-async function processFlashcardJob(jobId, topics, qty, moduleContent) {
+async function processFlashcardJob(jobId, topics, qty, moduleContent, plan) {
   try {
     jobs[jobId].progress = 'Gerando flashcards com IA...';
     let userMsg;
     if (moduleContent) {
-      // Gerar a partir do conteúdo real do módulo
       userMsg = `Gere ${qty} flashcards a partir deste conteúdo de estudo:\n\n${moduleContent}`;
     } else {
-      // Tema livre
       userMsg = `Gere ${qty} flashcards sobre: ${topics.join(', ')}`;
     }
-    const result = await callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, temperature: 0, system: PROMPT_FLASHCARDS,
-      messages: [{ role: 'user', content: userMsg }]
+    const usePlan = plan || 'free';
+    const { result, deliverAt } = await callAI({
+      plan: usePlan, feature: 'flashdeck', jobId,
+      payload: { max_tokens: 8000, temperature: 0, system: PROMPT_FLASHCARDS,
+        messages: [{ role: 'user', content: userMsg }] }
     });
-    if (result?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'flashcards', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0, jobId });
+    if (result?.usage) logApiCost({ model: result.model || 'unknown', feature: 'flashcards', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0, jobId });
     const data = parseAnthropicJSON(result, 'flashcards');
     const cards = (data.cards || []).slice(0, qty);
-    jobs[jobId].status = 'ready';
     jobs[jobId].cards = cards;
     jobs[jobId].progress = 'Pronto!';
+    if (deliverAt && deliverAt > Date.now()) {
+      jobs[jobId].status = 'delayed';
+      jobs[jobId].deliverAt = deliverAt;
+    } else {
+      jobs[jobId].status = 'ready';
+    }
   } catch (err) {
     console.error('[flashcard ' + jobId + ']', err.message);
     jobs[jobId].status = 'error';
@@ -605,10 +662,71 @@ http.createServer(async (req, res) => {
     res.writeHead(204, CORS); res.end(); return;
   }
 
+  // POST /stripe-webhook — raw body, verified by Stripe signature
+  if (req.method === 'POST' && req.url === '/stripe-webhook') {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', async () => {
+      const rawBody = Buffer.concat(chunks);
+      try {
+        const event = verifyWebhook(rawBody, req.headers['stripe-signature']);
+        await processStripeEvent(event);
+        res.writeHead(200, CORS); res.end('ok');
+      } catch (err) {
+        console.error('[stripe-webhook]', err.message);
+        res.writeHead(400, CORS); res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /create-checkout-session
+  if (req.method === 'POST' && req.url === '/create-checkout-session') {
+    try {
+      const body = await readBody(req);
+      const user = await verifyUserToken(body.idToken);
+      const result = await createCheckoutSession({ plan: body.plan, userId: user.uid, userEmail: user.email });
+      res.writeHead(200, CORS); res.end(JSON.stringify(result));
+    } catch (err) { res.writeHead(500, CORS); res.end(JSON.stringify({ error: err.message })); }
+    return;
+  }
+
+  // POST /create-portal-session
+  if (req.method === 'POST' && req.url === '/create-portal-session') {
+    try {
+      const body = await readBody(req);
+      const user = await verifyUserToken(body.idToken);
+      const sub = await getSubscription(user.uid, body.idToken);
+      if (!sub.stripeCustomerId) throw new Error('Nenhuma assinatura ativa');
+      const result = await createPortalSession({ stripeCustomerId: sub.stripeCustomerId });
+      res.writeHead(200, CORS); res.end(JSON.stringify(result));
+    } catch (err) { res.writeHead(500, CORS); res.end(JSON.stringify({ error: err.message })); }
+    return;
+  }
+
+  // POST /subscription-status
+  if (req.method === 'POST' && req.url === '/subscription-status') {
+    try {
+      const body = await readBody(req);
+      const user = await verifyUserToken(body.idToken);
+      const sub = await getSubscription(user.uid, body.idToken);
+      res.writeHead(200, CORS); res.end(JSON.stringify({ plan: sub.plan, status: sub.status, usage: sub.usage }));
+    } catch (err) { res.writeHead(500, CORS); res.end(JSON.stringify({ error: err.message })); }
+    return;
+  }
+
   // POST /generate-module — inicia job, retorna jobId imediatamente
   if (req.method === 'POST' && req.url === '/generate-module') {
     try {
       const body = await readBody(req);
+      let user, sub;
+      try {
+        if (body.idToken) { user = await verifyUserToken(body.idToken); sub = await getSubscription(user.uid, body.idToken); }
+        else { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      } catch { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      const limitErr = checkLimit('module', sub);
+      if (limitErr) { res.writeHead(429, CORS); res.end(JSON.stringify(limitErr)); return; }
+      incrementUsage('module', sub);
       if ((!body.pdfBase64 && !body.pdfText) || !body.discipline || !body.title) {
         res.writeHead(400, CORS);
         res.end(JSON.stringify({ error: 'pdfBase64 ou pdfText, discipline e title são obrigatórios' }));
@@ -616,7 +734,7 @@ http.createServer(async (req, res) => {
       }
       const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       jobs[jobId] = { status: 'processing', progress: 'Iniciando...', module: null, error: null, createdAt: Date.now() };
-      processJob(jobId, body); // dispara em background, sem await
+      processJob(jobId, body, sub.plan); // dispara em background, sem await
       res.writeHead(202, CORS);
       res.end(JSON.stringify({ jobId, status: 'processing' }));
     } catch (err) {
@@ -631,8 +749,11 @@ http.createServer(async (req, res) => {
   if (req.method === 'GET' && jobMatch) {
     const job = jobs[jobMatch[1]];
     if (!job) { res.writeHead(404, CORS); res.end(JSON.stringify({ error: 'Job não encontrado' })); return; }
+    if (job.status === 'delayed' && job.deliverAt && Date.now() >= job.deliverAt) {
+      job.status = 'ready';
+    }
     res.writeHead(200, CORS);
-    res.end(JSON.stringify({ status: job.status, progress: job.progress, module: job.module, quiz: job.quiz, cards: job.cards, error: job.error, topicsDone: job.topicsDone, topicsTotal: job.topicsTotal, stepsDone: job.stepsDone, stepsTotal: job.stepsTotal }));
+    res.end(JSON.stringify({ status: job.status, progress: job.progress, module: job.module, quiz: job.quiz, cards: job.cards, error: job.error, topicsDone: job.topicsDone, topicsTotal: job.topicsTotal, stepsDone: job.stepsDone, stepsTotal: job.stepsTotal, deliverAt: job.deliverAt || null }));
     return;
   }
 
@@ -736,6 +857,14 @@ http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/generate-revision') {
     try {
       const body = await readBody(req);
+      let user, sub;
+      try {
+        if (body.idToken) { user = await verifyUserToken(body.idToken); sub = await getSubscription(user.uid, body.idToken); }
+        else { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      } catch { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      const limitErr = checkLimit('revision', sub);
+      if (limitErr) { res.writeHead(429, CORS); res.end(JSON.stringify(limitErr)); return; }
+      incrementUsage('revision', sub);
       if (!body.topics || !Array.isArray(body.topics) || body.topics.length === 0) {
         res.writeHead(400, CORS);
         res.end(JSON.stringify({ error: 'topics (array) é obrigatório' }));
@@ -745,7 +874,7 @@ http.createServer(async (req, res) => {
       if (topics.length === 0) { res.writeHead(400, CORS); res.end(JSON.stringify({ error: 'Informe pelo menos 1 tópico' })); return; }
       const jobId = 'rev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       jobs[jobId] = { status: 'processing', progress: 'Iniciando revisão...', quiz: null, error: null, topicsDone: 0, topicsTotal: topics.length, createdAt: Date.now() };
-      processRevisionJob(jobId, topics);
+      processRevisionJob(jobId, topics, sub.plan);
       res.writeHead(202, CORS);
       res.end(JSON.stringify({ jobId, status: 'processing' }));
     } catch (err) {
@@ -759,6 +888,14 @@ http.createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/generate-flashcards') {
     try {
       const body = await readBody(req);
+      let user, sub;
+      try {
+        if (body.idToken) { user = await verifyUserToken(body.idToken); sub = await getSubscription(user.uid, body.idToken); }
+        else { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      } catch { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      const limitErr = checkLimit('flashdeck', sub);
+      if (limitErr) { res.writeHead(429, CORS); res.end(JSON.stringify(limitErr)); return; }
+      incrementUsage('flashdeck', sub);
       if (!body.topics || !Array.isArray(body.topics) || body.topics.length === 0) {
         res.writeHead(400, CORS);
         res.end(JSON.stringify({ error: 'topics (array) é obrigatório' }));
@@ -770,7 +907,7 @@ http.createServer(async (req, res) => {
       const jobId = 'fc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
       jobs[jobId] = { status: 'processing', progress: 'Iniciando flashcards...', cards: null, error: null, createdAt: Date.now() };
       const moduleContent = body.content ? String(body.content).substring(0, 15000) : null;
-      processFlashcardJob(jobId, topics, qty, moduleContent);
+      processFlashcardJob(jobId, topics, qty, moduleContent, sub.plan);
       res.writeHead(202, CORS);
       res.end(JSON.stringify({ jobId, status: 'processing' }));
     } catch (err) {
@@ -789,11 +926,17 @@ http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'question, expectedAnswer e userAnswer são obrigatórios' }));
         return;
       }
-      const result = await callAnthropic({
-        model: 'claude-sonnet-4-6', max_tokens: 500, system: PROMPT_FEEDBACK,
-        messages: [{ role: 'user', content: `Pergunta: ${body.question}\n\nResposta esperada: ${body.expectedAnswer}\n\nResposta do aluno: ${body.userAnswer}` }]
+      let user, sub;
+      try {
+        if (body.idToken) { user = await verifyUserToken(body.idToken); sub = await getSubscription(user.uid, body.idToken); }
+        else { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      } catch { sub = { plan: 'free', usage: {} }; user = { uid: body.userId || 'anon' }; }
+      const { result } = await callAI({
+        plan: sub.plan || 'free', feature: 'feedback',
+        payload: { max_tokens: 500, system: PROMPT_FEEDBACK,
+          messages: [{ role: 'user', content: `Pergunta: ${body.question}\n\nResposta esperada: ${body.expectedAnswer}\n\nResposta do aluno: ${body.userAnswer}` }] }
       });
-      if (result?.usage) logApiCost({ model: 'claude-sonnet-4-6', feature: 'feedback', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0 });
+      if (result?.usage) logApiCost({ model: result.model || 'unknown', feature: 'feedback', inputTokens: result.usage.input_tokens || 0, outputTokens: result.usage.output_tokens || 0 });
       const feedback = parseAnthropicJSON(result, 'feedback');
       res.writeHead(200, CORS);
       res.end(JSON.stringify(feedback));
