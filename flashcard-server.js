@@ -3,50 +3,51 @@
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const { callAI } = require('./ai-router');
 
 const PORT = 3739;
 
-function getKey() {
-  try {
-    const e = fs.readFileSync('/etc/claude-hub/api-keys.env', 'utf8');
-    const m = e.match(/ANTHROPIC_API_KEY_PRODUCAO=(.+)/);
-    if (m) return m[1].trim();
-  } catch {}
-  try {
-    const e = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
-    const m = e.match(/ANTHROPIC_API_KEY=(.+)/);
-    if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
-  } catch {}
-  return '';
-}
+// function getKey() {
+//   try {
+//     const e = fs.readFileSync('/etc/claude-hub/api-keys.env', 'utf8');
+//     const m = e.match(/ANTHROPIC_API_KEY_PRODUCAO=(.+)/);
+//     if (m) return m[1].trim();
+//   } catch {}
+//   try {
+//     const e = fs.readFileSync('/Users/macmini-win7/projects/projects/imagex-ris/.env', 'utf8');
+//     const m = e.match(/ANTHROPIC_API_KEY=(.+)/);
+//     if (m && m[1].trim().startsWith('sk-ant-')) return m[1].trim();
+//   } catch {}
+//   return '';
+// }
 
-function callAnthropic(payload) {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify(payload);
-    const req = https.request({
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': getKey(),
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(body),
-      }
-    }, res => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
-        catch (e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(300000, () => { req.destroy(); reject(new Error('Anthropic API timeout')); });
-    req.write(body);
-    req.end();
-  });
-}
+// function callAnthropic(payload) {
+//   return new Promise((resolve, reject) => {
+//     const body = JSON.stringify(payload);
+//     const req = https.request({
+//       hostname: 'api.anthropic.com',
+//       path: '/v1/messages',
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'x-api-key': getKey(),
+//         'anthropic-version': '2023-06-01',
+//         'Content-Length': Buffer.byteLength(body),
+//       }
+//     }, res => {
+//       const chunks = [];
+//       res.on('data', c => chunks.push(c));
+//       res.on('end', () => {
+//         try { resolve(JSON.parse(Buffer.concat(chunks).toString())); }
+//         catch (e) { reject(e); }
+//       });
+//     });
+//     req.on('error', reject);
+//     req.setTimeout(300000, () => { req.destroy(); reject(new Error('Anthropic API timeout')); });
+//     req.write(body);
+//     req.end();
+//   });
+// }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -114,10 +115,7 @@ function parseAnthropicJSON(result, label) {
 async function processFlashcardJob(jobId, topics, qty) {
   try {
     jobs[jobId].progress = 'Gerando flashcards...';
-    const result = await callAnthropic({
-      model: 'claude-sonnet-4-6', max_tokens: 8000, system: PROMPT_FLASHCARDS,
-      messages: [{ role: 'user', content: `Gere ${qty} flashcards sobre: ${topics.join(', ')}` }]
-    });
+    const result = await callAI({ plan: 'free', feature: 'flashcards', payload: { max_tokens: 8000, system: PROMPT_FLASHCARDS, messages: [{ role: 'user', content: `Gere ${qty} flashcards sobre: ${topics.join(', ')}` }] } }).then(({result}) => result);
     const data = parseAnthropicJSON(result, 'flashcards');
     jobs[jobId].status = 'ready';
     jobs[jobId].cards = (data.cards || []).slice(0, qty);
@@ -138,10 +136,7 @@ async function processRevisionJob(jobId, topics) {
       jobs[jobId].progress = `Gerando tópico ${i + 1} de ${topics.length}: ${topic}...`;
       jobs[jobId].topicsDone = i;
       jobs[jobId].topicsTotal = topics.length;
-      const result = await callAnthropic({
-        model: 'claude-sonnet-4-6', max_tokens: 6000, system: PROMPT_REVISION,
-        messages: [{ role: 'user', content: `Gere o quiz de revisão para o tema: ${topic}` }]
-      });
+      const result = await callAI({ plan: 'free', feature: 'revision', payload: { max_tokens: 6000, system: PROMPT_REVISION, messages: [{ role: 'user', content: `Gere o quiz de revisão para o tema: ${topic}` }] } }).then(({result}) => result);
       const data = parseAnthropicJSON(result, 'revisão ' + topic);
       (data.obj || []).forEach(q => {
         const ans = q.ans !== undefined ? q.ans : q.a;
@@ -224,10 +219,7 @@ http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'question, expectedAnswer e userAnswer são obrigatórios' }));
         return;
       }
-      const result = await callAnthropic({
-        model: 'claude-sonnet-4-6', max_tokens: 500, system: PROMPT_FEEDBACK,
-        messages: [{ role: 'user', content: `Pergunta: ${body.question}\n\nResposta esperada: ${body.expectedAnswer}\n\nResposta do aluno: ${body.userAnswer}` }]
-      });
+      const result = await callAI({ plan: 'free', feature: 'feedback', payload: { max_tokens: 500, system: PROMPT_FEEDBACK, messages: [{ role: 'user', content: `Pergunta: ${body.question}\n\nResposta esperada: ${body.expectedAnswer}\n\nResposta do aluno: ${body.userAnswer}` }] } }).then(({result}) => result);
       const feedback = parseAnthropicJSON(result, 'feedback');
       res.writeHead(200, CORS);
       res.end(JSON.stringify(feedback));
