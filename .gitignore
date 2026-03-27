@@ -1,0 +1,7 @@
+node_modules/
+logs/
+.env
+*.log
+.pids
+test.pdf
+medmind-pro-service-account.json
