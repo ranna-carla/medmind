@@ -7,6 +7,24 @@ LOGS="$PROJ/logs"
 PORT=3737
 mkdir -p "$LOGS"
 
+# --- Ollama ---
+if command -v ollama &> /dev/null; then
+  if ! curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+    echo "Iniciando Ollama..."
+    ollama serve >> "$LOGS/ollama.log" 2>&1 &
+    sleep 3
+    if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
+      echo "  Ollama OK"
+    else
+      echo "  AVISO: Ollama nao iniciou. Plano Free indisponivel."
+    fi
+  else
+    echo "Ollama ja esta rodando."
+  fi
+else
+  echo "AVISO: Ollama nao instalado. Execute: brew install ollama && ollama pull qwen2.5:7b"
+fi
+
 # --- Node.js ---
 if curl -s -o /dev/null -w '' "http://127.0.0.1:$PORT/" 2>/dev/null; then
   NODE_PID=$(netstat -anv 2>/dev/null | grep "127.0.0.1.$PORT" | awk '{print $9}' | head -1)
