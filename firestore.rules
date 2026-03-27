@@ -115,5 +115,16 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create, update, delete: if isAdmin();
     }
+
+    // Assinaturas — leitura pelo proprio usuario ou admin; escrita APENAS pelo servidor
+    match /subscriptions/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if false;
+    }
+
+    // Eventos Stripe processados (idempotency) — server-only
+    match /stripe_events/{eventId} {
+      allow read, write: if false;
+    }
   }
 }
