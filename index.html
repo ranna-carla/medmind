@@ -451,6 +451,74 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 @keyframes favPulse{0%{transform:scale(1)}30%{transform:scale(1.5)}60%{transform:scale(.9)}100%{transform:scale(1)}}
 .fav-pulse{animation:favPulse .4s ease!important}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* === PLANS PAGE === */
+.plans-hero{text-align:center;padding:3rem 1rem 1.5rem}
+.plans-hero h1{font-size:24px;font-weight:800;line-height:1.3;margin-bottom:8px}
+.plans-hero p{font-size:13px;color:var(--dim);line-height:1.5}
+.gradient-text{background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.plans-grid{display:grid;grid-template-columns:1fr;gap:1.5rem;padding:1rem;max-width:900px;margin:0 auto}
+@media(min-width:768px){.plans-grid{grid-template-columns:repeat(3,1fr)}}
+.plan-card{background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:2rem;transition:transform .2s,border-color .2s}
+.plan-card:hover{transform:translateY(-2px)}
+.plan-card.featured{border-color:rgba(108,92,231,0.5);box-shadow:0 0 30px rgba(108,92,231,0.15)}
+.plan-badge{background:linear-gradient(135deg,#f9ca24,#f0932b);color:#000;font-size:0.7rem;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;margin-bottom:8px}
+.plan-price{font-size:32px;font-weight:800;font-family:'JetBrains Mono',monospace;margin:12px 0 4px}
+.plan-price small{font-size:14px;font-weight:400;color:var(--dim)}
+.plan-speed{display:inline-block;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;margin-bottom:16px}
+.plan-features{list-style:none;padding:0;margin:0 0 20px}
+.plan-features li{font-size:12px;color:var(--dim);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:8px}
+.plan-features li::before{content:'';display:none}
+.plan-btn{width:100%;padding:12px;border-radius:10px;border:none;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
+.plan-btn:active{transform:scale(.97)}
+.plan-btn-free{background:var(--bg3);color:var(--text)}
+.plan-btn-plus{background:linear-gradient(135deg,#6c5ce7,#0984e3);color:#fff}
+.plan-btn-pro{background:linear-gradient(135deg,#f9ca24,#f0932b);color:#000}
+
+/* Speed comparison bars */
+.speed-section{max-width:600px;margin:0 auto 2rem;padding:0 1rem}
+.speed-section h3{font-size:14px;font-weight:700;margin-bottom:16px;text-align:center}
+.speed-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.speed-label{width:50px;font-size:12px;font-weight:600;text-align:right;flex-shrink:0}
+.speed-track{flex:1;height:32px;background:var(--bg3);border-radius:16px;overflow:hidden;position:relative}
+.speed-bar{height:100%;border-radius:16px;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-size:11px;font-weight:700;color:#fff;width:0;transition:width 1.5s ease}
+.speed-bar.bar-free{background:linear-gradient(90deg,#ff6b6b,#ee5a24);width:0}
+.speed-bar.bar-plus{background:linear-gradient(90deg,#6c5ce7,#0984e3);width:0}
+.speed-bar.bar-pro{background:linear-gradient(90deg,#00cec9,#00b894);width:0}
+.speed-bar.animate.bar-free{width:100%}
+.speed-bar.animate.bar-plus{width:20%}
+.speed-bar.animate.bar-pro{width:3%}
+.speed-time{width:60px;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+
+/* Feature comparison table */
+.compare-table{width:100%;max-width:800px;margin:2rem auto;border-collapse:collapse;font-size:12px}
+.compare-table th,.compare-table td{padding:10px 8px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06)}
+.compare-table th{font-weight:700;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.compare-table th:first-child,.compare-table td:first-child{text-align:left;font-weight:600;color:var(--text)}
+.compare-table td{color:var(--dim)}
+.compare-check{color:var(--green);font-size:16px}
+
+/* FAQ Accordion */
+.faq-section{max-width:700px;margin:2rem auto;padding:0 1rem}
+.faq-item{border-bottom:1px solid rgba(255,255,255,.06)}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:14px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)}
+.faq-q::after{content:'+';font-size:18px;color:var(--dim);transition:transform .2s;flex-shrink:0;margin-left:8px}
+.faq-item.open .faq-q::after{content:'-'}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .2s ease;font-size:12px;color:var(--dim);line-height:1.6}
+.faq-item.open .faq-a{max-height:200px;padding-bottom:14px}
+
+/* Plans CTA */
+.plans-cta{text-align:center;padding:2rem 1rem 3rem}
+.plans-cta h2{font-size:20px;font-weight:800;margin-bottom:8px}
+.plans-cta p{font-size:13px;color:var(--dim)}
+
+/* Upgrade modal */
+.upgrade-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;animation:fmIn .2s ease}
+.upgrade-modal-box{background:var(--bg2);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:24px;max-width:400px;width:100%;text-align:center;animation:fmSlide .3s ease}
+
+/* Upsell speed banner */
+.upsell-speed{margin-top:8px;padding:8px 12px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.2);border-radius:8px;font-size:12px;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.upsell-speed a{color:#6c5ce7;cursor:pointer;font-weight:600;text-decoration:none}
 </style>
 </head>
 <body>
@@ -497,6 +565,129 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 <div class="page" id="pg-review"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📝 Revisão</div></div><div class="page-inner" id="reviewContent"></div></div>
 <div class="page" id="pg-ranking"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">⭐ Ranking</div></div><div class="page-inner" id="rankContent"></div></div>
 <div class="page" id="pg-library"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">📢 Publicar</div></div><div class="page-inner" id="libraryContent"></div></div>
+<div class="page" id="pg-planos">
+<div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">💎 Planos</div></div>
+<div class="page-inner" id="planosContent">
+
+<div class="plans-hero">
+<h1>Estude medicina com <span class="gradient-text">IA personalizada</span></h1>
+<p>Modulos, quizzes, flashcards e feedback gerados por inteligencia artificial</p>
+</div>
+
+<!-- Speed comparison -->
+<div class="speed-section">
+<h3>Velocidade de geracao</h3>
+<div class="speed-row"><div class="speed-label">Free</div><div class="speed-track"><div class="speed-bar bar-free" id="speedBarFree">~20 min</div></div><div class="speed-time">~20 min</div></div>
+<div class="speed-row"><div class="speed-label" style="color:#6c5ce7">Plus</div><div class="speed-track"><div class="speed-bar bar-plus" id="speedBarPlus">~4 min</div></div><div class="speed-time">~4 min</div></div>
+<div class="speed-row"><div class="speed-label" style="color:#00cec9">Pro</div><div class="speed-track"><div class="speed-bar bar-pro" id="speedBarPro">~30s</div></div><div class="speed-time">~30 seg</div></div>
+</div>
+
+<!-- Plan cards -->
+<div class="plans-grid">
+
+<!-- FREE -->
+<div class="plan-card">
+<div style="font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Free</div>
+<div class="plan-price">R$0<small>/mes</small></div>
+<div style="font-size:11px;color:var(--dim);margin-bottom:8px">Gratis para sempre</div>
+<div class="plan-speed" style="background:rgba(255,107,107,.12);color:var(--red)">~20 min por geracao</div>
+<ul class="plan-features">
+<li><span style="color:var(--green)">&#10003;</span> 3 modulos/mes</li>
+<li><span style="color:var(--green)">&#10003;</span> 5 revisoes/mes</li>
+<li><span style="color:var(--green)">&#10003;</span> 10 flashcard decks</li>
+<li><span style="color:var(--green)">&#10003;</span> 10 feedbacks/dia</li>
+</ul>
+<button class="plan-btn plan-btn-free" onclick="goPage('home')">Comecar gratis</button>
+</div>
+
+<!-- PLUS -->
+<div class="plan-card">
+<div style="font-size:12px;font-weight:700;color:#6c5ce7;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Plus</div>
+<div class="plan-price">R$29<small>/mes</small></div>
+<div style="font-size:11px;color:var(--dim);margin-bottom:8px">5x mais rapido</div>
+<div class="plan-speed" style="background:rgba(108,92,231,.12);color:#6c5ce7">~4 min por geracao</div>
+<ul class="plan-features">
+<li><span style="color:var(--green)">&#10003;</span> 10 modulos/mes</li>
+<li><span style="color:var(--green)">&#10003;</span> 15 revisoes/mes</li>
+<li><span style="color:var(--green)">&#10003;</span> 30 flashcard decks</li>
+<li><span style="color:var(--green)">&#10003;</span> 30 feedbacks/dia</li>
+</ul>
+<button class="plan-btn plan-btn-plus" onclick="upgradePlan('plus')">Assinar Plus</button>
+</div>
+
+<!-- PRO -->
+<div class="plan-card featured">
+<div class="plan-badge">MAIS POPULAR</div>
+<div style="font-size:12px;font-weight:700;color:#f9ca24;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pro</div>
+<div class="plan-price">R$59<small>/mes</small></div>
+<div style="font-size:11px;color:var(--dim);margin-bottom:8px">Instantaneo</div>
+<div class="plan-speed" style="background:rgba(0,206,201,.12);color:#00cec9">~30 seg por geracao</div>
+<ul class="plan-features">
+<li><span style="color:var(--green)">&#10003;</span> 30 modulos/mes</li>
+<li><span style="color:var(--green)">&#10003;</span> Ilimitado revisoes</li>
+<li><span style="color:var(--green)">&#10003;</span> Ilimitado flashcards</li>
+<li><span style="color:var(--green)">&#10003;</span> Ilimitado feedbacks</li>
+</ul>
+<button class="plan-btn plan-btn-pro" onclick="upgradePlan('pro')">Assinar Pro</button>
+</div>
+
+</div>
+
+<!-- Feature comparison table -->
+<div style="padding:0 1rem;overflow-x:auto">
+<table class="compare-table">
+<thead><tr><th>Recurso</th><th>Free</th><th style="color:#6c5ce7">Plus</th><th style="color:#f9ca24">Pro</th></tr></thead>
+<tbody>
+<tr><td>Modulos/mes</td><td>3</td><td>10</td><td>30</td></tr>
+<tr><td>Revisoes/mes</td><td>5</td><td>15</td><td><span class="compare-check">&#8734;</span></td></tr>
+<tr><td>Flashcard decks</td><td>10</td><td>30</td><td><span class="compare-check">&#8734;</span></td></tr>
+<tr><td>Feedbacks/dia</td><td>10</td><td>30</td><td><span class="compare-check">&#8734;</span></td></tr>
+<tr><td>Velocidade</td><td>~20 min</td><td>~4 min</td><td>~30 seg</td></tr>
+<tr><td>Modelo IA</td><td>Basico</td><td>Avancado</td><td>Premium</td></tr>
+<tr><td>Suporte prioritario</td><td>-</td><td>-</td><td><span class="compare-check">&#10003;</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+<div style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center">Perguntas frequentes</div>
+
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">Posso trocar de plano a qualquer momento?</div>
+<div class="faq-a">Sim! Voce pode fazer upgrade ou downgrade quando quiser. O valor e ajustado proporcionalmente ao periodo restante.</div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">Como funciona o acumulo de creditos?</div>
+<div class="faq-a">Os creditos sao renovados mensalmente e nao acumulam entre meses. Se voce gerar 2 de 3 modulos, os creditos restantes expiram na renovacao.</div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">O que acontece quando atinjo o limite?</div>
+<div class="faq-a">Voce recebe uma notificacao sugerindo upgrade. Nao perde acesso ao conteudo ja gerado — apenas nao pode gerar novo conteudo ate o proximo ciclo.</div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">Posso cancelar quando quiser?</div>
+<div class="faq-a">Sim, o cancelamento e imediato. Voce mantem o acesso ate o fim do periodo pago.</div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">O plano Free tem limite de tempo?</div>
+<div class="faq-a">Nao! O plano Free e gratuito para sempre. Voce pode estudar sem prazo, apenas com limites mensais de geracao.</div>
+</div>
+<div class="faq-item" onclick="this.classList.toggle('open')">
+<div class="faq-q">Qual a diferenca de qualidade entre os planos?</div>
+<div class="faq-a">Planos pagos usam modelos de IA mais avancados, gerando conteudo mais detalhado, com melhor formatacao e questoes mais elaboradas.</div>
+</div>
+</div>
+
+<!-- CTA final -->
+<div class="plans-cta">
+<h2>Comece gratis. Faca <span class="gradient-text">upgrade</span> quando quiser.</h2>
+<p>Sem compromisso. Cancele a qualquer momento.</p>
+<button class="plan-btn plan-btn-pro" style="max-width:280px;margin:16px auto 0;display:block" onclick="upgradePlan('pro')">Comecar com Pro</button>
+</div>
+
+</div>
+</div>
 <div class="page" id="pg-profile"><div class="pg-hdr"><div style="font-size:18px;font-weight:700;padding:4px 16px">👤 Perfil</div></div><div class="page-inner" id="profileContent"></div></div>
 <!-- FAB Publicar -->
 <button class="create-fab" onclick="goPage('library')" title="Publicar módulo">+</button>
@@ -507,9 +698,75 @@ html,body{height:100%;width:100%;font-family:'Sora',sans-serif;background:var(--
 <button class="bnav-btn" data-pg="ranking" onclick="goPage('ranking')"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Ranking</button>
 <button class="bnav-btn" data-pg="profile" onclick="goPage('profile')" style="position:relative"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil<span class="friend-badge" id="friendBadge" style="display:none">0</span></button>
 </div>
+<!-- Upgrade Modal -->
+<div id="modal-upgrade" class="upgrade-modal-overlay" style="display:none">
+<div class="upgrade-modal-box">
+<div style="font-size:40px;margin-bottom:8px">🔒</div>
+<h3 id="upgrade-title" style="font-size:18px;font-weight:700;margin-bottom:8px">Limite atingido</h3>
+<p id="upgrade-msg" style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.5"></p>
+<button onclick="upgradePlan('plus')" class="plan-btn plan-btn-plus" style="margin-bottom:8px">Upgrade para Plus — R$29/mes</button>
+<button onclick="upgradePlan('pro')" class="plan-btn plan-btn-pro" style="margin-bottom:8px">Upgrade para Pro — R$59/mes</button>
+<button onclick="closeUpgradeModal()" style="display:block;width:100%;padding:10px;border:none;background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;cursor:pointer;margin-top:4px">Fechar</button>
+<p id="upgrade-renew" style="font-size:11px;color:var(--dim2);margin-top:8px"></p>
+</div>
+</div>
 </div>
 <script>
 const APP_VERSION='4.0-friends';
+
+/* ============================================================
+   💎 PLAN SYSTEM
+   ============================================================ */
+let userPlan='free';
+let userUsage={};
+
+async function loadSubscriptionStatus(){
+try{
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/subscription-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken})});
+  const data=await resp.json();
+  userPlan=data.plan||'free';
+  userUsage=data.usage||{};
+  updatePlanBadge();
+  updateUsageBar();
+}catch(e){console.error('[plan]',e.message);}}
+
+function updatePlanBadge(){
+const badge=document.getElementById('plan-badge');
+if(!badge)return;
+if(userPlan==='pro'){badge.textContent='PRO';badge.style.background='linear-gradient(135deg,#f9ca24,#f0932b)';badge.style.display='inline-block';}
+else if(userPlan==='plus'){badge.textContent='PLUS';badge.style.background='linear-gradient(135deg,#6c5ce7,#0984e3)';badge.style.display='inline-block';}
+else{badge.style.display='none';}}
+
+function updateUsageBar(){
+const bar=document.getElementById('usage-bar');
+if(!bar)return;
+if(userPlan!=='pro'){
+  const limits=userPlan==='plus'?{m:10,r:15,f:30}:{m:3,r:5,f:10};
+  bar.innerHTML=`<small>Modulos: ${userUsage.modulesUsed||0}/${limits.m} | Revisoes: ${userUsage.revisionsUsed||0}/${limits.r} | Flashcards: ${userUsage.flashdecksUsed||0}/${limits.f}</small>`;
+  bar.style.display='block';
+}else{bar.style.display='none';}}
+
+async function upgradePlan(plan){
+try{
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,plan})});
+  const data=await resp.json();
+  if(data.url)window.location.href=data.url;
+  else alert('Erro ao criar sessao de pagamento');
+}catch(e){alert('Erro: '+e.message);}}
+
+function showUpgradeModal(feature,used,max){
+const titles={module:'modulos',revision:'revisoes',flashdeck:'flashcard decks',feedback:'feedbacks'};
+document.getElementById('upgrade-msg').textContent='Voce usou '+used+'/'+max+' '+(titles[feature]||feature)+' este mes.';
+if(userUsage.renewsAt){
+  const dt=new Date(userUsage.renewsAt);
+  document.getElementById('upgrade-renew').textContent='Seus creditos renovam em '+dt.toLocaleDateString('pt-BR');
+}
+document.getElementById('modal-upgrade').style.display='flex';}
+
+function closeUpgradeModal(){
+document.getElementById('modal-upgrade').style.display='none';}
 
 /* ============================================================
    🔥 FIREBASE CONFIG
@@ -745,6 +1002,7 @@ document.getElementById('loadingScreen').classList.add('hidden');
 document.getElementById('mainApp').style.display='flex';
 navHistory=['home'];
 history.replaceState({page:'home'},'','');
+loadSubscriptionStatus();
 renderHome();
 /* Recupera job de geração pendente (se recarregou durante geração) */
 try{const pj=JSON.parse(localStorage.getItem('_pendingJob')||'null');
@@ -1554,7 +1812,8 @@ if(pg==='challenges')renderChallenges();
 if(pg==='review')renderReview();
 if(pg==='ranking')renderRanking();
 if(pg==='library')renderSugerir();
-if(pg==='profile'){loadFriendsData().then(()=>renderProfile());}
+if(pg==='profile'){loadFriendsData().then(()=>{renderProfile();updateUsageBar();});}
+if(pg==='planos'){setTimeout(()=>{document.querySelectorAll('.speed-bar').forEach(b=>b.classList.add('animate'));},100);}
 /* History API */
 if(!_skipPush){
 navHistory.push(pg);
@@ -2741,9 +3000,11 @@ const topics=[..._revSelectedModules,...freeTopics].slice(0,3);
 if(!topics.length){alert('Selecione um modulo ou digite um tema');return;}
 revScreen='generating';renderReview();
 try{
-  const resp=await fetch('/generate-revision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/generate-revision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,idToken})});
   if(!resp.ok)throw new Error('Erro do servidor: '+resp.status);
   const data=await resp.json();
+  if(data.error==='limit_reached'){showUpgradeModal(data.feature,data.used,data.max);revScreen='create';renderReview();return;}
   if(!data.jobId)throw new Error(data.error||'Erro ao iniciar');
   revGeneratingJob={jobId:data.jobId,topics,progress:'Iniciando...',topicsDone:0,topicsTotal:topics.length};
   _pollRevisionJob();
@@ -2755,7 +3016,13 @@ if(!revGeneratingJob)return;
 try{
   const resp=await fetch('/job-status/'+revGeneratingJob.jobId);
   const data=await resp.json();
-  if(data.status==='processing'){
+  if(data.status==='delayed'){
+    const remainMs=Math.max(0,(data.deliverAt||0)-Date.now());
+    const remainSec=Math.ceil(remainMs/1000);
+    revGeneratingJob.progress='Processando com IA... '+remainSec+'s restantes';
+    _updateGeneratingUI();
+    setTimeout(_pollRevisionJob,1500);
+  }else if(data.status==='processing'){
     revGeneratingJob.progress=data.progress||'Processando...';
     revGeneratingJob.stepsDone=data.stepsDone||0;
     revGeneratingJob.stepsTotal=data.stepsTotal||revGeneratingJob.topics.length*3;
@@ -2956,8 +3223,10 @@ quizState.confirmed[qId]=true;
 _renderQuizOverlay();
 /* Chama IA para feedback */
 try{
-  const resp=await fetch('/revision-feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.question,expectedAnswer:q.answer,userAnswer})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/revision-feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.question,expectedAnswer:q.answer,userAnswer,idToken})});
   const fb=await resp.json();
+  if(fb.error==='limit_reached'){showUpgradeModal(fb.feature,fb.used,fb.max);return;}
   quizState.feedbacks[qId]=fb;
 }catch(e){quizState.feedbacks[qId]={feedback:'Erro ao gerar feedback: '+e.message,score:0};}
 _renderQuizOverlay();
@@ -3220,10 +3489,12 @@ loadOverlay.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--
 loadOverlay.innerHTML='<div class="spinner" style="width:40px;height:40px;border:3px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite"></div><div style="font-size:14px;font-weight:600;color:var(--text)">Gerando flashcards com IA...</div><div id="fc-load-status" style="font-size:12px;color:var(--dim)">Enviando conteudo do modulo</div><button onclick="document.getElementById(\'fc-loading-overlay\')?.remove()" style="margin-top:12px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:\'Sora\',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>';
 document.body.appendChild(loadOverlay);
 try{
-  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,content,qty:15})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,content,qty:15,idToken})});
   const ct=resp.headers.get('content-type')||'';
   if(!ct.includes('json')){loadOverlay.remove();_showToast('Servidor precisa ser reiniciado');return;}
   const data=await resp.json();
+  if(data.error==='limit_reached'){loadOverlay.remove();showUpgradeModal(data.feature,data.used,data.max);return;}
   if(!data.jobId){loadOverlay.remove();_showToast(data.error||'Erro ao iniciar');return;}
   const statusEl=document.getElementById('fc-load-status');
   if(statusEl)statusEl.textContent='Processando...';
@@ -3239,6 +3510,11 @@ try{
       }else if(d.status==='error'){
         loadOverlay.remove();
         _showToast('Erro: '+(d.error||'desconhecido'));
+      }else if(d.status==='delayed'){
+        const remainMs=Math.max(0,(d.deliverAt||0)-Date.now());
+        const remainSec=Math.ceil(remainMs/1000);
+        if(statusEl)statusEl.textContent='Processando com IA... '+remainSec+'s restantes';
+        setTimeout(poll,2000);
       }else{
         if(statusEl)statusEl.textContent=d.progress||'Gerando...';
         setTimeout(poll,2000);
@@ -3490,10 +3766,12 @@ const status=document.getElementById('aiFlashStatus');
 if(status)status.textContent='Gerando flashcards...';
 try{
   const topics=topic.split(',').map(t=>t.trim()).filter(Boolean).slice(0,3);
-  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15,idToken})});
   const ct=resp.headers.get('content-type')||'';
   if(!ct.includes('json')){throw new Error('Servidor precisa ser reiniciado para esta funcao');}
   const data=await resp.json();
+  if(data.error==='limit_reached'){showUpgradeModal(data.feature,data.used,data.max);return;}
   if(!data.jobId)throw new Error(data.error||'Erro ao iniciar');
   if(status)status.textContent='Processando...';
   const pollAI=async()=>{
@@ -3505,6 +3783,11 @@ try{
         _launchFlashcards('Flashcards: '+topic,d.cards,[{type:'ai',id:'ai_'+Date.now(),name:topic}]);
       }else if(d.status==='error'){
         if(status)status.textContent='Erro: '+(d.error||'Falha');
+      }else if(d.status==='delayed'){
+        const remainMs=Math.max(0,(d.deliverAt||0)-Date.now());
+        const remainSec=Math.ceil(remainMs/1000);
+        if(status)status.textContent='Processando com IA... '+remainSec+'s restantes';
+        setTimeout(pollAI,2000);
       }else{
         if(status)status.textContent=d.progress||'Gerando...';
         setTimeout(pollAI,2000);
@@ -3522,8 +3805,10 @@ const topics=modules.map(m=>m.name);
 closeFlashcards();
 _showToast('Gerando novos cards...');
 try{
-  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/generate-flashcards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topics,qty:15,idToken})});
   const data=await resp.json();
+  if(data.error==='limit_reached'){showUpgradeModal(data.feature,data.used,data.max);return;}
   if(!data.jobId)throw new Error(data.error||'Erro');
   const pollRegen=async()=>{
     const r=await fetch('/job-status/'+data.jobId);
@@ -3532,6 +3817,8 @@ try{
       _launchFlashcards(topics.join(' · '),d.cards,modules);
     }else if(d.status==='error'){
       _showToast('Erro: '+(d.error||''));
+    }else if(d.status==='delayed'){
+      setTimeout(pollRegen,2000);
     }else{
       setTimeout(pollRegen,2000);
     }
@@ -3561,7 +3848,7 @@ ${getUserAvatar({size:48})}
 <div style="position:absolute;bottom:-2px;right:-2px;background:var(--bg);border-radius:6px;padding:1px 5px;font-size:9px;font-weight:700;color:var(--gold);border:1px solid rgba(249,202,36,.3)">${lv.emoji}</div>
 </div>
 <div style="flex:1;min-width:0">
-<div style="font-size:16px;font-weight:700">${greeting}, ${firstName}! 👋</div>
+<div style="font-size:16px;font-weight:700">${greeting}, ${firstName}! 👋<span id="plan-badge" style="display:none;font-size:0.65rem;padding:2px 8px;border-radius:10px;color:#fff;margin-left:6px;vertical-align:middle"></span></div>
 <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
 <div style="font-size:11px;font-weight:700;color:var(--accent2)">${lv.name}</div>
 <div style="font-size:10px;color:var(--dim)">·</div>
@@ -4206,8 +4493,10 @@ const items=curMod.quiz[qz.mode];const q=items[i];
 qz.ans[i]=userAnswer;qz.confirmed[i]=true;
 renderQs();
 try{
-  const resp=await fetch('/revision-feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.q,expectedAnswer:q.ans,userAnswer})});
+  const idToken=await firebase.auth().currentUser.getIdToken();
+  const resp=await fetch('/revision-feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.q,expectedAnswer:q.ans,userAnswer,idToken})});
   const fb=await resp.json();
+  if(fb.error==='limit_reached'){showUpgradeModal(fb.feature,fb.used,fb.max);return;}
   qz.feedbacks[i]=fb;
 }catch(e){qz.feedbacks[i]={feedback:'Erro ao gerar feedback: '+e.message,score:0};}
 renderQs();
@@ -4278,7 +4567,10 @@ rl.innerHTML=rh;
 
 function renderProfile(){const lv=getLevel(S.xp);
 const userEmail=currentUser?currentUser.email:'';
-let h=`<div class="profile-card"><div onclick="openAvatarModal()" style="cursor:pointer">${getUserAvatar({size:80})}</div><div style="font-size:10px;color:var(--dim);margin-top:4px;cursor:pointer" onclick="openAvatarModal()">trocar avatar</div><input class="profile-name-input" value="${S.name}" onchange="updName(this.value);renderProfile();" placeholder="Seu nome"><div class="profile-sub">${lv.emoji} ${lv.name} · ${S.xp} XP · 🔥 ${S.streak}</div>${userEmail?'<div style="font-size:10px;color:var(--dim2);margin-top:6px">☁️ '+userEmail+' · Dados salvos na nuvem</div>':''}</div>`;
+const planLabel=userPlan==='pro'?'<span style="background:linear-gradient(135deg,#f9ca24,#f0932b);color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">PRO</span>':userPlan==='plus'?'<span style="background:linear-gradient(135deg,#6c5ce7,#0984e3);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">PLUS</span>':'<span style="font-size:10px;color:var(--dim);margin-left:6px">Free</span>';
+let h=`<div class="profile-card"><div onclick="openAvatarModal()" style="cursor:pointer">${getUserAvatar({size:80})}</div><div style="font-size:10px;color:var(--dim);margin-top:4px;cursor:pointer" onclick="openAvatarModal()">trocar avatar</div><input class="profile-name-input" value="${S.name}" onchange="updName(this.value);renderProfile();" placeholder="Seu nome"><div class="profile-sub">${lv.emoji} ${lv.name} · ${S.xp} XP · 🔥 ${S.streak}${planLabel}</div>${userEmail?'<div style="font-size:10px;color:var(--dim2);margin-top:6px">☁️ '+userEmail+' · Dados salvos na nuvem</div>':''}</div>`;
+h+=`<div id="usage-bar" style="display:none;background:var(--bg2);border-radius:10px;padding:10px 14px;margin-bottom:12px;border:1px solid rgba(255,255,255,.05);text-align:center;color:var(--dim)"></div>`;
+h+=`<button onclick="goPage('planos')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,rgba(108,92,231,.2),rgba(0,206,201,.15));border:1px solid rgba(108,92,231,.3);color:var(--text);font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">💎 Ver planos e precos</button>`;
 
 /* === Convite de Amigo === */
 h+=`<button onclick="shareFriendCode()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">📤 Convidar amigo</button>`;
@@ -4470,6 +4762,7 @@ overlay.innerHTML=`
 <div id="gerarStatus2" style="font-size:13px;color:var(--dim);margin-bottom:16px">Lendo PDF...</div>
 <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="gerarBar2" style="height:100%;width:5%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width 1s ease"></div></div>
 <div style="font-size:11px;color:var(--dim2)">Não feche esta tela</div>
+${userPlan!=='pro'?'<div class="upsell-speed" style="margin-top:12px"><span style="opacity:0.7">No Plus: ~4 min | No Pro: ~30 seg</span><a onclick="goPage(\'planos\')" style="color:#6c5ce7;cursor:pointer;font-weight:600">Ver planos</a></div>':''}
 <button id="gerarCancelBtn" onclick="document.getElementById('gerar-overlay')?.remove();_gerarJobId=null" style="margin-top:20px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>
 </div>`;
 document.body.appendChild(overlay);
@@ -4518,6 +4811,8 @@ if(pdfText.length>=100){
 }else{
   throw new Error('Não foi possível ler o conteúdo do PDF. O arquivo pode ser escaneado (imagem). Tente um PDF com texto selecionável.');
 }
+const idTokenMod=await firebase.auth().currentUser.getIdToken();
+payload.idToken=idTokenMod;
 let startResp;
 try{
   startResp=await fetch('/generate-module',{
@@ -4528,6 +4823,7 @@ try{
 }catch(netErr){throw new Error('Sem conexão com o servidor. Verifique se está online.');}
 if(!startResp.ok)throw new Error('Servidor retornou erro '+startResp.status);
 const startData=await startResp.json();
+if(startData.error==='limit_reached'){showUpgradeModal(startData.feature,startData.used,startData.max);overlay.remove();return;}
 if(!startData.jobId)throw new Error(startData.error||'Erro ao iniciar geração');
 const jobId=startData.jobId;
 _gerarJobId=jobId;
@@ -4550,6 +4846,11 @@ const moduleData=await new Promise((resolve,reject)=>{
       retryCount=0;
       if(d.status==='ready'){clearInterval(poll);resolve(d.module);}
       else if(d.status==='error'){clearInterval(poll);reject(new Error(d.error||'Erro na geração'));}
+      else if(d.status==='delayed'){
+        const remainMs=Math.max(0,(d.deliverAt||0)-Date.now());
+        const remainSec=Math.ceil(remainMs/1000);
+        setStatus('Processando com IA... '+remainSec+'s restantes',Math.min(88,25+msgIdx*9));
+      }
       else{
         /* Prioriza progress real do servidor; fallback para msgs genéricas */
         if(d.progress){setStatus(d.progress,Math.min(88,25+msgIdx*9));}
