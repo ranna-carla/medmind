@@ -38,65 +38,45 @@ Emitted 'error' event on Server instance at:
 }
 
 Node.js v25.8.1
-node:events:486
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: listen EADDRINUSE: address already in use 127.0.0.1:3737
-    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
-    at listenInCluster (node:net:2065:12)
-    at node:net:2274:7
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
-Emitted 'error' event on Server instance at:
-    at emitErrorNT (node:net:2044:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  code: 'EADDRINUSE',
-  errno: -48,
-  syscall: 'listen',
-  address: '127.0.0.1',
-  port: 3737
-}
-
-Node.js v25.8.1
 MedMind rodando em http://127.0.0.1:3737
-MedMind rodando em http://127.0.0.1:3737
-node:events:486
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: listen EADDRINUSE: address already in use 127.0.0.1:3737
-    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
-    at listenInCluster (node:net:2065:12)
-    at node:net:2274:7
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
-Emitted 'error' event on Server instance at:
-    at emitErrorNT (node:net:2044:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  code: 'EADDRINUSE',
-  errno: -48,
-  syscall: 'listen',
-  address: '127.0.0.1',
-  port: 3737
-}
-
-Node.js v25.8.1
-node:events:486
-      throw er; // Unhandled 'error' event
-      ^
-
-Error: listen EADDRINUSE: address already in use 127.0.0.1:3737
-    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
-    at listenInCluster (node:net:2065:12)
-    at node:net:2274:7
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
-Emitted 'error' event on Server instance at:
-    at emitErrorNT (node:net:2044:8)
-    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
-  code: 'EADDRINUSE',
-  errno: -48,
-  syscall: 'listen',
-  address: '127.0.0.1',
-  port: 3737
-}
-
-Node.js v25.8.1
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[save-module] OK docId=7V4LPsprk17DhY2pV2eE userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[save-module] OK docId=Y9TKq7cLzybLUEuurhvG userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[save-module] OK docId=VbNqrj98KRt0a5oxWWgl userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=jRsqcstk5GdE9fawJIOY userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=glm9Rq9qc0XSkicn24CB userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=2td0IwTsPLS9xZgADPuz userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=9JnuAVnurlLQMDiAEhfc userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=lRgRVklRnxCJ4Fo68fiB userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=6043sj1N3ucC5PEYP6N1 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=EDcpyqe2smQZuYLZE26w userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=o1bnpe8l9SRJgt4ejA7B userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=bSF67YEMuYQJOjS7ra19 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=dDGQ31zy1ijmAJndBGdx userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=JNGzujCcOVepVHKhHHiU userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=aONWTKWFdmYgJFp2L9Gt userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=F50IsfoQkayUUxnRQMX1 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=3TAcpSeQFQwjoA3GXZnp userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=nKLdZxEGk8uAfwtjqX8M userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=nOqklsC2l418ePYcUgZw userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=Pq7xuA5XJCiWY0hhT448 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=dqXsvAMCsnY6K4wyT5mK userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=h2SgjuWGqtSF36Rhx4QH userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=Se0U2BtqT4zOuMhFWZTn userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=e2f1aFfHl8pJv8nEMfa3 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=Sm8iTBxLdWIK0AhvSN4z userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=u6U7eoendT9h3r2CBj7Z userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=r3rLqawTeu80zp1Lj3Ze userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=ULSkxblrrdzMOlGteKSY userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=5uuJDPqLLTYlooVFRop5 userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[save-module] OK docId=r7R1PC5Be2ogwmLHpJiz userId=faQDQzIVAsh40hMXAEOoHP5BG4W2
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}
+[plan-limits] getSubscription error: Firestore GET failed (403): {"error":{"code":403,"message":"Missing or insufficient permissions.","status":"PERMISSION_DENIED"}}

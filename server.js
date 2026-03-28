@@ -415,7 +415,11 @@ function parseAnthropicJSON(result, label) {
 // Processa a geração em background — conteúdo e quiz em PARALELO
 async function processJob(jobId, { pdfBase64, pdfText, discipline, title, professor, observations }, plan) {
   try {
-    jobs[jobId].progress = 'Gerando conteúdo e questões em paralelo...';
+    const usePlanLabel = (plan || 'free') === 'free' ? 'IA local (gratuita)' : 'Haiku';
+    jobs[jobId].progress = `Gerando conteúdo e questões via ${usePlanLabel}...`;
+    if ((plan || 'free') === 'free') {
+      jobs[jobId].progress += ' (pode levar 15-20 min)';
+    }
 
     const ctx = `Disciplina: ${discipline}\nTítulo: ${title}\n${professor ? 'Professor(a): ' + professor + '\n' : ''}${observations ? 'Observações: ' + observations + '\n' : ''}`;
 
@@ -736,7 +740,7 @@ http.createServer(async (req, res) => {
       jobs[jobId] = { status: 'processing', progress: 'Iniciando...', module: null, error: null, createdAt: Date.now() };
       processJob(jobId, body, sub.plan); // dispara em background, sem await
       res.writeHead(202, CORS);
-      res.end(JSON.stringify({ jobId, status: 'processing' }));
+      res.end(JSON.stringify({ jobId, status: 'processing', plan: sub.plan }));
     } catch (err) {
       res.writeHead(500, CORS);
       res.end(JSON.stringify({ error: err.message }));

@@ -4629,8 +4629,8 @@ let sugPdfFile=null;
 let sugVisibility='private';
 
 function renderSugerir(){
-/* Se há um job de geração em andamento, não re-renderiza o form */
-if(_gerarJobId&&document.getElementById('gerar-overlay')){return;}
+/* Se já tem overlay bloqueante (upload em progresso), não re-renderiza */
+if(document.getElementById('gerar-overlay')){return;}
 sugPdfFile=null;sugVisibility='private';
 let h=`<div style="text-align:center;padding:16px 0 12px">
 <div style="font-size:40px;margin-bottom:6px">🤖</div>
@@ -4709,39 +4709,180 @@ let _gerarJobId=null; /* job em andamento — impede re-render destruir o progre
 /* Retoma polling de job pendente após page reload */
 async function _resumePendingJob(pj){
   _gerarJobId=pj.jobId;
-  const overlay=document.createElement('div');overlay.id='gerar-overlay';
-  overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .3s ease;padding:20px';
-  overlay.innerHTML=`<div style="text-align:center;max-width:340px;width:100%">
-  <div style="font-size:48px;margin-bottom:12px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
-  <div style="font-size:18px;font-weight:700;margin-bottom:4px">Retomando geração...</div>
-  <div id="gerarStatus2" style="font-size:13px;color:var(--dim);margin-bottom:16px">${pj.title||'Verificando...'}</div>
-  <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="gerarBar2" style="height:100%;width:40%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width 1s ease"></div></div>
-  <div style="font-size:11px;color:var(--dim2)">Recuperando progresso</div>
-  <button onclick="document.getElementById('gerar-overlay')?.remove();_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}" style="margin-top:20px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>
-  </div>`;
-  document.body.appendChild(overlay);
-  function setStatus(msg,pct){const el=document.getElementById('gerarStatus2');const bar=document.getElementById('gerarBar2');if(el)el.textContent=msg;if(bar)bar.style.width=pct+'%';}
-  let retryCount=0;
-  const poll=setInterval(async()=>{
-    if(!document.getElementById('gerar-overlay')){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}return;}
-    try{
-      const r=await fetch('/job-status/'+pj.jobId);
-      if(!r.ok){if(r.status===404){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}overlay.innerHTML=`<div style="text-align:center;padding:20px;max-width:340px"><div style="font-size:48px;margin-bottom:12px">⚠️</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Geração expirou</div><div style="font-size:13px;color:var(--dim);margin-bottom:20px">O servidor reiniciou. Gere o módulo novamente.</div><button onclick="document.getElementById('gerar-overlay')?.remove();goPage('library')" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Gerar novamente</button></div>`;return;}throw new Error('status');}
-      const d=await r.json();retryCount=0;
-      if(d.status==='ready'){
-        clearInterval(poll);setStatus('Salvando módulo...',92);
-        const idToken=await currentUser.getIdToken();
-        const saveResp=await fetch('/save-module',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,userId:currentUser.uid,userName:S.name||'Estudante',userEmail:currentUser.email||'',module:d.module})});
-        const saveData=await saveResp.json();
-        _gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}
-        if(saveData.success){await loadGeneratedModules();_showToast('Módulo gerado com sucesso!');overlay.remove();renderHome();}
-        else{overlay.remove();_showToast('Erro ao salvar: '+(saveData.error||''));}
-      }else if(d.status==='error'){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}overlay.innerHTML=`<div style="text-align:center;padding:20px;max-width:340px"><div style="font-size:48px;margin-bottom:12px">😔</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Erro na geração</div><div style="font-size:13px;color:var(--red);margin-bottom:20px">${d.error||'Erro desconhecido'}</div><button onclick="document.getElementById('gerar-overlay')?.remove()" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Fechar</button></div>`;}
-      else if(d.progress){setStatus(d.progress,60);}
-    }catch(e){retryCount++;if(retryCount>=8){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob')}catch(e){}overlay.remove();_showToast('Conexão perdida');}}
-  },2000);
+  const plan=pj.plan||userPlan||'free';
+  const startedAt=pj.startedAt||Date.now();
+  /* Usa banner flutuante em vez de overlay bloqueante */
+  _createGenBanner(pj.jobId,pj.title||'Módulo',plan,startedAt);
+  _startBgPolling(pj.jobId,pj.title||'Módulo',pj.disc||'',pj.prof||'',pj.visibility||'private',plan,startedAt);
+  _showToast('Retomando geração do módulo...');
 }
 
+/* ===== BANNER FLUTUANTE DE GERAÇÃO ===== */
+function _fmtElapsed(ms){const s=Math.floor(ms/1000);const m=Math.floor(s/60);const sec=s%60;return m>0?(m+'min '+String(sec).padStart(2,'0')+'s'):(sec+'s');}
+
+function _createGenBanner(jobId,titulo,plan,startedAt){
+  const existing=document.getElementById('gen-banner');if(existing)existing.remove();
+  const b=document.createElement('div');b.id='gen-banner';
+  const isFree=plan==='free';
+  b.style.cssText='position:fixed;bottom:calc(68px + max(8px,env(safe-area-inset-bottom)));left:10px;right:10px;z-index:100;background:linear-gradient(135deg,#1a1a2e,#16213e);border:1.5px solid #00f5d4;border-radius:18px;padding:14px 16px;font-family:"Sora",sans-serif;box-shadow:0 4px 24px rgba(0,245,212,.15),0 8px 32px rgba(0,0,0,.5);animation:fu .3s ease;cursor:pointer';
+  b.innerHTML=`
+<div style="display:flex;align-items:center;gap:12px">
+  <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#00f5d4,#7b2ff7);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;animation:pulse 1.5s ease-in-out infinite">🧠</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Gerando: ${titulo}</div>
+    <div id="gen-banner-status" style="font-size:11px;color:#8892b0;margin-top:2px">Iniciando...</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+      <div style="flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div id="gen-banner-bar" style="height:100%;width:5%;background:linear-gradient(90deg,#00f5d4,#7b2ff7);border-radius:3px;transition:width 1s ease;box-shadow:0 0 8px rgba(0,245,212,.4)"></div></div>
+      <div id="gen-banner-timer" style="font-size:12px;font-weight:700;color:#00f5d4;font-variant-numeric:tabular-nums;white-space:nowrap">0s</div>
+    </div>
+    ${isFree?'<div style="font-size:10px;color:#8892b0;margin-top:6px">Quer mais rapido? <a onclick="event.stopPropagation();goPage(\'planos\')" style="color:#f9ca24;font-weight:700;cursor:pointer;text-decoration:none">Upgrade Pro → ~30s ⚡</a></div>':''}
+  </div>
+  <button onclick="event.stopPropagation();_cancelGenBanner()" style="background:rgba(255,255,255,.06);border:none;color:#8892b0;font-size:14px;cursor:pointer;padding:6px;flex-shrink:0;border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center" title="Cancelar">✕</button>
+</div>`;
+  b.onclick=()=>{_expandGenBanner(jobId,titulo,plan,startedAt);};
+  document.body.appendChild(b);
+  /* Timer update */
+  const timerInterval=setInterval(()=>{
+    const el=document.getElementById('gen-banner-timer');
+    if(!el){clearInterval(timerInterval);return;}
+    el.textContent=_fmtElapsed(Date.now()-startedAt);
+  },1000);
+  b._timerInterval=timerInterval;
+  return b;
+}
+
+function _updateGenBanner(status,pct){
+  const el=document.getElementById('gen-banner-status');if(el)el.textContent=status;
+  const bar=document.getElementById('gen-banner-bar');if(bar)bar.style.width=pct+'%';
+}
+
+function _cancelGenBanner(){
+  const b=document.getElementById('gen-banner');
+  if(b){if(b._timerInterval)clearInterval(b._timerInterval);b.remove();}
+  _gerarJobId=null;
+  try{localStorage.removeItem('_pendingJob');}catch(e){}
+}
+
+function _expandGenBanner(jobId,titulo,plan,startedAt){
+  const overlay=document.createElement('div');overlay.id='gerar-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:110;background:linear-gradient(180deg,#0a0f1e 0%,#111827 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .2s ease;padding:20px';
+  const isFree=plan==='free';
+  const elapsed=_fmtElapsed(Date.now()-startedAt);
+  overlay.innerHTML=`
+<div style="text-align:center;max-width:340px;width:100%">
+  <div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#00f5d4,#7b2ff7);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;animation:pulse 1.5s ease-in-out infinite;box-shadow:0 4px 24px rgba(0,245,212,.25)">🧠</div>
+  <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:4px">Gerando módulo...</div>
+  <div style="font-size:15px;color:#ccd6f6;margin-bottom:12px;font-weight:600">${titulo}</div>
+  <div id="expand-status" style="font-size:13px;color:#8892b0;margin-bottom:16px">${document.getElementById('gen-banner-status')?.textContent||'Processando...'}</div>
+  <div style="display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+    <div style="font-size:36px;font-weight:800;color:#00f5d4;font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(0,245,212,.3)" id="expand-timer">${elapsed}</div>
+  </div>
+  <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:20px"><div id="expand-bar" style="height:100%;width:${document.getElementById('gen-banner-bar')?.style.width||'30%'};background:linear-gradient(90deg,#00f5d4,#7b2ff7);border-radius:3px;transition:width 1s ease;box-shadow:0 0 12px rgba(0,245,212,.3)"></div></div>
+  ${isFree?'<div style="background:linear-gradient(135deg,rgba(249,202,36,.08),rgba(240,147,43,.08));border:1px solid rgba(249,202,36,.2);border-radius:14px;padding:14px;margin-bottom:20px"><div style="font-size:12px;color:#ccd6f6;line-height:1.6">IA local gratuita — pode levar 15-20 min<br><strong style="color:#f9ca24;font-size:13px">No Pro: apenas ~30 segundos! ⚡</strong></div><button onclick="event.stopPropagation();document.getElementById(\'gerar-overlay\')?.remove();goPage(\'planos\')" style="margin-top:10px;padding:10px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,#f9ca24,#f0932b);color:#000;font-family:\'Sora\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(249,202,36,.3)">Ver planos</button></div>':''}
+  <div style="font-size:12px;color:#8892b0;margin-bottom:16px">Navegue no app normalmente — avisaremos quando ficar pronto!</div>
+  <button onclick="document.getElementById('gerar-overlay')?.remove()" style="padding:12px 28px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#ccd6f6;font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Minimizar</button>
+</div>`;
+  document.body.appendChild(overlay);
+  /* Sync expand view with banner */
+  const syncInterval=setInterval(()=>{
+    if(!document.getElementById('gerar-overlay')){clearInterval(syncInterval);return;}
+    const st=document.getElementById('gen-banner-status');
+    const et=document.getElementById('expand-status');
+    if(st&&et)et.textContent=st.textContent;
+    const bb=document.getElementById('gen-banner-bar');
+    const eb=document.getElementById('expand-bar');
+    if(bb&&eb)eb.style.width=bb.style.width;
+    const tt=document.getElementById('expand-timer');
+    if(tt)tt.textContent=_fmtElapsed(Date.now()-startedAt);
+  },1000);
+}
+
+function _showGenSuccess(titulo,moduleData,saveDocId,disc,visibility){
+  const b=document.getElementById('gen-banner');
+  if(b){if(b._timerInterval)clearInterval(b._timerInterval);b.remove();}
+  const ov=document.getElementById('gerar-overlay');if(ov)ov.remove();
+  const userName=(S&&S.name)?S.name.split(' ')[0]:'Estudante';
+  /* Notificação de sucesso flutuante */
+  const n=document.createElement('div');n.id='gen-success-notif';
+  n.style.cssText='position:fixed;bottom:calc(68px + max(8px,env(safe-area-inset-bottom)));left:10px;right:10px;z-index:120;background:linear-gradient(135deg,#0d2818,#1a3a2a);border:1.5px solid #00b894;border-radius:18px;padding:16px;font-family:"Sora",sans-serif;box-shadow:0 4px 24px rgba(0,184,148,.2),0 8px 32px rgba(0,0,0,.5);animation:fu .3s ease';
+  n.innerHTML=`
+<div style="display:flex;align-items:center;gap:12px">
+  <div style="font-size:32px;flex-shrink:0">🎉</div>
+  <div style="flex:1;min-width:0">
+    <div style="font-size:15px;font-weight:700;color:#00f5d4">${userName}, seu módulo ficou pronto!</div>
+    <div style="font-size:12px;color:#ccd6f6;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${moduleData.name||titulo}</div>
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      <span style="font-size:10px;background:rgba(0,245,212,.1);padding:3px 8px;border-radius:6px;color:#00f5d4;font-weight:600">${(moduleData.quiz?.obj||[]).length} objetivas</span>
+      <span style="font-size:10px;background:rgba(123,47,247,.1);padding:3px 8px;border-radius:6px;color:#a78bfa;font-weight:600">${(moduleData.quiz?.esc||[]).length} dissertativas</span>
+      <span style="font-size:10px;background:rgba(249,202,36,.1);padding:3px 8px;border-radius:6px;color:#f9ca24;font-weight:600">${(moduleData.quiz?.pra||[]).length} casos</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="document.getElementById('gen-success-notif')?.remove();openGeneratedModule('${saveDocId}')" style="padding:9px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#00f5d4,#7b2ff7);color:#fff;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px rgba(0,245,212,.3)">Estudar agora</button>
+      <button onclick="document.getElementById('gen-success-notif')?.remove()" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#8892b0;font-family:'Sora',sans-serif;font-size:11px;cursor:pointer">Depois</button>
+    </div>
+  </div>
+</div>`;
+  document.body.appendChild(n);
+  /* Auto-dismiss após 30s */
+  setTimeout(()=>{const el=document.getElementById('gen-success-notif');if(el){el.style.opacity='0';el.style.transition='opacity .5s';setTimeout(()=>el.remove(),500);}},30000);
+}
+
+function _showGenError(msg){
+  const b=document.getElementById('gen-banner');
+  if(b){if(b._timerInterval)clearInterval(b._timerInterval);b.remove();}
+  const ov=document.getElementById('gerar-overlay');if(ov)ov.remove();
+  _showToast('Erro: '+msg);
+}
+
+/* ===== POLLING EM BACKGROUND ===== */
+function _startBgPolling(jobId,titulo,disc,prof,visibility,plan,startedAt){
+  const msgs=['IA lendo o PDF...','Analisando conteúdo...','Criando resumo...','Gerando questões...','Montando casos clínicos...','Finalizando módulo...','Quase pronto...'];
+  let msgIdx=0;let retryCount=0;
+  const poll=setInterval(async()=>{
+    try{
+      const r=await fetch('/job-status/'+jobId);
+      if(!r.ok){
+        if(r.status===404){clearInterval(poll);_showGenError('Servidor reiniciou. Tente gerar novamente.');_gerarJobId=null;try{localStorage.removeItem('_pendingJob');}catch(e){}return;}
+        throw new Error('status '+r.status);
+      }
+      const d=await r.json();retryCount=0;
+      if(d.status==='ready'){
+        clearInterval(poll);
+        _updateGenBanner('Salvando módulo...',92);
+        try{
+          const idToken=await currentUser.getIdToken();
+          const saveResp=await fetch('/save-module',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken,userId:currentUser.uid,userName:S.name||'Estudante',userEmail:currentUser.email||'',discipline:disc,title:titulo,professor:prof,visibility:visibility,module:d.module})});
+          const saveData=await saveResp.json();
+          _gerarJobId=null;sugPdfFile=null;try{localStorage.removeItem('_pendingJob');}catch(e){}
+          if(!saveData.success){_showGenError(saveData.error||'Erro ao salvar');return;}
+          await loadGeneratedModules();
+          if(saveData.docId){if(!S.lastAccessed)S.lastAccessed=[];S.lastAccessed=S.lastAccessed.filter(x=>x.id!==saveData.docId);S.lastAccessed.unshift({id:saveData.docId,type:'gen',timestamp:Date.now()});if(S.lastAccessed.length>10)S.lastAccessed.length=10;saveState(S);}
+          _showGenSuccess(titulo,d.module,saveData.docId,disc,visibility);
+        }catch(saveErr){_showGenError('Erro ao salvar: '+saveErr.message);}
+      }
+      else if(d.status==='error'){
+        clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob');}catch(e){}
+        _showGenError(d.error||'Erro na geração');
+      }
+      else if(d.status==='delayed'){
+        const remainMs=Math.max(0,(d.deliverAt||0)-Date.now());
+        const remainSec=Math.ceil(remainMs/1000);
+        _updateGenBanner('Processando... '+remainSec+'s restantes',Math.min(88,25+msgIdx*9));
+      }
+      else{
+        const progressMsg=d.progress||msgs[Math.min(msgIdx,msgs.length-1)]||'Processando...';
+        const pct=Math.min(88,20+msgIdx*3);
+        _updateGenBanner(progressMsg,pct);
+        msgIdx++;
+      }
+    }catch(e){
+      retryCount++;
+      if(retryCount>=15){clearInterval(poll);_gerarJobId=null;try{localStorage.removeItem('_pendingJob');}catch(e){}_showGenError('Conexão perdida. Tente novamente.');}
+    }
+  },2500);
+}
+
+/* ===== GERAR MÓDULO (PRINCIPAL) ===== */
 async function gerarModulo(){
 const disc=document.getElementById('sugDisc')?.value;
 const titulo=(document.getElementById('sugTitulo')?.value||'').trim();
@@ -4752,18 +4893,15 @@ if(!disc){alert('Selecione a disciplina');return;}
 if(!titulo){alert('Digite o título da aula');return;}
 if(!currentUser){alert('Faça login para gerar módulos');return;}
 
-/* Troca toda a tela para overlay de progresso (não é destruído ao navegar) */
+/* Overlay temporário apenas durante upload */
 const overlay=document.createElement('div');overlay.id='gerar-overlay';
 overlay.style.cssText='position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fu .3s ease;padding:20px';
 overlay.innerHTML=`
 <div style="text-align:center;max-width:340px;width:100%">
-<div id="gerarEmoji" style="font-size:48px;margin-bottom:12px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
-<div style="font-size:18px;font-weight:700;margin-bottom:4px">Gerando seu módulo...</div>
+<div style="font-size:48px;margin-bottom:12px;animation:pulse 1.5s ease-in-out infinite">🧠</div>
+<div style="font-size:18px;font-weight:700;margin-bottom:4px">Preparando módulo...</div>
 <div id="gerarStatus2" style="font-size:13px;color:var(--dim);margin-bottom:16px">Lendo PDF...</div>
 <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div id="gerarBar2" style="height:100%;width:5%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:3px;transition:width 1s ease"></div></div>
-<div style="font-size:11px;color:var(--dim2)">Não feche esta tela</div>
-${userPlan!=='pro'?'<div class="upsell-speed" style="margin-top:12px"><span style="opacity:0.7">No Plus: ~4 min | No Pro: ~30 seg</span><a onclick="goPage(\'planos\')" style="color:#6c5ce7;cursor:pointer;font-weight:600">Ver planos</a></div>':''}
-<button id="gerarCancelBtn" onclick="document.getElementById('gerar-overlay')?.remove();_gerarJobId=null" style="margin-top:20px;padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Cancelar</button>
 </div>`;
 document.body.appendChild(overlay);
 
@@ -4783,8 +4921,8 @@ try{
   const extracted=await extractPdfText(sugPdfFile);
   pdfText=extracted.text;
   pdfPages=extracted.numPages;
-  if(pdfPages>30)setStatus('PDF com '+pdfPages+' páginas — processando...',15);
-  else setStatus('Texto extraído ('+pdfText.length+' chars, '+pdfPages+' pgs)...',18);
+  if(pdfPages>30)setStatus('PDF com '+pdfPages+' páginas...',15);
+  else setStatus('Texto extraído ('+pdfText.length+' chars)...',18);
 }catch(e){
   console.warn('pdf.js falhou:',e.message);
   setStatus('Lendo PDF como arquivo...',12);
@@ -4792,7 +4930,7 @@ try{
 
 /* 1b. Se texto curto, ler base64 como backup (PDF escaneado) */
 if(pdfText.length<100){
-  setStatus('PDF parece ser escaneado — processamento pode ser mais lento...',14);
+  setStatus('PDF parece ser escaneado...',14);
   pdfBase64=await new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onload=e=>resolve(e.target.result.split(',')[1]);
@@ -4801,7 +4939,7 @@ if(pdfText.length<100){
   });
 }
 
-/* 2. Montar payload */
+/* 2. Montar payload e enviar */
 setStatus('Enviando para IA...',20);
 const payload={discipline:disc,title:titulo,professor:prof,observations:obs};
 if(pdfText.length>=100){
@@ -4826,86 +4964,22 @@ const startData=await startResp.json();
 if(startData.error==='limit_reached'){showUpgradeModal(startData.feature,startData.used,startData.max);overlay.remove();return;}
 if(!startData.jobId)throw new Error(startData.error||'Erro ao iniciar geração');
 const jobId=startData.jobId;
+const jobPlan=startData.plan||userPlan||'free';
 _gerarJobId=jobId;
-/* Persiste no localStorage para recuperar se recarregar */
-try{localStorage.setItem('_pendingJob',JSON.stringify({jobId,title:titulo,startedAt:Date.now()}));}catch(e){}
+const startedAt=Date.now();
+try{localStorage.setItem('_pendingJob',JSON.stringify({jobId,title:titulo,disc,prof,visibility:sugVisibility,plan:jobPlan,startedAt}));}catch(e){}
 
-/* 3. Polling com retry */
-setStatus('IA processando o PDF...',25);
-const estEl=document.getElementById('gerarStatus2');
-if(estEl){const est=document.createElement('div');est.style.cssText='font-size:10px;color:var(--dim2);margin-top:4px';est.textContent='Tempo estimado: ~1 min';estEl.parentNode.insertBefore(est,estEl.nextSibling);}
-const msgs=['IA lendo o PDF...','Analisando conteúdo...','Criando resumo...','Gerando questões...','Montando casos clínicos...','Finalizando módulo...','Quase pronto...'];
-let msgIdx=0;let retryCount=0;
-const moduleData=await new Promise((resolve,reject)=>{
-  const poll=setInterval(async()=>{
-    if(!document.getElementById('gerar-overlay')){clearInterval(poll);reject(new Error('Cancelado'));return;}
-    try{
-      const r=await fetch('/job-status/'+jobId);
-      if(!r.ok){if(r.status===404){clearInterval(poll);reject(new Error('Servidor reiniciou durante a geração. Tente novamente.'));return;}throw new Error('status '+r.status);}
-      const d=await r.json();
-      retryCount=0;
-      if(d.status==='ready'){clearInterval(poll);resolve(d.module);}
-      else if(d.status==='error'){clearInterval(poll);reject(new Error(d.error||'Erro na geração'));}
-      else if(d.status==='delayed'){
-        const remainMs=Math.max(0,(d.deliverAt||0)-Date.now());
-        const remainSec=Math.ceil(remainMs/1000);
-        setStatus('Processando com IA... '+remainSec+'s restantes',Math.min(88,25+msgIdx*9));
-      }
-      else{
-        /* Prioriza progress real do servidor; fallback para msgs genéricas */
-        if(d.progress){setStatus(d.progress,Math.min(88,25+msgIdx*9));}
-        else if(msgIdx<msgs.length){setStatus(msgs[msgIdx],25+msgIdx*9);}
-        msgIdx++;
-      }
-    }catch(e){
-      retryCount++;
-      if(retryCount>=8){clearInterval(poll);reject(new Error('Conexão perdida. Tente novamente.'));}
-    }
-  },2000);
-});
+/* 3. Fechar overlay e abrir banner flutuante */
+overlay.remove();
+_createGenBanner(jobId,titulo,jobPlan,startedAt);
 
-/* 4. Salvar no Firestore */
-setStatus('Salvando módulo...',92);
-const idToken=await currentUser.getIdToken();
-const saveResp=await fetch('/save-module',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({idToken,userId:currentUser.uid,userName:S.name||'Estudante',userEmail:currentUser.email||'',discipline:disc,title:titulo,professor:prof,visibility:sugVisibility,module:moduleData})
-});
-const saveData=await saveResp.json();
-if(!saveData.success)throw new Error(saveData.error||'Erro ao salvar');
+/* 4. Polling em background — usuário navega livremente */
+_startBgPolling(jobId,titulo,disc,prof,sugVisibility,jobPlan,startedAt);
 
-/* 5. Sucesso! */
-setStatus('Pronto!',100);
-_gerarJobId=null;sugPdfFile=null;
-try{localStorage.removeItem('_pendingJob');}catch(e){}
-await loadGeneratedModules();
-/* Adicionar ao lastAccessed para aparecer primeiro na Home */
-if(saveData.docId){
-  if(!S.lastAccessed)S.lastAccessed=[];
-  S.lastAccessed=S.lastAccessed.filter(x=>x.id!==saveData.docId);
-  S.lastAccessed.unshift({id:saveData.docId,type:'gen',timestamp:Date.now()});
-  if(S.lastAccessed.length>10)S.lastAccessed.length=10;
-  saveState(S);
-}
-overlay.innerHTML=`
-<div style="text-align:center;padding:20px;max-width:360px">
-<div style="font-size:64px;margin-bottom:12px">🎉</div>
-<div style="font-size:20px;font-weight:700;margin-bottom:6px">Módulo gerado!</div>
-<div style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:4px"><strong style="color:var(--text)">${moduleData.name||titulo}</strong></div>
-<div style="font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:8px">${disc} · ${sugVisibility==='public'?'🌐 Público':'🔒 Privado'}</div>
-<div style="background:var(--bg2);border-radius:12px;padding:14px 10px;margin:12px 0 20px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;border:1px solid rgba(255,255,255,.05)">
-<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--green)">${(moduleData.quiz?.obj||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">objetivas</div></div>
-<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--accent2)">${(moduleData.quiz?.esc||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">dissertativas</div></div>
-<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--gold)">${(moduleData.quiz?.pra||[]).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">casos clínicos</div></div>
-<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--pink)">${Object.keys(moduleData.sections||{}).length}</div><div style="font-size:9px;color:var(--dim);margin-top:2px">seções</div></div>
-</div>
-<div style="display:flex;flex-direction:column;gap:10px">
-<button onclick="document.getElementById('gerar-overlay')?.remove();openGeneratedModule('${saveData.docId}')" style="padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">▶️ Estudar agora</button>
-<button onclick="document.getElementById('gerar-overlay')?.remove();goPage('home')" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:13px;font-weight:600;cursor:pointer">← Voltar pra Home</button>
-<button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--dim2);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Gerar outro modulo</button>
-</div>
-</div>`;
+/* Volta para home */
+goPage('home');
+_showToast('Módulo sendo gerado! Navegue normalmente.');
+
 }catch(e){
 console.error('Erro ao gerar:',e);
 _gerarJobId=null;
@@ -4920,7 +4994,7 @@ if(ov){
   <button onclick="document.getElementById('gerar-overlay')?.remove();renderSugerir()" style="padding:12px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;font-family:'Sora',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Tentar novamente</button>
   <button onclick="document.getElementById('gerar-overlay')?.remove()" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--dim);font-family:'Sora',sans-serif;font-size:12px;cursor:pointer">Fechar</button>
   </div></div>`;
-}else{alert('❌ Erro: '+e.message);}
+}else{alert('Erro: '+e.message);}
 }}
 
 /* === ADMIN: ver solicitações no perfil === */
