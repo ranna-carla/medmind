@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-App educacional gamificado para estudos com flashcards, quizzes, desafios diários e sistema de ranking. PWA mobile-first com planos de assinatura (Free/Plus/Pro) e suporte a IA local ou via API.
+App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), sistema de ranking e suporte a IA local ou via API.
 
 ## Stack Tecnológico
 
@@ -18,18 +18,18 @@ App educacional gamificado para estudos com flashcards, quizzes, desafios diári
 
 ## Portas
 
-- Backend local: 3737 (`server.js`)
+- Backend: 3737 (`server.js`)
 - Flashcard server: 3739 (`flashcard-server.js`)
 - Ollama: 11434
 
 ## Arquivos Principais
 
-- `index.html` — Frontend completo (UI, módulos, landing page planos)
+- `index.html` — Frontend completo (UI, módulos, landing planos, modais upsell)
 - `server.js` — Backend: router IA, geração conteúdo, Stripe, limites
-- `flashcard-server.js` — Serviço auxiliar de flashcards
+- `flashcard-server.js` — Serviço de flashcards
 - `ai-router.js` — Roteamento IA por plano (Ollama/Haiku)
-- `ollama-client.js` — Cliente Ollama com fila de concorrência
-- `plan-limits.js` — Definições de planos e controle de limites
+- `ollama-client.js` — Cliente Ollama com controle de concorrência
+- `plan-limits.js` — Definições de planos e limites
 - `firebase.json` — Configuração Firebase
 - `firestore.rules` — Regras de segurança
 - `curated-seed.json` — Dados seed dos módulos
@@ -39,7 +39,7 @@ App educacional gamificado para estudos com flashcards, quizzes, desafios diári
 ```bash
 ./setup-ollama.sh    # Instalar Ollama + modelo
 ./start.sh           # Iniciar Ollama, Node.js e Tunnel
-npm run deploy       # Firebase deploy (hosting + rules)
+npm run deploy       # Firebase deploy
 ```
 
 ## Regras
