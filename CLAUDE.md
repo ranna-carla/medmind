@@ -13,7 +13,7 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 - **IA (Free):** Ollama local (qwen2.5:7b)
 - **IA (Plus/Pro):** Anthropic Haiku API
 - **Pagamentos:** Stripe (checkout, webhooks, portal)
-- **Extras:** PDF parsing, admin dashboard, whitelabel
+- **Extras:** PDF parsing (pdf-parse), admin dashboard, whitelabel
 
 ## Portas
 
@@ -31,6 +31,8 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 - `plan-limits.js` — Limites por plano
 - `firestore.rules` — Regras segurança
 - `curated-seed.json` — Seed inicial módulos
+- `firebase.json` — Configuração Firebase
+- `WHITELABEL.md` — Documentação whitelabel
 
 ## Comandos Essenciais
 
