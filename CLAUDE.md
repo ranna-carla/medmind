@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), sistema de ranking, IA local e pagamentos integrados.
+App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), sistema de ranking, IA local e pagamentos integrados via Stripe.
 
 ## Stack Tecnológico
 
@@ -13,7 +13,7 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 - **IA (Free):** Ollama local (qwen2.5:7b)
 - **IA (Plus/Pro):** Anthropic Haiku API
 - **Pagamentos:** Stripe (checkout, webhooks, portal)
-- **Extras:** PDF parsing (pdf-parse), admin dashboard, whitelabel
+- **Extras:** PDF parsing, admin dashboard, whitelabel
 
 ## Portas
 
@@ -23,14 +23,13 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 
 ## Arquivos Principais
 
-- `index.html` — Frontend completo (UI, landing planos, modais upsell)
-- `server.js` — Router IA, geração conteúdo, Stripe, limites
+- `index.html` — Frontend completo
+- `server.js` — Router IA, geração conteúdo, Stripe
 - `flashcard-server.js` — Serviço dedicado flashcards
 - `ai-router.js` — Roteamento IA por plano
 - `ollama-client.js` — Cliente Ollama com controle concorrência
 - `plan-limits.js` — Limites por plano
-- `firestore.rules` — Regras segurança
-- `curated-seed.json` — Seed inicial módulos
+- `firestore.rules` — Regras de segurança
 - `firebase.json` — Configuração Firebase
 - `WHITELABEL.md` — Documentação whitelabel
 
