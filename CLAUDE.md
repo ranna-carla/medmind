@@ -13,7 +13,7 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 - **IA (Free):** Ollama local (qwen2.5:7b)
 - **IA (Plus/Pro):** Anthropic Haiku API
 - **Pagamentos:** Stripe (checkout, webhooks, portal)
-- **Extras:** PDF parsing, admin dashboard, whitelabel
+- **Dependências:** firebase-admin, firebase-tools, pdf-parse, stripe
 
 ## Portas
 
@@ -29,7 +29,7 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 - `ai-router.js` — Roteamento IA por plano
 - `ollama-client.js` — Cliente Ollama com controle concorrência
 - `plan-limits.js` — Limites por plano
-- `firestore.rules` — Regras de segurança
+- `firestore.rules` — Regras de segurança Firestore
 - `firebase.json` — Configuração Firebase
 - `WHITELABEL.md` — Documentação whitelabel
 
