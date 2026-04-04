@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), sistema de ranking, IA local e pagamentos integrados via Stripe.
+App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), ranking de usuários, IA local e pagamentos via Stripe.
 
 ## Stack Tecnológico
 
@@ -24,25 +24,25 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 ## Arquivos Principais
 
 - `index.html` — Frontend completo
-- `server.js` — Router IA, geração conteúdo, Stripe
+- `server.js` — Router principal, IA e Stripe
 - `flashcard-server.js` — Serviço dedicado flashcards
 - `ai-router.js` — Roteamento IA por plano
-- `ollama-client.js` — Cliente Ollama com controle concorrência
-- `plan-limits.js` — Limites por plano
-- `firestore.rules` — Regras de segurança Firestore
+- `ollama-client.js` — Cliente Ollama com controle de concorrência
+- `plan-limits.js` — Limites por plano de assinatura
+- `firestore.rules` — Regras de segurança
 - `firebase.json` — Configuração Firebase
 - `WHITELABEL.md` — Documentação whitelabel
 
 ## Comandos Essenciais
 
 ```bash
-./setup-ollama.sh    # Instalar Ollama
-./start.sh           # Iniciar serviços
-npm run deploy       # Firebase deploy
+./setup-ollama.sh      # Instalar Ollama
+./start.sh             # Iniciar todos os serviços
+npm run deploy         # Deploy Firebase
 ```
 
 ## Regras
 
-- Nunca commitar `.env`, chaves Firebase ou API keys
+- Nunca commitar `.env`, chaves Firebase ou credenciais
 - Código em inglês, documentação em português BR
 - Manter compatibilidade PWA e mobile-first
