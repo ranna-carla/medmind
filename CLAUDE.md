@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-App educacional gamificado para estudos com flashcards, quizzes e desafios diários. PWA mobile-first com planos de assinatura (Free/Plus/Pro), ranking de usuários, IA local e pagamentos via Stripe.
+PWA educacional gamificada para estudos com flashcards, quizzes e desafios diários. Planos de assinatura (Free/Plus/Pro), ranking de usuários, IA local/cloud e pagamentos via Stripe.
 
 ## Stack Tecnológico
 
@@ -18,17 +18,17 @@ App educacional gamificado para estudos com flashcards, quizzes e desafios diár
 ## Portas
 
 - Backend: 3737 (`server.js`)
-- Flashcard server: 3739 (`flashcard-server.js`)
+- Flashcard Server: 3739 (`flashcard-server.js`)
 - Ollama: 11434
 
 ## Arquivos Principais
 
-- `index.html` — Frontend completo
+- `index.html` — Frontend PWA
 - `server.js` — Router principal, IA e Stripe
-- `flashcard-server.js` — Serviço dedicado flashcards
+- `flashcard-server.js` — Serviço flashcards
 - `ai-router.js` — Roteamento IA por plano
 - `ollama-client.js` — Cliente Ollama com controle de concorrência
-- `plan-limits.js` — Limites por plano de assinatura
+- `plan-limits.js` — Limites por plano
 - `firestore.rules` — Regras de segurança
 - `firebase.json` — Configuração Firebase
 - `WHITELABEL.md` — Documentação whitelabel
