@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Win7 Med</title>
+<meta name="description" content="Win7 Med: captação de pacientes em radiologia. Ressonância, tomografia, raio-X e outros exames de imagem com Google Ads e resultados auditáveis.">
+<meta name="theme-color" content="#0B2545">
+<meta property="og:title" content="Win7 Med">
+<meta property="og:description" content="Captação de pacientes em radiologia. Aumentamos o faturamento de clínicas de ressonância, tomografia e raio-X.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/marca-7.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0B2545;
+  --navy-deep:#071A33;
+  --navy-soft:#13335E;
+  --ink:#10233B;
+  --paper:#F3F1EC;
+  --paper-2:#E9E5DC;
+  --white:#FFFFFF;
+  --gold:#E7B544;
+  --gold-soft:rgba(231,181,68,.18);
+  --teal:#27D3C0;
+  --mute:#8FA3BF;
+  --mute-paper:#5E6B7C;
+  --line:rgba(255,255,255,.12);
+  --line-paper:rgba(16,35,59,.12);
+  --w7-amarelo:#F5B71A;
+  --w7-vermelho:#E23B3B;
+  --w7-verde:#27A548;
+  --w7-azul:#2F7CC1;
+  --wa:#25D366;
+  --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
+  --sans:'Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --gutter:clamp(16px,4vw,48px);
+  --max:1120px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{font-family:var(--sans);font-weight:300;font-size:17px;line-height:1.55;color:var(--white);background:var(--navy);overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:4px}
+.wrap{width:min(var(--max),100% - 2*var(--gutter));margin-inline:auto}
+h1,h2,h3{font-weight:400;line-height:1.05;letter-spacing:-.01em}
+h1,h2{font-family:var(--serif)}
+h1{font-size:clamp(40px,7vw,78px)}
+h2{font-size:clamp(34px,5vw,56px)}
+h3{font-family:var(--sans);font-weight:500;font-size:20px;line-height:1.3}
+em{font-family:var(--serif);font-style:italic;font-weight:400}
+p{max-width:62ch}
+strong{font-weight:600}
+.lede{font-size:clamp(18px,2.2vw,22px);line-height:1.5;color:rgba(255,255,255,.82)}
+.paper .lede{color:var(--mute-paper)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--sans);font-weight:500;font-size:16px;line-height:1;padding:16px 24px;border-radius:999px;border:1px solid transparent;text-decoration:none;cursor:pointer;transition:transform .15s ease,background-color .15s ease}
+.btn:active{transform:scale(.98)}
+.btn svg{width:20px;height:20px;flex:none}
+.btn-wa{background:var(--wa);color:#05301b;border-color:var(--wa)}
+.btn-wa:hover{background:#2fe072}
+.btn-ghost{background:transparent;color:var(--white);border-color:rgba(255,255,255,.35)}
+.btn-ghost:hover{border-color:var(--white)}
+.paper .btn-ghost{color:var(--ink);border-color:rgba(16,35,59,.35)}
+.paper .btn-ghost:hover{border-color:var(--ink)}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(11,37,69,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;font-size:18px;letter-spacing:.01em}
+.brand svg{width:34px;height:34px}
+.brand span b{font-weight:300}
+.nav{display:none;gap:28px;font-size:15px;font-weight:400}
+.nav a{text-decoration:none;color:rgba(255,255,255,.78);padding:6px 0;border-bottom:1px solid transparent}
+.nav a:hover{color:var(--white);border-bottom-color:var(--gold)}
+.topbar .btn{padding:11px 16px;font-size:14px}
+.topbar .btn span{display:none}
+@media (min-width:860px){.nav{display:flex}.topbar .btn span{display:inline}}
+
+/* hero */
+.hero{padding:clamp(48px,8vw,112px) 0 clamp(40px,6vw,72px);position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:auto -20% -40% auto;width:60vw;max-width:720px;aspect-ratio:1;border-radius:50%;background:radial-gradient(closest-side,rgba(39,211,192,.16),transparent 70%);pointer-events:none}
+.hero-grid{display:grid;gap:40px;align-items:end}
+@media (min-width:960px){.hero-grid{grid-template-columns:1.25fr .9fr;gap:64px}}
+.hero h1{max-width:13ch}
+.hero h1 em{color:var(--gold)}
+.hero .lede{margin-top:22px;max-width:46ch}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.hero-marks{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:28px;font-size:14px;color:var(--mute)}
+.hero-marks span{display:inline-flex;align-items:center;gap:8px}
+.hero-marks svg{width:16px;height:16px}
+
+/* audited case panel */
+.case{background:var(--navy-deep);border:1px solid var(--line);border-radius:20px;padding:clamp(22px,3vw,34px);position:relative}
+.case-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px;color:var(--mute);padding-bottom:16px;border-bottom:1px solid var(--line)}
+.case-head b{font-weight:500;color:var(--white)}
+.ledger{list-style:none;display:grid;gap:14px;margin-top:18px}
+.ledger li{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:12px;font-size:15px;color:var(--mute)}
+.ledger .val{font-family:var(--serif);font-size:clamp(30px,3.6vw,42px);line-height:1;color:var(--white);font-variant-numeric:tabular-nums}
+.ledger .val.teal{color:var(--teal)}
+.ledger .val.gold{color:var(--gold)}
+.bars{margin-top:22px;display:grid;gap:8px}
+.bar{height:10px;border-radius:999px;background:var(--navy-soft);overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:var(--mute);width:var(--w)}
+.bar.teal i{background:var(--teal)}
+.bars small{display:block;font-size:12px;color:var(--mute);margin-top:4px}
+
+/* highlights row (Instagram stories as navigation) */
+.stories{padding:clamp(28px,4vw,44px) 0 clamp(40px,6vw,72px)}
+.stories ul{list-style:none;display:flex;gap:clamp(14px,3vw,36px);overflow-x:auto;scroll-snap-type:x proximity;padding:6px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.stories ul::-webkit-scrollbar{display:none}
+.stories li{flex:none;scroll-snap-align:start}
+.story{display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;font-size:14px;font-weight:400;color:rgba(255,255,255,.85);width:92px}
+.story .ring{width:78px;height:78px;border-radius:50%;padding:3px;background:conic-gradient(from 200deg,var(--w7-amarelo),var(--w7-vermelho),var(--w7-azul),var(--w7-verde),var(--w7-amarelo));transition:transform .15s ease}
+.story .ring div{width:100%;height:100%;border-radius:50%;background:var(--navy-deep);border:3px solid var(--navy);display:grid;place-items:center}
+.story .ring svg{width:32px;height:32px;stroke:var(--gold);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.story:hover .ring{transform:translateY(-3px)}
+@media (min-width:860px){.stories ul{justify-content:center}}
+
+/* sections */
+section{padding:clamp(56px,9vw,120px) 0}
+.paper{background:var(--paper);color:var(--ink)}
+.paper h2 em{color:var(--w7-azul)}
+.sec-head{display:grid;gap:18px;max-width:760px;margin-bottom:clamp(32px,5vw,56px)}
+.sec-head p{font-size:18px;color:rgba(255,255,255,.78)}
+.paper .sec-head p{color:var(--mute-paper)}
+
+/* exames */
+.exames{display:grid;gap:14px}
+@media (min-width:700px){.exames{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.exames{grid-template-columns:repeat(4,1fr)}}
+.exame{padding:26px 24px 28px;border-radius:16px;background:var(--white);border:1px solid var(--line-paper);display:grid;gap:12px;align-content:start}
+.exame svg{width:40px;height:40px;stroke:var(--navy);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.exame p{font-size:15px;color:var(--mute-paper)}
+.exame.mais{background:transparent;border-style:dashed}
+
+/* transparência */
+.quote{display:grid;gap:28px;align-items:center}
+@media (min-width:900px){.quote{grid-template-columns:1.1fr .9fr;gap:64px}}
+.quote blockquote{font-family:var(--serif);font-size:clamp(28px,4vw,44px);line-height:1.15;max-width:18ch}
+.quote blockquote span{color:var(--gold)}
+.quote-side{display:grid;gap:18px;font-size:17px;color:rgba(255,255,255,.82)}
+.quote-side p{max-width:48ch}
+.check{display:grid;gap:12px;list-style:none}
+.check li{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start}
+.check svg{width:22px;height:22px;stroke:var(--teal);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-top:2px}
+
+/* método */
+.steps{list-style:none;counter-reset:passo;display:grid;gap:0;border-top:1px solid var(--line-paper)}
+.steps li{counter-increment:passo;display:grid;grid-template-columns:64px 1fr;gap:16px;padding:26px 0;border-bottom:1px solid var(--line-paper);align-items:start}
+.steps li::before{content:counter(passo);font-family:var(--serif);font-size:44px;line-height:1;color:var(--w7-azul)}
+.steps h3{margin-bottom:6px;grid-column:2}
+.steps p{font-size:16px;color:var(--mute-paper);max-width:58ch;grid-column:2}
+@media (min-width:900px){.steps li{grid-template-columns:80px 1fr 1.4fr;gap:24px}.steps h3{grid-column:2}.steps p{grid-column:3}}
+
+/* posts do instagram */
+.posts{display:grid;gap:16px}
+@media (min-width:760px){.posts{grid-template-columns:repeat(3,1fr)}.post{aspect-ratio:4/5}}
+.post{aspect-ratio:1/1;border-radius:18px;padding:26px;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;position:relative;overflow:hidden;border:1px solid var(--line)}
+.post.dark{background:linear-gradient(170deg,#163A68,#0B2545 60%,#071A33)}
+.post.light{background:var(--paper);color:var(--ink);border-color:var(--line-paper)}
+.post .tag{position:absolute;top:18px;left:22px;font-size:13px;color:var(--mute)}
+.post.light .tag{color:var(--mute-paper)}
+.post .pl{position:absolute;top:16px;right:18px;width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.5;opacity:.7}
+.post p{font-size:clamp(26px,3vw,34px);line-height:1.08;font-family:var(--serif);max-width:100%}
+.post p b{font-family:var(--sans);font-weight:500;font-size:16px;display:block;margin-bottom:8px;color:var(--gold)}
+.post.light p b{color:var(--w7-vermelho)}
+.posts-foot{margin-top:22px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;font-size:15px;color:var(--mute)}
+
+/* sobre */
+.sobre{display:grid;gap:36px}
+@media (min-width:900px){.sobre{grid-template-columns:1fr 1fr;gap:64px;align-items:center}}
+.sobre figure{border-radius:20px;overflow:hidden;background:var(--paper-2);aspect-ratio:4/3;position:relative;display:grid;place-items:center;border:1px solid var(--line-paper)}
+.sobre figure img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.sobre figure figcaption{position:relative;text-align:center;padding:24px;color:var(--mute-paper);font-size:15px;max-width:34ch}
+.sobre figure figcaption strong{display:block;font-family:var(--serif);font-size:30px;font-weight:400;color:var(--ink);margin-bottom:6px}
+.sobre figure.has-img figcaption{display:none}
+.sobre .text{display:grid;gap:18px}
+.sobre .text p{color:var(--mute-paper)}
+.badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:var(--white);border:1px solid var(--line-paper);font-size:14px;font-weight:500;color:var(--ink)}
+.badge svg{width:16px;height:16px}
+
+/* JPR + localização */
+.duo{display:grid;gap:16px}
+@media (min-width:900px){.duo{grid-template-columns:1fr 1fr}}
+.panel{border:1px solid var(--line);border-radius:20px;padding:clamp(24px,3.5vw,40px);display:grid;gap:14px;align-content:start;background:var(--navy-deep)}
+.panel h3{font-family:var(--serif);font-weight:400;font-size:clamp(28px,3.2vw,38px);line-height:1.08}
+.panel p{color:rgba(255,255,255,.78);font-size:16px}
+.panel .jpr{font-family:var(--serif);font-size:clamp(56px,8vw,88px);line-height:1;letter-spacing:.06em;color:var(--gold);font-weight:400}
+.panel svg.ico{width:40px;height:40px;stroke:var(--gold);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* cta final */
+.final{text-align:left;padding-bottom:clamp(40px,6vw,72px)}
+.final .box{background:linear-gradient(160deg,#F7F3EA,#E9E5DC);color:var(--ink);border-radius:24px;padding:clamp(32px,5vw,64px);display:grid;gap:22px;position:relative;overflow:hidden}
+.final .box::after{content:"7";position:absolute;right:-.06em;bottom:-.32em;font-family:var(--serif);font-size:clamp(220px,40vw,420px);line-height:1;color:rgba(16,35,59,.06);pointer-events:none}
+.final h2{max-width:16ch}
+.final p{color:var(--mute-paper);font-size:18px;max-width:52ch}
+.final .hero-cta{margin-top:4px}
+.final .btn-ghost{color:var(--ink);border-color:rgba(16,35,59,.35)}
+.final .btn-ghost:hover{border-color:var(--ink)}
+
+footer{border-top:1px solid var(--line);padding:32px 0 calc(28px + env(safe-area-inset-bottom));font-size:14px;color:var(--mute)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 32px;align-items:center}
+footer a{color:rgba(255,255,255,.85);text-decoration:none}
+footer a:hover{color:var(--white)}
+footer ul{list-style:none;display:flex;flex-wrap:wrap;gap:20px}
+.logo-win7{height:28px;width:auto;opacity:.9}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#inicio" aria-label="Win7 Med, início">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="#fff"/><polygon points="24,22 56,22 56,36 24,36" fill="#F5B71A"/><polygon points="56,22 82,22 58,62 42,62" fill="#E23B3B"/><polygon points="60,58 86,44 86,70" fill="#27A548"/><polygon points="42,62 58,62 44,84 28,84" fill="#2F7CC1"/></svg>
+      <span>Win7 <b>Med</b></span>
+    </a>
+    <nav class="nav" aria-label="Seções">
+      <a href="#resultados">Resultados</a>
+      <a href="#exames">Exames</a>
+      <a href="#metodo">Método Win7</a>
+      <a href="#sobre">A Win7 Med</a>
+      <a href="#localizacao">Atendimento</a>
+    </nav>
+    <a class="btn btn-wa" href="https://wa.me/message/RVE5DF5TU4B5M1" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8Zm-3.3 4.4c-.2 0-.5 0-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 2.4 1 2.9.8 3.4.7.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4l-.5-.3-1.9-.9c-.3-.1-.4-.1-.6.1l-.9 1.1c-.2.2-.3.2-.6.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.9-2c-.2-.6-.4-.5-.6-.5h-.3Z"/></svg>
+      <span>Falar no WhatsApp</span>
+    </a>
+  </div>
+</header>
+
+<main id="inicio">
+
+<section class="hero" aria-labelledby="h-hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1 id="h-hero">Mais pacientes de <em>ressonância, tomografia e raio-X</em> na sua clínica.</h1>
+      <p class="lede">A Win7 Med faz captação de pacientes em radiologia. Campanhas no Google para cada exame, com cada real investido e cada exame faturado na sua frente.</p>
+      <div class="hero-cta">
+        <a class="btn btn-wa" href="https://wa.me/message/RVE5DF5TU4B5M1" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8Zm-3.3 4.4c-.2 0-.5 0-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 2.4 1 2.9.8 3.4.7.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4l-.5-.3-1.9-.9c-.3-.1-.4-.1-.6.1l-.9 1.1c-.2.2-.3.2-.6.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.9-2c-.2-.6-.4-.5-.6-.5h-.3Z"/></svg>
+          Falar no WhatsApp
+        </a>
+        <a class="btn btn-ghost" href="#resultados">Ver resultados</a>
+      </div>
+      <div class="hero-marks" aria-label="Credenciais">
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--w7-azul)" d="M12 1.5l2.6 2.1 3.3-.4.9 3.2 2.9 1.6-1.3 3 1.3 3-2.9 1.6-.9 3.2-3.3-.4L12 22.5l-2.6-2.1-3.3.4-.9-3.2-2.9-1.6 1.3-3-1.3-3 2.9-1.6.9-3.2 3.3.4z"/><path d="M8.5 12.3l2.3 2.3 4.7-4.9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Perfil verificado no Instagram</span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M12 6.5v5.5l3.5 2" stroke="var(--gold)" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>Google Partner Premier</span>
+        <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V9l8-5 8 5v9" fill="none" stroke="var(--teal)" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 18v-5h6v5" fill="none" stroke="var(--teal)" stroke-width="1.6"/></svg>Especialistas em clínicas de imagem</span>
+      </div>
+    </div>
+
+    <aside class="case" aria-labelledby="case-title">
+      <div class="case-head">
+        <span id="case-title"><b>Centro de exames por imagem</b></span>
+        <span>dados reais auditáveis</span>
+      </div>
+      <ul class="ledger">
+        <li><span>Investido em mídia</span><span class="val">R$&nbsp;19.836</span></li>
+        <li><span>Faturado em exames</span><span class="val teal">R$&nbsp;473.616</span></li>
+        <li><span>Retorno sobre o investimento</span><span class="val gold">+2.287%</span></li>
+        <li><span>Cada real investido voltou</span><span class="val gold">23,88x</span></li>
+      </ul>
+      <div class="bars" aria-hidden="true">
+        <div><div class="bar"><i style="--w:4.2%"></i></div><small>investido</small></div>
+        <div><div class="bar teal"><i style="--w:100%"></i></div><small>faturado</small></div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<nav class="stories" aria-label="Destaques">
+  <div class="wrap">
+    <ul>
+      <li><a class="story" href="#resultados"><span class="ring"><div><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 26h22M8 22v-6M14 22V9M20 22v-9M26 22V6"/><path d="M22 6h4v4"/></svg></div></span>Resultados</a></li>
+      <li><a class="story" href="#metodo"><span class="ring"><div><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 10h16M5 16h20M5 22h16"/><path d="M18 6l4 4-4 4M22 12l4 4-4 4M18 18l4 4-4 4"/></svg></div></span>Método Win7</a></li>
+      <li><a class="story" href="#jpr"><span class="ring"><div><svg viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="21" text-anchor="middle" font-family="Outfit,sans-serif" font-size="13" font-weight="300" fill="#E7B544" stroke="none" letter-spacing="1">JPR</text></svg></div></span>JPR</a></li>
+      <li><a class="story" href="#localizacao"><span class="ring"><div><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28s-9-8.5-9-15a9 9 0 0 1 18 0c0 6.5-9 15-9 15Z"/><circle cx="16" cy="13" r="3.2"/></svg></div></span>Localização</a></li>
+      <li><a class="story" href="#sobre"><span class="ring"><div><svg viewBox="0 0 100 100" aria-hidden="true" style="stroke:none"><polygon points="24,22 56,22 56,36 24,36" fill="#F5B71A"/><polygon points="56,22 82,22 58,62 42,62" fill="#E23B3B"/><polygon points="60,58 86,44 86,70" fill="#27A548"/><polygon points="42,62 58,62 44,84 28,84" fill="#2F7CC1"/></svg></div></span>A Win7 Med</a></li>
+      <li><a class="story" href="#sobre"><span class="ring"><div><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="11" cy="10" r="3"/><circle cx="21" cy="10" r="3"/><path d="M4 23c0-4 3-6 7-6s7 2 7 6M14 23c0-4 3-6 7-6s7 2 7 6"/></svg></div></span>Partner Premier</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section id="resultados" aria-labelledby="h-res">
+  <div class="wrap quote">
+    <blockquote id="h-res">Transparência de <span>resultados</span>: você vê o que entra, o que sai e o que virou exame.</blockquote>
+    <div class="quote-side">
+      <p>Relatório de captação não é print de curtida. É quanto foi investido, quantos contatos chegaram pelo WhatsApp e pelo telefone, e quanto a clínica faturou com esses pacientes.</p>
+      <ul class="check">
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Números auditáveis, conferidos com o financeiro da clínica.</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custo por contato e por exame agendado, separados por tipo de exame.</span></li>
+        <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Verba de mídia paga direto ao Google, sem intermediário.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="exames" class="paper" aria-labelledby="h-exames">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-exames">Cada exame tem um paciente <em>procurando agora</em> no Google.</h2>
+      <p>Quem precisa de uma ressonância não pesquisa "clínica de imagem". Pesquisa o exame, a região e o convênio. A campanha é montada exame por exame, com página própria para cada um.</p>
+    </div>
+    <div class="exames">
+      <div class="exame">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="12" width="36" height="24" rx="12"/><circle cx="24" cy="24" r="6"/><path d="M24 6v6M24 36v6"/></svg>
+        <h3>Ressonância magnética</h3>
+        <p>Exame de ticket alto e busca com urgência. Campanhas por região e por tipo de ressonância.</p>
+      </div>
+      <div class="exame">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="17"/><circle cx="24" cy="24" r="8"/><path d="M24 7v4M24 37v4M7 24h4M37 24h4"/></svg>
+        <h3>Tomografia</h3>
+        <p>Paciente que já tem o pedido médico na mão e quer agendar hoje. Página direta para o WhatsApp.</p>
+      </div>
+      <div class="exame">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="6" width="30" height="36" rx="3"/><path d="M24 12v24M16 18h16M15 24h18M16 30h16"/></svg>
+        <h3>Raio-X</h3>
+        <p>Alto volume e decisão rápida. Captação em escala para preencher a agenda do dia.</p>
+      </div>
+      <div class="exame mais">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 10v28M10 24h28"/></svg>
+        <h3>Outros exames de imagem</h3>
+        <p>Ultrassom, mamografia, densitometria e o que mais a sua clínica oferece.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="metodo" class="paper" style="padding-top:0" aria-labelledby="h-met">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-met">O Método Win7, <em>passo a passo</em>.</h2>
+      <p>Um processo que começa antes do primeiro anúncio e só libera verba quando a clínica está pronta para receber o paciente.</p>
+    </div>
+    <ol class="steps">
+      <li><h3>Diagnóstico da clínica e da busca</h3><p>Como a clínica aparece hoje no Google, quem anuncia na sua região e quais exames têm mais procura. Daqui sai o plano de captação.</p></li>
+      <li><h3>Uma página para cada exame</h3><p>Página objetiva com WhatsApp visível, convênios aceitos, preparo do exame e responsável técnico, como exige a publicidade médica.</p></li>
+      <li><h3>Campanhas no Google Ads por exame e região</h3><p>Anúncios para quem está pesquisando o exame agora, com medição de cada contato por WhatsApp e telefone desde o primeiro dia.</p></li>
+      <li><h3>Acompanhamento com números auditáveis</h3><p>Investido, contatos, exames agendados e faturamento, conferidos com a clínica. O que funciona ganha verba. O que não funciona sai.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section id="conteudo" aria-labelledby="h-posts">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-posts">O que a gente fala <em>no Instagram</em>.</h2>
+      <p>Conteúdo para quem administra uma clínica de imagem e quer entender onde o faturamento está escapando.</p>
+    </div>
+    <div class="posts">
+      <a class="post dark" href="https://www.instagram.com/win7med" target="_blank" rel="noopener">
+        <span class="tag">@win7med</span>
+        <svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8.5v7l5.5-3.5z"/></svg>
+        <p><b>Reel</b>3 sinais que sua clínica está perdendo pacientes.</p>
+      </a>
+      <a class="post light" href="https://www.instagram.com/win7med" target="_blank" rel="noopener">
+        <span class="tag">@win7med</span>
+        <svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8.5v7l5.5-3.5z"/></svg>
+        <p><b>Reel</b>Seu marketing sabe a diferença entre ressonância e tomografia?</p>
+      </a>
+      <a class="post dark" href="https://www.instagram.com/win7med" target="_blank" rel="noopener">
+        <span class="tag">@win7med</span>
+        <svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8.5v7l5.5-3.5z"/></svg>
+        <p><b>Reel</b>2 reais ou um lead? O que o seu anúncio está comprando.</p>
+      </a>
+    </div>
+    <div class="posts-foot">
+      <a class="btn btn-ghost" href="https://www.instagram.com/win7med" target="_blank" rel="noopener">Seguir @win7med</a>
+      <span>4.332 seguidores acompanham os resultados e os bastidores.</span>
+    </div>
+  </div>
+</section>
+
+<section id="sobre" class="paper" aria-labelledby="h-sobre">
+  <div class="wrap sobre">
+    <figure>
+      <!-- Para usar a foto da equipe, salve a imagem em assets/equipe.jpg -->
+      <img src="assets/equipe.jpg" alt="Equipe da Win7 Med na recepção da agência" onerror="this.remove()" onload="this.parentElement.classList.add('has-img')">
+      <figcaption><strong>Equipe Win7 Med</strong>Foto da equipe entra aqui (assets/equipe.jpg).</figcaption>
+    </figure>
+    <div class="text">
+      <h2 id="h-sobre">A Win7 Med é a Win7 <em>dedicada à radiologia</em>.</h2>
+      <p>Somos a frente de saúde da Win7, agência de captação de clientes pelo Google. Na Win7 Med, o foco é um só: clínicas e centros de diagnóstico por imagem.</p>
+      <p>Uma equipe que conhece a rotina da clínica, fala a língua do paciente e do radiologista, e trabalha com a meta no faturamento, não na curtida.</p>
+      <div class="badges">
+        <span class="badge"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="var(--w7-azul)" stroke-width="1.8"/><path d="M8.5 12.3l2.3 2.3 4.7-4.9" stroke="var(--w7-azul)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Google Partner Premier</span>
+        <span class="badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--w7-azul)" d="M12 1.5l2.6 2.1 3.3-.4.9 3.2 2.9 1.6-1.3 3 1.3 3-2.9 1.6-.9 3.2-3.3-.4L12 22.5l-2.6-2.1-3.3.4-.9-3.2-2.9-1.6 1.3-3-1.3-3 2.9-1.6.9-3.2 3.3.4z"/><path d="M8.5 12.3l2.3 2.3 4.7-4.9" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Perfil verificado</span>
+        <span class="badge"><img class="logo-win7" src="assets/win7-logo.png" alt="Win7" style="height:20px"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-label="JPR e atendimento">
+  <div class="wrap duo">
+    <div class="panel" id="jpr">
+      <span class="jpr" aria-hidden="true">JPR</span>
+      <h3>Encontre a Win7 Med na Jornada Paulista de Radiologia.</h3>
+      <p>O maior encontro de radiologia da América Latina é onde a gente conversa pessoalmente com quem dirige clínicas de imagem. Se você vai à JPR, chame no WhatsApp e marque um horário no evento.</p>
+    </div>
+    <div class="panel" id="localizacao">
+      <svg class="ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28s-9-8.5-9-15a9 9 0 0 1 18 0c0 6.5-9 15-9 15Z"/><circle cx="16" cy="13" r="3.2"/></svg>
+      <h3>Atendimento para clínicas em todo o Brasil.</h3>
+      <p>Sede em Brasília (DF) e operação remota: reuniões por vídeo, campanhas por região e suporte pelo WhatsApp em horário comercial.</p>
+      <p><a href="https://wa.me/message/RVE5DF5TU4B5M1" target="_blank" rel="noopener">Falar com a equipe</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="final" aria-labelledby="h-final">
+  <div class="wrap">
+    <div class="box">
+      <h2 id="h-final">Quantos exames a sua agenda ainda <em>cabe</em> esta semana?</h2>
+      <p>Mande uma mensagem com o nome da clínica e os exames que você oferece. A equipe responde com uma análise inicial de como a clínica aparece hoje no Google.</p>
+      <div class="hero-cta">
+        <a class="btn btn-wa" href="https://wa.me/message/RVE5DF5TU4B5M1" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 1.8a8.2 8.2 0 1 1-4.2 15.3l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8Zm-3.3 4.4c-.2 0-.5 0-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 2.4 1 2.9.8 3.4.7.5 0 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4l-.5-.3-1.9-.9c-.3-.1-.4-.1-.6.1l-.9 1.1c-.2.2-.3.2-.6.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.9-2c-.2-.6-.4-.5-.6-.5h-.3Z"/></svg>
+          Falar no WhatsApp
+        </a>
+        <a class="btn btn-ghost" href="https://www.instagram.com/win7med" target="_blank" rel="noopener">Ver o Instagram</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <img class="logo-win7" src="assets/win7-logo-white.png" alt="Win7">
+    <ul>
+      <li><a href="https://www.instagram.com/win7med" target="_blank" rel="noopener">Instagram @win7med</a></li>
+      <li><a href="https://wa.me/message/RVE5DF5TU4B5M1" target="_blank" rel="noopener">WhatsApp</a></li>
+      <li><a href="#inicio">Voltar ao topo</a></li>
+    </ul>
+    <span>Win7 Med, captação de pacientes em radiologia.</span>
+  </div>
+</footer>
+
+</body>
+</html>
